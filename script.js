@@ -16,8 +16,8 @@
       <ellipse cx="8" cy="-13" rx="4.2" ry="15" fill="${c.body}" transform="rotate(14 8 -13)"/>
       <ellipse cx="-8" cy="-11" rx="2" ry="9.5" fill="${c.accent}" transform="rotate(-14 -8 -13)"/>
       <ellipse cx="8" cy="-11" rx="2" ry="9.5" fill="${c.accent}" transform="rotate(14 8 -13)"/>
-      <circle cx="-4.5" cy="6" r="1.4" fill="#4a3327"/>
-      <circle cx="4.5" cy="6" r="1.4" fill="#4a3327"/>
+      <circle cx="-4.5" cy="6" r="1.4" fill="${c.eye}"/>
+      <circle cx="4.5" cy="6" r="1.4" fill="${c.eye}"/>
       <ellipse cx="0" cy="10" rx="2" ry="1.4" fill="${c.accent}"/>
       <circle cx="13" cy="14" r="3.4" fill="${c.body}"/>`,
     cat: (c) => `
@@ -26,21 +26,21 @@
       <path d="M -13 6 Q -14 -3 -7 -1 Z" fill="${c.accent}"/>
       <path d="M -8 -6 L -4 -14 L -1 -5 Z" fill="${c.body}"/>
       <path d="M 3 -6 L 6 -15 L 9 -6 Z" fill="${c.body}"/>
-      <circle cx="-5" cy="2" r="1.3" fill="#3a2a20"/>
-      <circle cx="4" cy="1" r="1.3" fill="#3a2a20"/>
+      <circle cx="-5" cy="2" r="1.3" fill="${c.eye}"/>
+      <circle cx="4" cy="1" r="1.3" fill="${c.eye}"/>
       <path d="M 12 12 Q 22 8 20 -2" stroke="${c.body}" stroke-width="4" fill="none" stroke-linecap="round"/>`,
     squirrel: (c) => `
       <ellipse cx="-2" cy="8" rx="11" ry="9" fill="${c.body}"/>
       <path d="M 6 4 Q 26 -6 20 18 Q 14 26 4 18 Z" fill="${c.body}"/>
       <path d="M 8 6 Q 22 0 18 16 Q 13 21 7 15 Z" fill="${c.accent}"/>
       <path d="M -10 0 L -14 -9 L -6 -4 Z" fill="${c.body}"/>
-      <circle cx="-8" cy="4" r="1.2" fill="#3a2a20"/>
+      <circle cx="-8" cy="4" r="1.2" fill="${c.eye}"/>
       <ellipse cx="-14" cy="9" rx="2.4" ry="1.8" fill="${c.accent}"/>`,
     bird: (c) => `
       <ellipse cx="0" cy="4" rx="12" ry="9" fill="${c.body}"/>
       <circle cx="10" cy="-4" r="6.5" fill="${c.body}"/>
       <path d="M 15 -4 L 21 -1.5 L 15 1 Z" fill="${c.accent}"/>
-      <circle cx="12" cy="-6" r="1.1" fill="#2c2c2c"/>
+      <circle cx="12" cy="-6" r="1.1" fill="${c.eye}"/>
       <path d="M -10 4 Q -20 0 -12 -6 Q -6 -2 -10 4 Z" fill="${c.accent}"/>
       <path d="M -2 12 L -6 17 M 3 13 L 3 18" stroke="${c.accent}" stroke-width="1.6" stroke-linecap="round"/>`,
     butterfly: (c) => `
@@ -76,6 +76,47 @@
   function iconMarkup(name, colors) {
     const fn = ICONS[name];
     return fn ? fn(colors) : "";
+  }
+
+  /* ---------- 색상 위장(카무플라주) 유틸 ---------- */
+  function hexToRgb(hex) {
+    const h = hex.replace("#", "");
+    const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+    const num = parseInt(full, 16);
+    return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+  }
+
+  function rgbToHex(r, g, b) {
+    const clamp = (v) => Math.round(Math.max(0, Math.min(255, v)));
+    return "#" + [r, g, b].map((v) => clamp(v).toString(16).padStart(2, "0")).join("");
+  }
+
+  function mixHex(hex1, hex2, t) {
+    if (!t) return hex1;
+    const a = hexToRgb(hex1);
+    const b = hexToRgb(hex2);
+    return rgbToHex(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t);
+  }
+
+  // 숨은 그림이 어떤 배경 요소 옆에 있는지에 따라 위장할 색을 고른다
+  function blendTargetColor(occlude, palette) {
+    switch (occlude) {
+      case "blossom": return palette.blossom[0];
+      case "bush": return palette.bush[0];
+      case "trunk": return palette.trunk;
+      case "sky": return palette.sky[1];
+      default: return palette.blossom[0];
+    }
+  }
+
+  function camouflageColors(obj, palette, diff) {
+    const target = blendTargetColor(obj.occlude, palette);
+    const t = diff.blendT;
+    return {
+      body: mixHex(obj.colors.body, target, t),
+      accent: mixHex(obj.colors.accent, target, t * 0.8),
+      eye: mixHex(obj.colors.eye || "#33261c", target, t * 0.5)
+    };
   }
 
   /* =========================================================
@@ -128,6 +169,13 @@
     { dx: -30, dy: -40, r: 18 }, { dx: 30, dy: -40, r: 18 }
   ];
 
+  // 숨은 그림 위에 겹쳐 일부를 가리는 꽃잎/잎사귀 위치 (난이도가 높을수록 더 많이 사용)
+  const OCCLUDER_TEMPLATES = [
+    { dx: -9, dy: -7, r: 12 },
+    { dx: 9, dy: 5, r: 11 },
+    { dx: -4, dy: 11, r: 9 }
+  ];
+
   /* =========================================================
      5개 판 - 숨은 그림 목록 (viewBox 800x500 좌표)
      ========================================================= */
@@ -135,42 +183,42 @@
     {
       title: "1판. 벚꽃길 입구",
       objects: [
-        { id: "bunny1", icon: "bunny", x: 95, y: 830, scale: 1.05, rotate: -6, colors: { body: "#fffaf3", accent: "#f6b9cf" } },
-        { id: "bird1", icon: "bird", x: 470, y: 360, scale: 1.05, rotate: 6, colors: { body: "#a9795a", accent: "#e8a23a" } },
-        { id: "balloon1", icon: "heart", x: 75, y: 280, scale: 0.85, rotate: 8, colors: { body: "#ff8fae", accent: "#ffd2de" } }
+        { id: "bunny1", icon: "bunny", x: 95, y: 830, scale: 1.05, rotate: -6, occlude: "bush", colors: { body: "#fffaf3", accent: "#f6b9cf", eye: "#4a3327" } },
+        { id: "bird1", icon: "bird", x: 470, y: 360, scale: 1.05, rotate: 6, occlude: "blossom", colors: { body: "#a9795a", accent: "#e8a23a", eye: "#2c2c2c" } },
+        { id: "balloon1", icon: "heart", x: 75, y: 280, scale: 0.85, rotate: 8, occlude: "blossom", colors: { body: "#ff8fae", accent: "#ffd2de" } }
       ]
     },
     {
       title: "2판. 분홍빛 오솔길",
       objects: [
-        { id: "butterfly1", icon: "butterfly", x: 270, y: 700, scale: 0.9, rotate: -4, colors: { body: "#ffb0d6", accent: "#ff86b8" } },
-        { id: "cat1", icon: "cat", x: 430, y: 810, scale: 1.0, rotate: 4, colors: { body: "#7a5c46", accent: "#f6dcc0" } },
-        { id: "acorn1", icon: "acorn", x: 145, y: 880, scale: 1.05, rotate: 0, colors: { body: "#8a5a3a", accent: "#5c3c22" } }
+        { id: "butterfly1", icon: "butterfly", x: 270, y: 700, scale: 0.9, rotate: -4, occlude: "bush", colors: { body: "#ffb0d6", accent: "#ff86b8" } },
+        { id: "cat1", icon: "cat", x: 430, y: 810, scale: 1.0, rotate: 4, occlude: "bush", colors: { body: "#7a5c46", accent: "#f6dcc0", eye: "#3a2a20" } },
+        { id: "acorn1", icon: "acorn", x: 145, y: 880, scale: 1.05, rotate: 0, occlude: "bush", colors: { body: "#8a5a3a", accent: "#5c3c22" } }
       ]
     },
     {
       title: "3판. 노을 지는 벚꽃길",
       objects: [
-        { id: "squirrel1", icon: "squirrel", x: 55, y: 360, scale: 0.85, rotate: -10, colors: { body: "#a9714a", accent: "#7a4d30" } },
-        { id: "mushroom1", icon: "mushroom", x: 400, y: 850, scale: 0.95, rotate: 0, colors: { body: "#e85b4f", accent: "#fff0e0" } },
-        { id: "star1", icon: "star", x: 270, y: 100, scale: 0.9, rotate: 12, colors: { body: "#ffe28a", accent: "#fff6cf" } }
+        { id: "squirrel1", icon: "squirrel", x: 55, y: 360, scale: 0.85, rotate: -10, occlude: "trunk", colors: { body: "#a9714a", accent: "#7a4d30", eye: "#3a2a20" } },
+        { id: "mushroom1", icon: "mushroom", x: 400, y: 850, scale: 0.95, rotate: 0, occlude: "bush", colors: { body: "#e85b4f", accent: "#fff0e0" } },
+        { id: "star1", icon: "star", x: 270, y: 100, scale: 0.9, rotate: 12, occlude: "sky", colors: { body: "#ffe28a", accent: "#fff6cf" } }
       ]
     },
     {
       title: "4판. 저녁 벚꽃길",
       objects: [
-        { id: "bunny2", icon: "bunny", x: 470, y: 870, scale: 1.0, rotate: 10, colors: { body: "#e9d8ec", accent: "#c99fd6" } },
-        { id: "bird2", icon: "bird", x: 65, y: 330, scale: 0.95, rotate: -8, colors: { body: "#6f5a8a", accent: "#f2c26a" } },
-        { id: "kite1", icon: "kite", x: 450, y: 100, scale: 0.85, rotate: -18, colors: { body: "#ffd35e", accent: "#ff8f6b" } }
+        { id: "bunny2", icon: "bunny", x: 470, y: 870, scale: 1.0, rotate: 10, occlude: "bush", colors: { body: "#e9d8ec", accent: "#c99fd6", eye: "#4a3327" } },
+        { id: "bird2", icon: "bird", x: 65, y: 330, scale: 0.95, rotate: -8, occlude: "blossom", colors: { body: "#6f5a8a", accent: "#f2c26a", eye: "#2c2c2c" } },
+        { id: "kite1", icon: "kite", x: 450, y: 100, scale: 0.85, rotate: -18, occlude: "sky", colors: { body: "#ffd35e", accent: "#ff8f6b" } }
       ]
     },
     {
       title: "5판. 벚꽃 축제의 밤",
       objects: [
-        { id: "cat2", icon: "cat", x: 80, y: 810, scale: 1.0, rotate: -4, colors: { body: "#3a3040", accent: "#f0d8e8" } },
-        { id: "butterfly2", icon: "butterfly", x: 400, y: 760, scale: 0.9, rotate: 6, colors: { body: "#ffd6f0", accent: "#ff9fdc" } },
-        { id: "heart2", icon: "heart", x: 270, y: 740, scale: 0.9, rotate: -6, colors: { body: "#ff7fb0", accent: "#ffd2e6" } },
-        { id: "star2", icon: "star", x: 310, y: 90, scale: 0.85, rotate: -10, colors: { body: "#fff2b0", accent: "#ffffff" } }
+        { id: "cat2", icon: "cat", x: 80, y: 810, scale: 1.0, rotate: -4, occlude: "trunk", colors: { body: "#3a3040", accent: "#f0d8e8", eye: "#1a1218" } },
+        { id: "butterfly2", icon: "butterfly", x: 400, y: 760, scale: 0.9, rotate: 6, occlude: "bush", colors: { body: "#ffd6f0", accent: "#ff9fdc" } },
+        { id: "heart2", icon: "heart", x: 270, y: 740, scale: 0.9, rotate: -6, occlude: "bush", colors: { body: "#ff7fb0", accent: "#ffd2e6" } },
+        { id: "star2", icon: "star", x: 310, y: 90, scale: 0.85, rotate: -10, occlude: "sky", colors: { body: "#fff2b0", accent: "#ffffff" } }
       ]
     }
   ];
@@ -181,14 +229,16 @@
      - scaleMult: 숨은 그림 크기 배율 (작을수록 찾기 어려움)
      - opacity: 숨은 그림 불투명도 (낮을수록 배경과 더 잘 섞임)
      - extraRotate: 추가 회전 각도 (그림을 더 알아보기 어렵게 함)
+     - blendT: 색상을 주변 배경 색으로 섞는 비율 (높을수록 색이 배경과 비슷해짐 = 윤곽이 흐려짐)
+     - occluders: 숨은 그림 위에 겹쳐서 일부를 가리는 배경 장식(꽃잎/잎사귀) 개수
      - hints: 게임 시작 시 주어지는 힌트 개수
      ========================================================= */
   const DIFFICULTY_LEVELS = [
-    { id: 1, label: "아주 쉬움 · 크고 또렷하게 보여요", hitRadius: 58, scaleMult: 1.3, opacity: 1.0, extraRotate: 0, hints: 5 },
-    { id: 2, label: "쉬움 · 살짝 작아져요", hitRadius: 50, scaleMult: 1.12, opacity: 0.97, extraRotate: 6, hints: 4 },
-    { id: 3, label: "보통 · 적당히 숨어있어요", hitRadius: 42, scaleMult: 1.0, opacity: 0.92, extraRotate: 12, hints: 3 },
-    { id: 4, label: "어려움 · 작고 잘 안 보여요", hitRadius: 33, scaleMult: 0.85, opacity: 0.86, extraRotate: 18, hints: 2 },
-    { id: 5, label: "매우 어려움 · 완전히 꼭꼭 숨었어요", hitRadius: 25, scaleMult: 0.7, opacity: 0.8, extraRotate: 26, hints: 1 }
+    { id: 1, label: "아주 쉬움 · 색이 또렷하고 크게 보여요", hitRadius: 60, scaleMult: 1.35, opacity: 1.0, extraRotate: 0, blendT: 0, occluders: 0, hints: 5 },
+    { id: 2, label: "쉬움 · 살짝 작아지고 색이 은은해져요", hitRadius: 50, scaleMult: 1.15, opacity: 0.97, extraRotate: 6, blendT: 0.15, occluders: 0, hints: 4 },
+    { id: 3, label: "보통 · 배경과 색이 많이 비슷해져요", hitRadius: 40, scaleMult: 0.95, opacity: 0.92, extraRotate: 12, blendT: 0.35, occluders: 1, hints: 3 },
+    { id: 4, label: "어려움 · 꽃잎에 반쯤 가려져 있어요", hitRadius: 30, scaleMult: 0.78, opacity: 0.88, extraRotate: 20, blendT: 0.52, occluders: 2, hints: 2 },
+    { id: 5, label: "매우 어려움 · 윌리를 찾아라급! 완전히 숨었어요", hitRadius: 22, scaleMult: 0.62, opacity: 0.85, extraRotate: 30, blendT: 0.68, occluders: 3, hints: 1 }
   ];
 
   function currentDifficulty() {
@@ -372,20 +422,36 @@
       }));
     }
 
-    // 숨은 그림들 (맨 위, 주변과 어우러지도록 배치) - 난이도에 따라 크기/투명도/회전 조정
+    // 숨은 그림들 (맨 위, 주변과 어우러지도록 배치)
+    // 난이도에 따라 크기/투명도/회전은 물론, 주변 배경색과 섞은 위장색과
+    // 위에 겹쳐지는 꽃잎/잎사귀 가림막까지 적용해 난이도 차이를 크게 만든다
     const diff = currentDifficulty();
     const level = LEVELS[levelIdx];
     level.objects.forEach((obj, i) => {
       const extra = diff.extraRotate * (i % 2 === 0 ? 1 : -1);
+      const objScale = obj.scale * diff.scaleMult;
+      const camo = camouflageColors(obj, palette, diff);
       const g = svgEl("g", {
         class: "hidden-obj",
         id: `obj-${obj.id}`,
-        transform: `translate(${obj.x} ${obj.y}) rotate(${obj.rotate + extra}) scale(${obj.scale * diff.scaleMult})`,
+        transform: `translate(${obj.x} ${obj.y}) rotate(${obj.rotate + extra}) scale(${objScale})`,
         opacity: diff.opacity,
         "data-id": obj.id
       });
-      g.innerHTML = iconMarkup(obj.icon, obj.colors);
+      g.innerHTML = iconMarkup(obj.icon, camo);
       layer.appendChild(g);
+
+      // 가림막: 난이도가 높을수록 꽃잎/잎사귀 색 원으로 일부를 덮어 더 찾기 어렵게 함
+      const occluderColor = blendTargetColor(obj.occlude, palette);
+      OCCLUDER_TEMPLATES.slice(0, diff.occluders).forEach((o) => {
+        layer.appendChild(svgEl("circle", {
+          cx: obj.x + o.dx * objScale,
+          cy: obj.y + o.dy * objScale,
+          r: o.r * objScale,
+          fill: occluderColor,
+          opacity: "0.92"
+        }));
+      });
     });
   }
 
