@@ -176,12 +176,33 @@
   ];
 
   /* =========================================================
+     난이도 설정 (1: 아주 쉬움 ~ 5: 매우 어려움)
+     - hitRadius: 정답으로 인정하는 터치 반경 (작을수록 정확히 눌러야 함)
+     - scaleMult: 숨은 그림 크기 배율 (작을수록 찾기 어려움)
+     - opacity: 숨은 그림 불투명도 (낮을수록 배경과 더 잘 섞임)
+     - extraRotate: 추가 회전 각도 (그림을 더 알아보기 어렵게 함)
+     - hints: 게임 시작 시 주어지는 힌트 개수
+     ========================================================= */
+  const DIFFICULTY_LEVELS = [
+    { id: 1, label: "아주 쉬움 · 크고 또렷하게 보여요", hitRadius: 58, scaleMult: 1.3, opacity: 1.0, extraRotate: 0, hints: 5 },
+    { id: 2, label: "쉬움 · 살짝 작아져요", hitRadius: 50, scaleMult: 1.12, opacity: 0.97, extraRotate: 6, hints: 4 },
+    { id: 3, label: "보통 · 적당히 숨어있어요", hitRadius: 42, scaleMult: 1.0, opacity: 0.92, extraRotate: 12, hints: 3 },
+    { id: 4, label: "어려움 · 작고 잘 안 보여요", hitRadius: 33, scaleMult: 0.85, opacity: 0.86, extraRotate: 18, hints: 2 },
+    { id: 5, label: "매우 어려움 · 완전히 꼭꼭 숨었어요", hitRadius: 25, scaleMult: 0.7, opacity: 0.8, extraRotate: 26, hints: 1 }
+  ];
+
+  function currentDifficulty() {
+    return DIFFICULTY_LEVELS[state.difficulty - 1];
+  }
+
+  /* =========================================================
      게임 상태
      ========================================================= */
   const state = {
     levelIndex: 0,
     found: new Set(),
-    hintsLeft: 3,
+    difficulty: 1,
+    hintsLeft: 5,
     startTime: 0,
     totalElapsed: 0,
     busy: false
@@ -200,7 +221,10 @@
     btnHint: document.getElementById("btn-hint"),
     hintCount: document.getElementById("hint-count"),
     progressDots: document.getElementById("progress-dots"),
-    levelTitle: document.getElementById("level-title"),
+    levelTitle: document.getElementById("level-title-text"),
+    diffBadge: document.getElementById("diff-badge"),
+    diffButtons: document.getElementById("difficulty-buttons"),
+    diffDesc: document.getElementById("difficulty-desc"),
     foundCounter: document.getElementById("found-counter"),
     scene: document.getElementById("scene"),
     petalLayer: document.getElementById("petal-layer"),
@@ -348,13 +372,16 @@
       }));
     }
 
-    // 숨은 그림들 (맨 위, 주변과 어우러지도록 배치)
+    // 숨은 그림들 (맨 위, 주변과 어우러지도록 배치) - 난이도에 따라 크기/투명도/회전 조정
+    const diff = currentDifficulty();
     const level = LEVELS[levelIdx];
-    level.objects.forEach((obj) => {
+    level.objects.forEach((obj, i) => {
+      const extra = diff.extraRotate * (i % 2 === 0 ? 1 : -1);
       const g = svgEl("g", {
         class: "hidden-obj",
         id: `obj-${obj.id}`,
-        transform: `translate(${obj.x} ${obj.y}) rotate(${obj.rotate}) scale(${obj.scale})`,
+        transform: `translate(${obj.x} ${obj.y}) rotate(${obj.rotate + extra}) scale(${obj.scale * diff.scaleMult})`,
+        opacity: diff.opacity,
         "data-id": obj.id
       });
       g.innerHTML = iconMarkup(obj.icon, obj.colors);
@@ -416,6 +443,7 @@
 
     const level = LEVELS[idx];
     el.levelTitle.textContent = level.title;
+    el.diffBadge.textContent = `Lv.${state.difficulty}`;
     el.foundCounter.textContent = `0 / ${level.objects.length}`;
     renderDots();
     renderScene(idx);
@@ -440,12 +468,11 @@
     return { x, y };
   }
 
-  const HIT_RADIUS = 42;
-
   function handleTap(evt) {
     if (state.busy) return;
     const pt = getSvgPoint(evt);
     const level = LEVELS[state.levelIndex];
+    const hitRadius = currentDifficulty().hitRadius;
 
     let hit = null;
     let bestDist = Infinity;
@@ -454,7 +481,7 @@
       const dx = pt.x - obj.x;
       const dy = pt.y - obj.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= HIT_RADIUS && dist < bestDist) {
+      if (dist <= hitRadius && dist < bestDist) {
         bestDist = dist;
         hit = obj;
       }
@@ -564,18 +591,36 @@
     }
   }
 
-  function restartGame() {
-    state.hintsLeft = 3;
+  function beginNewGame() {
+    const diff = currentDifficulty();
+    state.hintsLeft = diff.hints;
     state.totalElapsed = 0;
     el.hintCount.textContent = state.hintsLeft;
     el.btnHint.disabled = false;
     startLevel(0);
   }
 
+  /* ---------- 난이도 선택 ---------- */
+  function updateDifficultyUI() {
+    const diff = currentDifficulty();
+    el.diffButtons.querySelectorAll(".diff-btn").forEach((btn) => {
+      btn.classList.toggle("active", Number(btn.dataset.diff) === state.difficulty);
+    });
+    el.diffDesc.textContent = diff.label;
+  }
+
+  el.diffButtons.querySelectorAll(".diff-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.difficulty = Number(btn.dataset.diff);
+      updateDifficultyUI();
+    });
+  });
+  updateDifficultyUI();
+
   /* ---------- 이벤트 바인딩 ---------- */
-  el.btnStart.addEventListener("click", () => startLevel(0));
+  el.btnStart.addEventListener("click", beginNewGame);
   el.btnNext.addEventListener("click", onNextPressed);
-  el.btnRestart.addEventListener("click", restartGame);
+  el.btnRestart.addEventListener("click", () => showScreen("start"));
   el.btnHint.addEventListener("click", useHint);
   el.scene.addEventListener("pointerdown", handleTap);
 
