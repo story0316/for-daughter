@@ -565,17 +565,16 @@
     const node = document.getElementById(`obj-${obj.id}`);
     if (node) {
       node.classList.add("found");
-      // 정답 표시: 동그라미가 나타났다가 서서히 사라짐
+      // 정답 표시: 동그라미가 나타난 뒤 사라지지 않고 계속 표시됨 (이번 판이 끝날 때까지)
       const ring = svgEl("circle", {
-        cx: obj.x, cy: obj.y, r: 14, fill: "none", stroke: "#5be08a", "stroke-width": "4", opacity: "0.95"
+        cx: obj.x, cy: obj.y, r: 14, fill: "none", stroke: "#5be08a", "stroke-width": "4", opacity: "0.95",
+        class: "found-ring"
       });
-      ring.style.transition = "r 0.6s ease, opacity 0.6s ease";
+      ring.style.transition = "r 0.5s ease";
       el.scene.appendChild(ring);
       requestAnimationFrame(() => {
-        ring.setAttribute("r", "46");
-        ring.style.opacity = "0";
+        ring.setAttribute("r", "40");
       });
-      setTimeout(() => ring.remove(), 650);
     }
 
     el.foundCounter.textContent = `${state.found.size} / ${LEVELS[state.levelIndex].objects.length}`;
