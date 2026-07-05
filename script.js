@@ -463,7 +463,7 @@
     if (hit) {
       markFound(hit, pt);
     } else {
-      spawnMissRipple(pt);
+      spawnMissMark(pt);
     }
   }
 
@@ -472,20 +472,21 @@
     const node = document.getElementById(`obj-${obj.id}`);
     if (node) {
       node.classList.add("found");
+      // 정답 표시: 동그라미가 나타났다가 서서히 사라짐
       const ring = svgEl("circle", {
-        cx: obj.x, cy: obj.y, r: 6, fill: "none", stroke: "#ffe28a", "stroke-width": "3", opacity: "0.9"
+        cx: obj.x, cy: obj.y, r: 14, fill: "none", stroke: "#5be08a", "stroke-width": "4", opacity: "0.95"
       });
-      ring.style.transition = "r 0.5s ease, opacity 0.5s ease";
+      ring.style.transition = "r 0.6s ease, opacity 0.6s ease";
       el.scene.appendChild(ring);
       requestAnimationFrame(() => {
-        ring.setAttribute("r", "50");
+        ring.setAttribute("r", "46");
         ring.style.opacity = "0";
       });
-      setTimeout(() => ring.remove(), 550);
+      setTimeout(() => ring.remove(), 650);
     }
 
     el.foundCounter.textContent = `${state.found.size} / ${LEVELS[state.levelIndex].objects.length}`;
-    showToast("찾았다! ✨");
+    showToast("정답이에요! ⭕");
 
     if (state.found.size === LEVELS[state.levelIndex].objects.length) {
       state.busy = true;
@@ -493,17 +494,23 @@
     }
   }
 
-  function spawnMissRipple(pt) {
-    const ring = svgEl("circle", {
-      cx: pt.x, cy: pt.y, r: 4, fill: "none", stroke: "#ffffff", "stroke-width": "2.5", opacity: "0.75"
+  function spawnMissMark(pt) {
+    // 오답 표시: X 표시가 나타났다가 서서히 사라짐
+    const g = svgEl("g", {
+      transform: `translate(${pt.x} ${pt.y})`,
+      opacity: "0"
     });
-    ring.style.transition = "r 0.4s ease, opacity 0.4s ease";
-    el.scene.appendChild(ring);
-    requestAnimationFrame(() => {
-      ring.setAttribute("r", "22");
-      ring.style.opacity = "0";
-    });
-    setTimeout(() => ring.remove(), 420);
+    g.appendChild(svgEl("line", { x1: -16, y1: -16, x2: 16, y2: 16, stroke: "#ff4d4d", "stroke-width": "6", "stroke-linecap": "round" }));
+    g.appendChild(svgEl("line", { x1: 16, y1: -16, x2: -16, y2: 16, stroke: "#ff4d4d", "stroke-width": "6", "stroke-linecap": "round" }));
+    g.style.transition = "opacity 0.15s ease, transform 0.5s ease";
+    el.scene.appendChild(g);
+    requestAnimationFrame(() => { g.style.opacity = "1"; });
+    setTimeout(() => {
+      g.style.opacity = "0";
+      g.setAttribute("transform", `translate(${pt.x} ${pt.y}) scale(0.6)`);
+    }, 550);
+    setTimeout(() => g.remove(), 750);
+    showToast("아쉬워요! 다시 찾아보세요 ❌");
   }
 
   /* ---------- 힌트 ---------- */
