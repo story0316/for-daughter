@@ -70,7 +70,55 @@
     kite: (c) => `
       <path d="M0 -20 L16 0 L0 20 L-16 0 Z" fill="${c.body}"/>
       <path d="M0 -20 L16 0 L0 0 Z" fill="${c.accent}" opacity="0.55"/>
-      <path d="M0 20 Q 4 30 -2 36 Q 6 40 0 46" stroke="#d8d8d8" stroke-width="1.4" fill="none"/>`
+      <path d="M0 20 Q 4 30 -2 36 Q 6 40 0 46" stroke="#d8d8d8" stroke-width="1.4" fill="none"/>`,
+    dragonfly: (c) => `
+      <ellipse cx="-14" cy="-5" rx="15" ry="4" fill="${c.accent}" opacity="0.75" transform="rotate(-14 -14 -5)"/>
+      <ellipse cx="14" cy="-5" rx="15" ry="4" fill="${c.accent}" opacity="0.75" transform="rotate(14 14 -5)"/>
+      <ellipse cx="-12" cy="4" rx="12" ry="3.2" fill="${c.accent}" opacity="0.65" transform="rotate(-8 -12 4)"/>
+      <ellipse cx="12" cy="4" rx="12" ry="3.2" fill="${c.accent}" opacity="0.65" transform="rotate(8 12 4)"/>
+      <ellipse cx="0" cy="-6" rx="3.4" ry="6" fill="${c.body}"/>
+      <ellipse cx="0" cy="14" rx="2.2" ry="14" fill="${c.body}"/>
+      <circle cx="-1.8" cy="-13" r="1.6" fill="${c.eye}"/>
+      <circle cx="1.8" cy="-13" r="1.6" fill="${c.eye}"/>`,
+    hedgehog: (c) => `
+      <ellipse cx="0" cy="9" rx="15" ry="8" fill="${c.accent}"/>
+      <path d="M -15 5 Q -13 -14 -3 -9 Q 3 -17 9 -8 Q 16 -13 14 3 Q 6 -3 0 1 Q -8 -3 -15 5 Z" fill="${c.body}"/>
+      <path d="M 13 5 L 21 3 L 13 9 Z" fill="${c.eye}"/>
+      <circle cx="8" cy="2" r="1.3" fill="${c.eye}"/>`,
+    owl: (c) => `
+      <ellipse cx="0" cy="7" rx="13" ry="15" fill="${c.body}"/>
+      <path d="M -9 -12 L -13 -21 L -4 -14 Z" fill="${c.body}"/>
+      <path d="M 9 -12 L 13 -21 L 4 -14 Z" fill="${c.body}"/>
+      <path d="M -13 9 Q -19 15 -12 22 Z" fill="${c.body}"/>
+      <path d="M 13 9 Q 19 15 12 22 Z" fill="${c.body}"/>
+      <circle cx="0" cy="-1" r="10" fill="${c.accent}"/>
+      <circle cx="-5" cy="-1" r="4.2" fill="#fff9ee"/>
+      <circle cx="5" cy="-1" r="4.2" fill="#fff9ee"/>
+      <circle cx="-5" cy="-1" r="2" fill="${c.eye}"/>
+      <circle cx="5" cy="-1" r="2" fill="${c.eye}"/>
+      <path d="M -2 6 L 2 6 L 0 10 Z" fill="#f0a03c"/>`,
+    fox: (c) => `
+      <ellipse cx="0" cy="11" rx="14" ry="9" fill="${c.body}"/>
+      <path d="M 11 15 Q 26 11 24 -2 Q 21 5 12 9 Z" fill="${c.body}"/>
+      <path d="M 22 -1 Q 25 4 20 6 Z" fill="${c.accent}"/>
+      <path d="M -10 -3 L -14 -15 L -2 -7 Z" fill="${c.body}"/>
+      <path d="M 10 -3 L 14 -15 L 2 -7 Z" fill="${c.body}"/>
+      <path d="M -8 -9 Q 0 -15 8 -9 Q 6 1 0 3 Q -6 1 -8 -9 Z" fill="${c.body}"/>
+      <path d="M -3 -1 Q 0 5 3 -1 Q 0 3 -3 -1 Z" fill="${c.accent}"/>
+      <circle cx="-3.5" cy="-3" r="1.2" fill="${c.eye}"/>
+      <circle cx="3.5" cy="-3" r="1.2" fill="${c.eye}"/>
+      <circle cx="0" cy="1" r="1" fill="${c.eye}"/>`,
+    firefly: (c) => `
+      <circle cx="0" cy="5" r="11" fill="${c.accent}" opacity="0.3"/>
+      <ellipse cx="-7" cy="-2" rx="7" ry="3" fill="${c.body}" opacity="0.6" transform="rotate(-22 -7 -2)"/>
+      <ellipse cx="7" cy="-2" rx="7" ry="3" fill="${c.body}" opacity="0.6" transform="rotate(22 7 -2)"/>
+      <ellipse cx="0" cy="-2" rx="4" ry="6.5" fill="${c.eye}"/>
+      <ellipse cx="0" cy="9" rx="4.6" ry="6" fill="${c.accent}"/>`,
+    dango: (c) => `
+      <line x1="0" y1="-23" x2="0" y2="17" stroke="#c9a06a" stroke-width="2.4"/>
+      <circle cx="0" cy="-15" r="7" fill="${c.body}"/>
+      <circle cx="0" cy="-1" r="7" fill="#fff8ec"/>
+      <circle cx="0" cy="13" r="7" fill="${c.accent}"/>`
   };
 
   function iconMarkup(name, colors) {
@@ -201,23 +249,23 @@
       objects: [
         { id: "squirrel1", icon: "squirrel", x: 55, y: 360, scale: 0.85, rotate: -10, occlude: "trunk", colors: { body: "#a9714a", accent: "#7a4d30", eye: "#3a2a20" } },
         { id: "mushroom1", icon: "mushroom", x: 400, y: 850, scale: 0.95, rotate: 0, occlude: "bush", colors: { body: "#e85b4f", accent: "#fff0e0" } },
-        { id: "star1", icon: "star", x: 270, y: 100, scale: 0.9, rotate: 12, occlude: "sky", colors: { body: "#ffe28a", accent: "#fff6cf" } }
+        { id: "dragonfly1", icon: "dragonfly", x: 270, y: 100, scale: 0.95, rotate: 12, occlude: "sky", colors: { body: "#c65a3c", accent: "#ffcf9c", eye: "#3a2416" } }
       ]
     },
     {
       title: "4판. 저녁 벚꽃길",
       objects: [
-        { id: "bunny2", icon: "bunny", x: 470, y: 870, scale: 1.0, rotate: 10, occlude: "bush", colors: { body: "#e9d8ec", accent: "#c99fd6", eye: "#4a3327" } },
-        { id: "bird2", icon: "bird", x: 65, y: 330, scale: 0.95, rotate: -8, occlude: "blossom", colors: { body: "#6f5a8a", accent: "#f2c26a", eye: "#2c2c2c" } },
+        { id: "hedgehog1", icon: "hedgehog", x: 470, y: 870, scale: 1.0, rotate: 10, occlude: "bush", colors: { body: "#7a5c74", accent: "#e9d8ec", eye: "#2a1f28" } },
+        { id: "owl1", icon: "owl", x: 65, y: 330, scale: 0.95, rotate: -8, occlude: "blossom", colors: { body: "#6f5a8a", accent: "#c9b8d6", eye: "#2c2c2c" } },
         { id: "kite1", icon: "kite", x: 450, y: 100, scale: 0.85, rotate: -18, occlude: "sky", colors: { body: "#ffd35e", accent: "#ff8f6b" } }
       ]
     },
     {
       title: "5판. 벚꽃 축제의 밤",
       objects: [
-        { id: "cat2", icon: "cat", x: 80, y: 810, scale: 1.0, rotate: -4, occlude: "trunk", colors: { body: "#3a3040", accent: "#f0d8e8", eye: "#1a1218" } },
-        { id: "butterfly2", icon: "butterfly", x: 400, y: 760, scale: 0.9, rotate: 6, occlude: "bush", colors: { body: "#ffd6f0", accent: "#ff9fdc" } },
-        { id: "heart2", icon: "heart", x: 270, y: 740, scale: 0.9, rotate: -6, occlude: "bush", colors: { body: "#ff7fb0", accent: "#ffd2e6" } },
+        { id: "fox1", icon: "fox", x: 80, y: 810, scale: 1.0, rotate: -4, occlude: "trunk", colors: { body: "#d9743f", accent: "#fff3e6", eye: "#1a1218" } },
+        { id: "firefly1", icon: "firefly", x: 400, y: 760, scale: 0.9, rotate: 6, occlude: "bush", colors: { body: "#3a3450", accent: "#d9ff8a", eye: "#241f38" } },
+        { id: "dango1", icon: "dango", x: 270, y: 740, scale: 0.9, rotate: -6, occlude: "bush", colors: { body: "#ff9fc2", accent: "#9edb8a" } },
         { id: "star2", icon: "star", x: 310, y: 90, scale: 0.85, rotate: -10, occlude: "sky", colors: { body: "#fff2b0", accent: "#ffffff" } }
       ]
     }
