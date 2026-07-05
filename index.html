@@ -17,6 +17,15 @@
         <h1>벚꽃길<br/>숨은그림찾기</h1>
         <p class="subtitle">화면을 톡톡 터치해서<br/>숨어있는 그림을 모두 찾아보세요!</p>
 
+        <div class="mode-picker">
+          <p class="mode-label">게임 모드를 선택하세요</p>
+          <div class="mode-buttons" id="mode-buttons">
+            <button class="mode-btn" data-mode="chameleon">🦎<br/>카멜레온<br/>숨은그림찾기</button>
+            <button class="mode-btn" data-mode="diff">🔍<br/>틀린그림<br/>찾기</button>
+          </div>
+          <p class="mode-desc" id="mode-desc">대상이 배경 색과 모양에 맞춰 매번 다르게 나타나요 🦎</p>
+        </div>
+
         <div class="difficulty-picker">
           <p class="difficulty-label">난이도를 선택하세요</p>
           <div class="difficulty-buttons" id="difficulty-buttons">
@@ -50,6 +59,11 @@
 
       <div id="stage-wrap">
         <svg id="scene" viewBox="0 0 540 960" preserveAspectRatio="xMidYMid meet"></svg>
+        <div id="diff-stage" style="display:none">
+          <svg id="sceneA" class="diff-svg" viewBox="0 140 540 520" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="diff-divider"></div>
+          <svg id="sceneB" class="diff-svg" viewBox="0 140 540 520" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
         <div id="petal-layer"></div>
         <div id="toast" class="toast"></div>
       </div>

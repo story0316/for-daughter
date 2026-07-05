@@ -5,9 +5,12 @@
   const VB_W = 540;
   const VB_H = 960;
   const HORIZON_Y = 260;
+  const MAIN_VB = { x: 0, y: 0, w: VB_W, h: VB_H };
+  const DIFF_VB = { x: 0, y: 140, w: 540, h: 520 };
 
   /* =========================================================
-     아이콘 라이브러리 (숨은 그림들) - 원점(0,0) 기준 상대 좌표
+     아이콘 라이브러리 (카멜레온 모드에서 무작위로 골라 쓰는 그림들)
+     원점(0,0) 기준 상대 좌표
      ========================================================= */
   const ICONS = {
     bunny: (c) => `
@@ -121,12 +124,14 @@
       <circle cx="0" cy="13" r="7" fill="${c.accent}"/>`
   };
 
+  const ICON_NAMES = Object.keys(ICONS);
+
   function iconMarkup(name, colors) {
     const fn = ICONS[name];
     return fn ? fn(colors) : "";
   }
 
-  /* ---------- 색상 위장(카무플라주) 유틸 ---------- */
+  /* ---------- 색상 유틸 (카무플라주 + 무작위 색 생성 + 색조 회전) ---------- */
   function hexToRgb(hex) {
     const h = hex.replace("#", "");
     const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
@@ -146,7 +151,41 @@
     return rgbToHex(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t);
   }
 
-  // 숨은 그림이 어떤 배경 요소 옆에 있는지에 따라 위장할 색을 고른다
+  function hslToHex(h, s, l) {
+    const hh = ((h % 360) + 360) % 360;
+    const ss = s / 100;
+    const ll = l / 100;
+    const k = (n) => (n + hh / 30) % 12;
+    const a = ss * Math.min(ll, 1 - ll);
+    const f = (n) => ll - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+    return rgbToHex(255 * f(0), 255 * f(8), 255 * f(4));
+  }
+
+  function hexToHsl(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    const rn = r / 255, gn = g / 255, bn = b / 255;
+    const max = Math.max(rn, gn, bn), min = Math.min(rn, gn, bn);
+    let h = 0, s = 0;
+    const l = (max + min) / 2;
+    const d = max - min;
+    if (d !== 0) {
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case rn: h = (gn - bn) / d + (gn < bn ? 6 : 0); break;
+        case gn: h = (bn - rn) / d + 2; break;
+        default: h = (rn - gn) / d + 4; break;
+      }
+      h /= 6;
+    }
+    return { h: h * 360, s: s * 100, l: l * 100 };
+  }
+
+  function rotateHue(hex, deg) {
+    const { h, s, l } = hexToHsl(hex);
+    return hslToHex(h + deg, s, l);
+  }
+
+  // 카멜레온 그림이 어떤 배경 요소 옆에 있는지에 따라 위장할 색을 고른다
   function blendTargetColor(occlude, palette) {
     switch (occlude) {
       case "blossom": return palette.blossom[0];
@@ -165,6 +204,18 @@
       accent: mixHex(obj.colors.accent, target, t * 0.8),
       eye: mixHex(obj.colors.eye || "#33261c", target, t * 0.5)
     };
+  }
+
+  function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
   }
 
   /* =========================================================
@@ -211,13 +262,17 @@
     { x: 130, y: 700 }, { x: 410, y: 720 }, { x: 100, y: 860 }, { x: 440, y: 860 }
   ];
 
+  const SKY_POINTS = [
+    { x: 130, y: 80 }, { x: 270, y: 60 }, { x: 410, y: 90 }, { x: 190, y: 150 }, { x: 360, y: 140 }
+  ];
+
   const BLOSSOM_OFFSETS = [
     { dx: -34, dy: -78, r: 27 }, { dx: 0, dy: -96, r: 32 }, { dx: 34, dy: -78, r: 27 },
     { dx: -18, dy: -56, r: 23 }, { dx: 18, dy: -56, r: 23 }, { dx: 0, dy: -68, r: 22 },
     { dx: -30, dy: -40, r: 18 }, { dx: 30, dy: -40, r: 18 }
   ];
 
-  // 숨은 그림 위에 겹쳐 일부를 가리는 꽃잎/잎사귀 위치 (난이도가 높을수록 더 많이 사용)
+  // 카멜레온 그림 위에 겹쳐 일부를 가리는 꽃잎/잎사귀 위치 (난이도가 높을수록 더 많이 사용)
   const OCCLUDER_TEMPLATES = [
     { dx: -9, dy: -7, r: 12 },
     { dx: 9, dy: 5, r: 11 },
@@ -225,60 +280,26 @@
   ];
 
   /* =========================================================
-     5개 판 - 숨은 그림 목록 (viewBox 800x500 좌표)
+     5개 판 - 배경 요소 분포 템플릿
+     (카멜레온 모드에서 몇 개를, 어떤 배경 요소 옆에 생성할지 결정하는 데만 쓰임 -
+      실제 모양/색/정확한 위치는 매번 무작위로 생성됨)
      ========================================================= */
   const LEVELS = [
-    {
-      title: "1판. 벚꽃길 입구",
-      objects: [
-        { id: "bunny1", icon: "bunny", x: 95, y: 830, scale: 1.05, rotate: -6, occlude: "bush", colors: { body: "#fffaf3", accent: "#f6b9cf", eye: "#4a3327" } },
-        { id: "bird1", icon: "bird", x: 470, y: 360, scale: 1.05, rotate: 6, occlude: "blossom", colors: { body: "#a9795a", accent: "#e8a23a", eye: "#2c2c2c" } },
-        { id: "balloon1", icon: "heart", x: 75, y: 280, scale: 0.85, rotate: 8, occlude: "blossom", colors: { body: "#ff8fae", accent: "#ffd2de" } }
-      ]
-    },
-    {
-      title: "2판. 분홍빛 오솔길",
-      objects: [
-        { id: "butterfly1", icon: "butterfly", x: 270, y: 700, scale: 0.9, rotate: -4, occlude: "bush", colors: { body: "#ffb0d6", accent: "#ff86b8" } },
-        { id: "cat1", icon: "cat", x: 430, y: 810, scale: 1.0, rotate: 4, occlude: "bush", colors: { body: "#7a5c46", accent: "#f6dcc0", eye: "#3a2a20" } },
-        { id: "acorn1", icon: "acorn", x: 145, y: 880, scale: 1.05, rotate: 0, occlude: "bush", colors: { body: "#8a5a3a", accent: "#5c3c22" } }
-      ]
-    },
-    {
-      title: "3판. 노을 지는 벚꽃길",
-      objects: [
-        { id: "squirrel1", icon: "squirrel", x: 55, y: 360, scale: 0.85, rotate: -10, occlude: "trunk", colors: { body: "#a9714a", accent: "#7a4d30", eye: "#3a2a20" } },
-        { id: "mushroom1", icon: "mushroom", x: 400, y: 850, scale: 0.95, rotate: 0, occlude: "bush", colors: { body: "#e85b4f", accent: "#fff0e0" } },
-        { id: "dragonfly1", icon: "dragonfly", x: 270, y: 100, scale: 0.95, rotate: 12, occlude: "sky", colors: { body: "#c65a3c", accent: "#ffcf9c", eye: "#3a2416" } }
-      ]
-    },
-    {
-      title: "4판. 저녁 벚꽃길",
-      objects: [
-        { id: "hedgehog1", icon: "hedgehog", x: 470, y: 870, scale: 1.0, rotate: 10, occlude: "bush", colors: { body: "#7a5c74", accent: "#e9d8ec", eye: "#2a1f28" } },
-        { id: "owl1", icon: "owl", x: 65, y: 330, scale: 0.95, rotate: -8, occlude: "blossom", colors: { body: "#6f5a8a", accent: "#c9b8d6", eye: "#2c2c2c" } },
-        { id: "kite1", icon: "kite", x: 450, y: 100, scale: 0.85, rotate: -18, occlude: "sky", colors: { body: "#ffd35e", accent: "#ff8f6b" } }
-      ]
-    },
-    {
-      title: "5판. 벚꽃 축제의 밤",
-      objects: [
-        { id: "fox1", icon: "fox", x: 80, y: 810, scale: 1.0, rotate: -4, occlude: "trunk", colors: { body: "#d9743f", accent: "#fff3e6", eye: "#1a1218" } },
-        { id: "firefly1", icon: "firefly", x: 400, y: 760, scale: 0.9, rotate: 6, occlude: "bush", colors: { body: "#3a3450", accent: "#d9ff8a", eye: "#241f38" } },
-        { id: "dango1", icon: "dango", x: 270, y: 740, scale: 0.9, rotate: -6, occlude: "bush", colors: { body: "#ff9fc2", accent: "#9edb8a" } },
-        { id: "star2", icon: "star", x: 310, y: 90, scale: 0.85, rotate: -10, occlude: "sky", colors: { body: "#fff2b0", accent: "#ffffff" } }
-      ]
-    }
+    { title: "1판. 벚꽃길 입구", objects: [{ occlude: "bush", scale: 1.05 }, { occlude: "blossom", scale: 1.05 }, { occlude: "blossom", scale: 0.85 }] },
+    { title: "2판. 분홍빛 오솔길", objects: [{ occlude: "bush", scale: 0.9 }, { occlude: "bush", scale: 1.0 }, { occlude: "bush", scale: 1.05 }] },
+    { title: "3판. 노을 지는 벚꽃길", objects: [{ occlude: "trunk", scale: 0.85 }, { occlude: "bush", scale: 0.95 }, { occlude: "sky", scale: 0.9 }] },
+    { title: "4판. 저녁 벚꽃길", objects: [{ occlude: "bush", scale: 1.0 }, { occlude: "blossom", scale: 0.95 }, { occlude: "sky", scale: 0.85 }] },
+    { title: "5판. 벚꽃 축제의 밤", objects: [{ occlude: "trunk", scale: 1.0 }, { occlude: "bush", scale: 0.9 }, { occlude: "bush", scale: 0.9 }, { occlude: "sky", scale: 0.85 }] }
   ];
 
   /* =========================================================
      난이도 설정 (1: 아주 쉬움 ~ 5: 매우 어려움)
-     - hitRadius: 정답으로 인정하는 터치 반경 (작을수록 정확히 눌러야 함)
-     - scaleMult: 숨은 그림 크기 배율 (작을수록 찾기 어려움)
-     - opacity: 숨은 그림 불투명도 (낮을수록 배경과 더 잘 섞임)
-     - extraRotate: 추가 회전 각도 (그림을 더 알아보기 어렵게 함)
-     - blendT: 색상을 주변 배경 색으로 섞는 비율 (높을수록 색이 배경과 비슷해짐 = 윤곽이 흐려짐)
-     - occluders: 숨은 그림 위에 겹쳐서 일부를 가리는 배경 장식(꽃잎/잎사귀) 개수
+     - hitRadius: (카멜레온 모드) 정답으로 인정하는 터치 반경
+     - scaleMult: (카멜레온 모드) 그림 크기 배율
+     - opacity: (카멜레온 모드) 그림 불투명도
+     - extraRotate: (카멜레온 모드) 추가 회전 각도
+     - blendT: (두 모드 공통) 색상을 주변 배경 색으로 섞는 비율 / 틀린그림 색 차이의 반대비율
+     - occluders: (카멜레온 모드) 그림 위에 겹쳐서 가리는 장식 개수
      - hints: 게임 시작 시 주어지는 힌트 개수
      ========================================================= */
   const DIFFICULTY_LEVELS = [
@@ -289,6 +310,14 @@
     { id: 5, label: "매우 어려움 · 윌리를 찾아라급! 완전히 숨었어요", hitRadius: 22, scaleMult: 0.62, opacity: 0.85, extraRotate: 30, blendT: 0.68, occluders: 3, hints: 1 }
   ];
 
+  // 틀린그림찾기 모드에서 난이도별로 추가되는 차이 개수
+  const DIFF_COUNT_BONUS = [0, 0, 1, 1, 2];
+
+  const MODE_INFO = {
+    chameleon: { label: "대상이 배경 색과 모양에 맞춰 매번 다르게 나타나요 🦎", startToast: "숨은 그림을 찾아보세요! 🔍" },
+    diff: { label: "위·아래 그림을 비교해서 다른 부분을 찾아보세요 🔍", startToast: "다른 부분을 찾아보세요! 🔍" }
+  };
+
   function currentDifficulty() {
     return DIFFICULTY_LEVELS[state.difficulty - 1];
   }
@@ -297,8 +326,10 @@
      게임 상태
      ========================================================= */
   const state = {
+    mode: "chameleon",
     levelIndex: 0,
     found: new Set(),
+    currentTargets: [],
     difficulty: 1,
     hintsLeft: 5,
     startTime: 0,
@@ -321,10 +352,15 @@
     progressDots: document.getElementById("progress-dots"),
     levelTitle: document.getElementById("level-title-text"),
     diffBadge: document.getElementById("diff-badge"),
+    modeButtons: document.getElementById("mode-buttons"),
+    modeDesc: document.getElementById("mode-desc"),
     diffButtons: document.getElementById("difficulty-buttons"),
     diffDesc: document.getElementById("difficulty-desc"),
     foundCounter: document.getElementById("found-counter"),
     scene: document.getElementById("scene"),
+    diffStage: document.getElementById("diff-stage"),
+    sceneA: document.getElementById("sceneA"),
+    sceneB: document.getElementById("sceneB"),
     petalLayer: document.getElementById("petal-layer"),
     toast: document.getElementById("toast"),
     levelClearTitle: document.getElementById("levelclear-title"),
@@ -343,8 +379,9 @@
     return node;
   }
 
-  /* ---------- 배경 그리기 ---------- */
-  function buildTree(spot, palette) {
+  /* ---------- 배경 그리기 (카멜레온/틀린그림 두 모드가 공유) ---------- */
+  function buildTree(spot, palette, opts) {
+    opts = opts || {};
     const g = svgEl("g", { transform: `translate(${spot.x} ${spot.y}) scale(${spot.scale})` });
     const trunk = svgEl("path", {
       d: "M -6 40 Q -10 0 -3 -30 Q 0 -34 3 -30 Q 10 0 6 40 Z",
@@ -359,56 +396,64 @@
     });
     g.appendChild(trunk);
     g.appendChild(branch);
-    BLOSSOM_OFFSETS.forEach((o, i) => {
-      const color = palette.blossom[i % palette.blossom.length];
-      g.appendChild(svgEl("circle", {
-        cx: o.dx, cy: o.dy - 30, r: o.r, fill: color, opacity: "0.95"
-      }));
-    });
+    if (!opts.bald) {
+      let blossomColors = palette.blossom;
+      if (opts.recolorDeg) blossomColors = blossomColors.map((c) => rotateHue(c, opts.recolorDeg));
+      BLOSSOM_OFFSETS.forEach((o, i) => {
+        g.appendChild(svgEl("circle", {
+          cx: o.dx, cy: o.dy - 30, r: o.r, fill: blossomColors[i % blossomColors.length], opacity: "0.95"
+        }));
+      });
+    }
     return g;
   }
 
-  function buildBush(spot, palette) {
-    const g = svgEl("g", { transform: `translate(${spot.x} ${spot.y}) scale(${spot.scale})` });
+  function buildBush(spot, palette, opts) {
+    opts = opts || {};
+    const scaleAdj = opts.resizeFactor || 1;
+    const g = svgEl("g", { transform: `translate(${spot.x} ${spot.y}) scale(${spot.scale * scaleAdj})` });
+    let colors = palette.bush;
+    if (opts.recolorDeg) colors = colors.map((c) => rotateHue(c, opts.recolorDeg));
     const offsets = [
       { dx: -20, dy: 0, r: 20 }, { dx: 0, dy: -8, r: 24 }, { dx: 20, dy: 0, r: 20 },
       { dx: -10, dy: 6, r: 16 }, { dx: 10, dy: 6, r: 16 }
     ];
     offsets.forEach((o, i) => {
       g.appendChild(svgEl("circle", {
-        cx: o.dx, cy: o.dy, r: o.r, fill: palette.bush[i % palette.bush.length], opacity: "0.95"
+        cx: o.dx, cy: o.dy, r: o.r, fill: colors[i % colors.length], opacity: "0.95"
       }));
     });
     return g;
   }
 
-  function renderScene(levelIdx) {
-    const palette = PALETTES[levelIdx];
-    const scene = el.scene;
-    scene.innerHTML = "";
+  // 배경(하늘/언덕/길/등불/수풀/나무/떨어진 꽃잎)만 그리고, 그린 레이어(g)를 반환한다.
+  // mutations가 있으면 특정 나무/수풀/등불에 변형(재색칠/크기변경/제거)을 적용한다 (틀린그림찾기용)
+  function drawBackground(svgElement, palette, mutations, idPrefix) {
+    mutations = mutations || {};
+    svgElement.innerHTML = "";
 
     const defs = svgEl("defs", {});
-    const skyGrad = svgEl("linearGradient", { id: "skyGrad", x1: "0", y1: "0", x2: "0", y2: "1" });
+    const skyGrad = svgEl("linearGradient", { id: `${idPrefix}-sky`, x1: "0", y1: "0", x2: "0", y2: "1" });
     skyGrad.appendChild(svgEl("stop", { offset: "0%", "stop-color": palette.sky[0] }));
     skyGrad.appendChild(svgEl("stop", { offset: "100%", "stop-color": palette.sky[1] }));
     defs.appendChild(skyGrad);
 
-    const groundGrad = svgEl("linearGradient", { id: "groundGrad", x1: "0", y1: "0", x2: "0", y2: "1" });
+    const groundGrad = svgEl("linearGradient", { id: `${idPrefix}-ground`, x1: "0", y1: "0", x2: "0", y2: "1" });
     groundGrad.appendChild(svgEl("stop", { offset: "0%", "stop-color": palette.grass[0] }));
     groundGrad.appendChild(svgEl("stop", { offset: "100%", "stop-color": palette.grass[1] }));
     defs.appendChild(groundGrad);
 
     // 뷰박스 밖으로 배경 요소가 삐져나가지 않도록(레터박스 여백 노출 방지) 클립 처리
-    const clipPath = svgEl("clipPath", { id: "sceneClip" });
+    const clipPath = svgEl("clipPath", { id: `${idPrefix}-clip` });
     clipPath.appendChild(svgEl("rect", { x: 0, y: 0, width: VB_W, height: VB_H }));
     defs.appendChild(clipPath);
-    scene.appendChild(defs);
+    svgElement.appendChild(defs);
 
-    const layer = svgEl("g", { "clip-path": "url(#sceneClip)" });
-    scene.appendChild(layer);
+    const layer = svgEl("g", { "clip-path": `url(#${idPrefix}-clip)` });
+    svgElement.appendChild(layer);
 
     // 하늘
-    layer.appendChild(svgEl("rect", { x: 0, y: 0, width: VB_W, height: VB_H, fill: "url(#skyGrad)" }));
+    layer.appendChild(svgEl("rect", { x: 0, y: 0, width: VB_W, height: VB_H, fill: `url(#${idPrefix}-sky)` }));
 
     // 밤이면 별
     if (palette.night) {
@@ -425,7 +470,7 @@
     layer.appendChild(svgEl("ellipse", { cx: VB_W / 2, cy: HORIZON_Y + 40, rx: 380, ry: 90, fill: palette.far, opacity: "0.6" }));
 
     // 잔디 바닥
-    layer.appendChild(svgEl("rect", { x: 0, y: HORIZON_Y, width: VB_W, height: VB_H - HORIZON_Y, fill: "url(#groundGrad)" }));
+    layer.appendChild(svgEl("rect", { x: 0, y: HORIZON_Y, width: VB_W, height: VB_H - HORIZON_Y, fill: `url(#${idPrefix}-ground)` }));
 
     // 길 (멀리서 가까이로 이어지는 벚꽃길)
     layer.appendChild(svgEl("path", {
@@ -443,7 +488,8 @@
 
     // 축제 밤이면 등불
     if (palette.night) {
-      LANTERN_SPOTS.forEach((spot) => {
+      LANTERN_SPOTS.forEach((spot, idx) => {
+        if (mutations.lanternRemove && mutations.lanternRemove[idx]) return;
         const lantern = svgEl("g", {});
         lantern.appendChild(svgEl("line", { x1: spot.x, y1: spot.y - 40, x2: spot.x, y2: spot.y, stroke: "#8a7060", "stroke-width": "1.5" }));
         lantern.appendChild(svgEl("ellipse", { cx: spot.x, cy: spot.y + 10, rx: 10, ry: 13, fill: "#ffd98a" }));
@@ -453,10 +499,20 @@
     }
 
     // 수풀 (먼저 - 배경)
-    BUSH_SPOTS.forEach((spot) => layer.appendChild(buildBush(spot, palette)));
+    BUSH_SPOTS.forEach((spot, idx) => {
+      const opts = {};
+      if (mutations.bushRecolor && mutations.bushRecolor[idx] !== undefined) opts.recolorDeg = mutations.bushRecolor[idx];
+      if (mutations.bushResize && mutations.bushResize[idx] !== undefined) opts.resizeFactor = mutations.bushResize[idx];
+      layer.appendChild(buildBush(spot, palette, opts));
+    });
 
     // 나무
-    TREE_SPOTS.forEach((spot) => layer.appendChild(buildTree(spot, palette)));
+    TREE_SPOTS.forEach((spot, idx) => {
+      const opts = {};
+      if (mutations.treeRecolor && mutations.treeRecolor[idx] !== undefined) opts.recolorDeg = mutations.treeRecolor[idx];
+      if (mutations.treeBald && mutations.treeBald[idx]) opts.bald = true;
+      layer.appendChild(buildTree(spot, palette, opts));
+    });
 
     // 바닥에 떨어진 꽃잎 몇 개 장식
     for (let i = 0; i < 14; i++) {
@@ -470,12 +526,80 @@
       }));
     }
 
-    // 숨은 그림들 (맨 위, 주변과 어우러지도록 배치)
-    // 난이도에 따라 크기/투명도/회전은 물론, 주변 배경색과 섞은 위장색과
-    // 위에 겹쳐지는 꽃잎/잎사귀 가림막까지 적용해 난이도 차이를 크게 만든다
-    const diff = currentDifficulty();
-    const level = LEVELS[levelIdx];
-    level.objects.forEach((obj, i) => {
+    return layer;
+  }
+
+  /* =========================================================
+     카멜레온 모드: 매번 무작위로 생성되는 숨은 그림
+     ========================================================= */
+  function anchorPoolFor(occlude) {
+    switch (occlude) {
+      case "blossom": return TREE_SPOTS.map((s) => ({ x: s.x, y: s.y - 95 * s.scale, scale: s.scale }));
+      case "trunk": return TREE_SPOTS.map((s) => ({ x: s.x, y: s.y + 8 * s.scale, scale: s.scale }));
+      case "sky": return SKY_POINTS.map((p) => ({ x: p.x, y: p.y, scale: 1 }));
+      case "bush":
+      default: return BUSH_SPOTS.map((s) => ({ x: s.x, y: s.y, scale: s.scale }));
+    }
+  }
+
+  function pickRandomAnchor(occlude) {
+    const pool = anchorPoolFor(occlude);
+    const base = pool[Math.floor(Math.random() * pool.length)];
+    const jitterX = Math.random() * 36 - 18;
+    const jitterY = Math.random() * 30 - 15;
+    return {
+      x: clamp(base.x + jitterX, 30, VB_W - 30),
+      y: clamp(base.y + jitterY, 40, VB_H - 40),
+      scale: base.scale
+    };
+  }
+
+  function generateBlobShape() {
+    const n = 4 + Math.floor(Math.random() * 2);
+    const shapes = [];
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2 + Math.random() * 0.6;
+      const dist = 6 + Math.random() * 10;
+      shapes.push({ dx: Math.cos(ang) * dist, dy: Math.sin(ang) * dist * 0.8 - 4, r: 9 + Math.random() * 8 });
+    }
+    return shapes;
+  }
+
+  function randomChameleonColors() {
+    const hue = Math.floor(Math.random() * 360);
+    const sat = 45 + Math.random() * 25;
+    const light = 55 + Math.random() * 18;
+    return {
+      body: hslToHex(hue, sat, light),
+      accent: hslToHex(hue + 35, Math.max(20, sat - 10), Math.min(88, light + 18)),
+      eye: "#33261c"
+    };
+  }
+
+  function generateChameleonTargets(levelIdx) {
+    const template = LEVELS[levelIdx].objects;
+    return template.map((tmpl, i) => {
+      const anchor = pickRandomAnchor(tmpl.occlude);
+      const useBlob = Math.random() < 0.35;
+      const rotate = Math.round(Math.random() * 40 - 20);
+      const scaleJitter = 0.88 + Math.random() * 0.34;
+      const obj = {
+        id: `t${i}`,
+        x: anchor.x,
+        y: anchor.y,
+        occlude: tmpl.occlude,
+        rotate,
+        scale: (tmpl.scale || 1) * scaleJitter,
+        colors: randomChameleonColors()
+      };
+      if (useBlob) obj.blob = generateBlobShape();
+      else obj.icon = ICON_NAMES[Math.floor(Math.random() * ICON_NAMES.length)];
+      return obj;
+    });
+  }
+
+  function renderChameleonObjects(layer, palette, diff) {
+    state.currentTargets.forEach((obj, i) => {
       const extra = diff.extraRotate * (i % 2 === 0 ? 1 : -1);
       const objScale = obj.scale * diff.scaleMult;
       const camo = camouflageColors(obj, palette, diff);
@@ -486,7 +610,13 @@
         opacity: diff.opacity,
         "data-id": obj.id
       });
-      g.innerHTML = iconMarkup(obj.icon, camo);
+      if (obj.blob) {
+        g.innerHTML = obj.blob.map((c, idx) =>
+          `<circle cx="${c.dx}" cy="${c.dy}" r="${c.r}" fill="${idx % 2 === 0 ? camo.body : camo.accent}"/>`
+        ).join("");
+      } else {
+        g.innerHTML = iconMarkup(obj.icon, camo);
+      }
       layer.appendChild(g);
 
       // 가림막: 난이도가 높을수록 꽃잎/잎사귀 색 원으로 일부를 덮어 더 찾기 어렵게 함
@@ -501,6 +631,80 @@
         }));
       });
     });
+  }
+
+  function renderChameleonScene(levelIdx) {
+    const palette = PALETTES[levelIdx];
+    const diff = currentDifficulty();
+    const layer = drawBackground(el.scene, palette, {}, "main");
+    state.currentTargets = generateChameleonTargets(levelIdx);
+    renderChameleonObjects(layer, palette, diff);
+  }
+
+  /* =========================================================
+     틀린그림찾기 모드: 같은 배경을 두 번 그리고 일부를 변형
+     ========================================================= */
+  // 틀린그림찾기 화면은 DIFF_VB로 잘라서 보여주므로, 잘려서 안 보이는 나무/수풀/등불은
+  // 차이 후보에서 제외해야 한다 (안 그러면 화면에 보이지도 않는 정답이 생길 수 있음)
+  function isWithinDiffView(y) {
+    return y >= DIFF_VB.y + 20 && y <= DIFF_VB.y + DIFF_VB.h - 20;
+  }
+
+  function pickDifferenceMutations(levelIdx, diffTier, count) {
+    const palette = PALETTES[levelIdx];
+    const tNorm = diffTier.blendT / 0.68; // 0(쉬움, 뚜렷) ~ 1(어려움, 미묘)
+    const hueShiftDeg = 110 - 75 * tNorm;
+    const resizeBase = 1.7 - 0.55 * tNorm;
+
+    const pool = [];
+    BUSH_SPOTS.forEach((spot, idx) => {
+      const recolorY = spot.y - 10 * spot.scale;
+      if (isWithinDiffView(recolorY)) pool.push({ type: "bush-recolor", idx, x: spot.x, y: recolorY, r: 46 * spot.scale, hueShiftDeg });
+      if (isWithinDiffView(spot.y)) pool.push({ type: "bush-resize", idx, x: spot.x, y: spot.y, r: 50 * spot.scale, resizeFactor: Math.random() < 0.5 ? resizeBase : 1 / resizeBase });
+    });
+    TREE_SPOTS.forEach((spot, idx) => {
+      const canopyY = spot.y - 70 * spot.scale;
+      if (isWithinDiffView(canopyY)) {
+        pool.push({ type: "tree-recolor", idx, x: spot.x, y: canopyY, r: 55 * spot.scale, hueShiftDeg });
+        pool.push({ type: "tree-bald", idx, x: spot.x, y: canopyY, r: 55 * spot.scale });
+      }
+    });
+    if (palette.night) {
+      LANTERN_SPOTS.forEach((spot, idx) => {
+        if (isWithinDiffView(spot.y)) pool.push({ type: "lantern-remove", idx, x: spot.x, y: spot.y, r: 26 });
+      });
+    }
+
+    shuffleArray(pool);
+    const chosen = [];
+    for (const cand of pool) {
+      if (chosen.length >= count) break;
+      const tooClose = chosen.some((c) => Math.hypot(c.x - cand.x, c.y - cand.y) < 90);
+      const sameElement = chosen.some((c) => c.type.split("-")[0] === cand.type.split("-")[0] && c.idx === cand.idx);
+      if (!tooClose && !sameElement) chosen.push(cand);
+    }
+    return chosen.map((c, i) => ({ id: `d${i}`, ...c }));
+  }
+
+  function renderDiffScene(levelIdx) {
+    const palette = PALETTES[levelIdx];
+    const diffTier = currentDifficulty();
+    const baseCount = LEVELS[levelIdx].objects.length;
+    const count = baseCount + DIFF_COUNT_BONUS[state.difficulty - 1];
+    const chosen = pickDifferenceMutations(levelIdx, diffTier, count);
+    state.currentTargets = chosen;
+
+    const mutations = { bushRecolor: {}, bushResize: {}, treeRecolor: {}, treeBald: {}, lanternRemove: {} };
+    chosen.forEach((c) => {
+      if (c.type === "bush-recolor") mutations.bushRecolor[c.idx] = c.hueShiftDeg;
+      if (c.type === "bush-resize") mutations.bushResize[c.idx] = c.resizeFactor;
+      if (c.type === "tree-recolor") mutations.treeRecolor[c.idx] = c.hueShiftDeg;
+      if (c.type === "tree-bald") mutations.treeBald[c.idx] = true;
+      if (c.type === "lantern-remove") mutations.lanternRemove[c.idx] = true;
+    });
+
+    drawBackground(el.sceneA, palette, {}, "da");
+    drawBackground(el.sceneB, palette, mutations, "db");
   }
 
   /* ---------- 꽃잎 흩날리기 ---------- */
@@ -558,83 +762,93 @@
     const level = LEVELS[idx];
     el.levelTitle.textContent = level.title;
     el.diffBadge.textContent = `Lv.${state.difficulty}`;
-    el.foundCounter.textContent = `0 / ${level.objects.length}`;
     renderDots();
-    renderScene(idx);
+
+    if (state.mode === "chameleon") {
+      el.scene.style.display = "";
+      el.diffStage.style.display = "none";
+      renderChameleonScene(idx);
+    } else {
+      el.scene.style.display = "none";
+      el.diffStage.style.display = "flex";
+      renderDiffScene(idx);
+    }
+
+    el.foundCounter.textContent = `0 / ${state.currentTargets.length}`;
     startPetals();
     showScreen("game");
-    showToast("숨은 그림을 찾아보세요! 🔍");
+    showToast(MODE_INFO[state.mode].startToast);
   }
 
   /* ---------- 터치 좌표 변환 ---------- */
-  function getSvgPoint(evt) {
-    const rect = el.scene.getBoundingClientRect();
-    const clientX = evt.clientX;
-    const clientY = evt.clientY;
-
-    // preserveAspectRatio="xMidYMid meet" 이므로 스케일/오프셋 계산
-    const scale = Math.min(rect.width / VB_W, rect.height / VB_H);
-    const offsetX = (rect.width - VB_W * scale) / 2;
-    const offsetY = (rect.height - VB_H * scale) / 2;
-
-    const x = (clientX - rect.left - offsetX) / scale;
-    const y = (clientY - rect.top - offsetY) / scale;
+  function getPointInSvg(svgElement, evt, vb) {
+    const rect = svgElement.getBoundingClientRect();
+    const scale = Math.min(rect.width / vb.w, rect.height / vb.h);
+    const offsetX = (rect.width - vb.w * scale) / 2;
+    const offsetY = (rect.height - vb.h * scale) / 2;
+    const x = (evt.clientX - rect.left - offsetX) / scale + vb.x;
+    const y = (evt.clientY - rect.top - offsetY) / scale + vb.y;
     return { x, y };
   }
 
-  function handleTap(evt) {
+  function handleTap(evt, svgElement, vb) {
     if (state.busy) return;
-    const pt = getSvgPoint(evt);
-    const level = LEVELS[state.levelIndex];
-    const hitRadius = currentDifficulty().hitRadius;
+    const pt = getPointInSvg(svgElement, evt, vb);
+    const fallbackRadius = currentDifficulty().hitRadius;
 
     let hit = null;
     let bestDist = Infinity;
-    level.objects.forEach((obj) => {
+    state.currentTargets.forEach((obj) => {
       if (state.found.has(obj.id)) return;
       const dx = pt.x - obj.x;
       const dy = pt.y - obj.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= hitRadius && dist < bestDist) {
+      const r = obj.r != null ? obj.r : fallbackRadius;
+      if (dist <= r && dist < bestDist) {
         bestDist = dist;
         hit = obj;
       }
     });
 
     if (hit) {
-      markFound(hit, pt);
+      markFound(hit);
     } else {
-      spawnMissMark(pt);
+      spawnMissMark(pt, svgElement);
     }
   }
 
-  function markFound(obj, pt) {
+  function drawFoundRing(svgElement, x, y) {
+    const ring = svgEl("circle", {
+      cx: x, cy: y, r: 14, fill: "none", stroke: "#5be08a", "stroke-width": "4", opacity: "0.95",
+      class: "found-ring"
+    });
+    ring.style.transition = "r 0.5s ease";
+    svgElement.appendChild(ring);
+    requestAnimationFrame(() => ring.setAttribute("r", "40"));
+  }
+
+  function markFound(obj) {
     state.found.add(obj.id);
-    const node = document.getElementById(`obj-${obj.id}`);
-    if (node) {
-      node.classList.add("found");
-      // 정답 표시: 동그라미가 나타난 뒤 사라지지 않고 계속 표시됨 (이번 판이 끝날 때까지)
-      const ring = svgEl("circle", {
-        cx: obj.x, cy: obj.y, r: 14, fill: "none", stroke: "#5be08a", "stroke-width": "4", opacity: "0.95",
-        class: "found-ring"
-      });
-      ring.style.transition = "r 0.5s ease";
-      el.scene.appendChild(ring);
-      requestAnimationFrame(() => {
-        ring.setAttribute("r", "40");
-      });
+
+    if (state.mode === "chameleon") {
+      const node = document.getElementById(`obj-${obj.id}`);
+      if (node) node.classList.add("found");
+      drawFoundRing(el.scene, obj.x, obj.y);
+    } else {
+      drawFoundRing(el.sceneA, obj.x, obj.y);
+      drawFoundRing(el.sceneB, obj.x, obj.y);
     }
 
-    el.foundCounter.textContent = `${state.found.size} / ${LEVELS[state.levelIndex].objects.length}`;
+    el.foundCounter.textContent = `${state.found.size} / ${state.currentTargets.length}`;
     showToast("정답이에요! ⭕");
 
-    if (state.found.size === LEVELS[state.levelIndex].objects.length) {
+    if (state.found.size === state.currentTargets.length) {
       state.busy = true;
       setTimeout(onLevelClear, 500);
     }
   }
 
-  function spawnMissMark(pt) {
+  function spawnMissMark(pt, svgElement) {
     // 오답 표시: X 표시가 나타났다가 서서히 사라짐
     const g = svgEl("g", {
       transform: `translate(${pt.x} ${pt.y})`,
@@ -643,7 +857,7 @@
     g.appendChild(svgEl("line", { x1: -16, y1: -16, x2: 16, y2: 16, stroke: "#ff4d4d", "stroke-width": "6", "stroke-linecap": "round" }));
     g.appendChild(svgEl("line", { x1: 16, y1: -16, x2: -16, y2: 16, stroke: "#ff4d4d", "stroke-width": "6", "stroke-linecap": "round" }));
     g.style.transition = "opacity 0.15s ease, transform 0.5s ease";
-    el.scene.appendChild(g);
+    svgElement.appendChild(g);
     requestAnimationFrame(() => { g.style.opacity = "1"; });
     setTimeout(() => {
       g.style.opacity = "0";
@@ -654,10 +868,21 @@
   }
 
   /* ---------- 힌트 ---------- */
+  function drawHintRing(svgElement, x, y, r) {
+    const ring = svgEl("circle", {
+      cx: x, cy: y, r, fill: "none", stroke: "#ffe28a", "stroke-width": "3",
+      "stroke-dasharray": "6 6", opacity: "0"
+    });
+    ring.style.transition = "opacity 0.3s ease";
+    svgElement.appendChild(ring);
+    requestAnimationFrame(() => { ring.style.opacity = "1"; });
+    setTimeout(() => { ring.style.opacity = "0"; }, 1500);
+    setTimeout(() => ring.remove(), 1900);
+  }
+
   function useHint() {
     if (state.hintsLeft <= 0 || state.busy) return;
-    const level = LEVELS[state.levelIndex];
-    const remaining = level.objects.filter((o) => !state.found.has(o.id));
+    const remaining = state.currentTargets.filter((o) => !state.found.has(o.id));
     if (remaining.length === 0) return;
 
     state.hintsLeft -= 1;
@@ -665,15 +890,13 @@
     if (state.hintsLeft <= 0) el.btnHint.disabled = true;
 
     remaining.forEach((obj) => {
-      const ring = svgEl("circle", {
-        cx: obj.x, cy: obj.y, r: 34, fill: "none", stroke: "#ffe28a", "stroke-width": "3",
-        "stroke-dasharray": "6 6", opacity: "0"
-      });
-      ring.style.transition = "opacity 0.3s ease";
-      el.scene.appendChild(ring);
-      requestAnimationFrame(() => { ring.style.opacity = "1"; });
-      setTimeout(() => { ring.style.opacity = "0"; }, 1500);
-      setTimeout(() => ring.remove(), 1900);
+      const r = obj.r || 34;
+      if (state.mode === "chameleon") {
+        drawHintRing(el.scene, obj.x, obj.y, r);
+      } else {
+        drawHintRing(el.sceneA, obj.x, obj.y, r);
+        drawHintRing(el.sceneB, obj.x, obj.y, r);
+      }
     });
     showToast("힌트! 동그라미 안을 살펴보세요 💡");
   }
@@ -713,6 +936,22 @@
     startLevel(0);
   }
 
+  /* ---------- 게임 모드 선택 ---------- */
+  function updateModeUI() {
+    el.modeButtons.querySelectorAll(".mode-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.mode === state.mode);
+    });
+    el.modeDesc.textContent = MODE_INFO[state.mode].label;
+  }
+
+  el.modeButtons.querySelectorAll(".mode-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.mode = btn.dataset.mode;
+      updateModeUI();
+    });
+  });
+  updateModeUI();
+
   /* ---------- 난이도 선택 ---------- */
   function updateDifficultyUI() {
     const diff = currentDifficulty();
@@ -735,7 +974,9 @@
   el.btnNext.addEventListener("click", onNextPressed);
   el.btnRestart.addEventListener("click", () => showScreen("start"));
   el.btnHint.addEventListener("click", useHint);
-  el.scene.addEventListener("pointerdown", handleTap);
+  el.scene.addEventListener("pointerdown", (e) => handleTap(e, el.scene, MAIN_VB));
+  el.sceneA.addEventListener("pointerdown", (e) => handleTap(e, el.sceneA, DIFF_VB));
+  el.sceneB.addEventListener("pointerdown", (e) => handleTap(e, el.sceneB, DIFF_VB));
 
   // 시작화면 장식 꽃잎
   (function decorateStart() {
