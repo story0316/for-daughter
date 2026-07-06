@@ -362,8 +362,8 @@ html, body {
   top: -20px;
   width: 12px;
   height: 12px;
-  background: radial-gradient(circle at 30% 30%, #ffe3ee, #ffb8d3 70%);
-  border-radius: 60% 10% 60% 10%;
+  background: radial-gradient(circle at 30% 30%, #fff8dc, #ffd97a 70%);
+  border-radius: 50%;
   opacity: 0.85;
   animation-name: petal-fall;
   animation-timing-function: linear;
