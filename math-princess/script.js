@@ -18,7 +18,8 @@
   const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 24;
   const QUESTIONS_PER_STUDY = 4;
   const QUESTIONS_PER_JOB = 3;
-  const SAVE_KEY = 'math-princess-save-v1';
+  const SAVE_SLOT_COUNT = 3;
+  const SAVE_KEY_PREFIX = 'math-princess-slot-';
   const STAGE_EMOJIS = ['🌱', '🧒', '👧', '👩'];
 
   const EVENTS = [
@@ -124,6 +125,7 @@
   const el = {
     screens: {
       start: document.getElementById('screen-start'),
+      nameEntry: document.getElementById('screen-name-entry'),
       main: document.getElementById('screen-main'),
       shop: document.getElementById('screen-shop'),
       npcSelect: document.getElementById('screen-npc-select'),
@@ -134,16 +136,21 @@
       ending: document.getElementById('screen-ending'),
     },
     totalTurnsLabel: document.getElementById('total-turns-label'),
-    btnNewGame: document.getElementById('btn-new-game'),
-    btnContinue: document.getElementById('btn-continue'),
+    slotList: document.getElementById('slot-list'),
+
+    btnNameBack: document.getElementById('btn-name-back'),
+    btnNameConfirm: document.getElementById('btn-name-confirm'),
+    nameInput: document.getElementById('name-input'),
 
     turnLabel: document.getElementById('turn-label'),
     goldLabel: document.getElementById('gold-label'),
     characterEmoji: document.getElementById('character-emoji'),
+    characterName: document.getElementById('character-name'),
     outfitBadge: document.getElementById('outfit-badge'),
     statPanel: document.getElementById('stat-panel'),
     activityGrid: document.getElementById('activity-grid'),
 
+    btnSave: document.getElementById('btn-save'),
     btnOpenShop: document.getElementById('btn-open-shop'),
     btnShopBack: document.getElementById('btn-shop-back'),
     shopList: document.getElementById('shop-list'),
@@ -204,6 +211,7 @@
 
   function makeInitialState() {
     return {
+      name: '',
       turn: 1,
       gold: 0,
       stats: {
@@ -225,6 +233,8 @@
 
   let state = makeInitialState();
   let session = null;
+  let activeSlot = null;
+  let pendingSlot = null;
 
   function clampStats() {
     STAT_KEYS.forEach((k) => {
@@ -245,27 +255,119 @@
     el.screens[name].classList.add('active');
   }
 
+  function slotKey(n) {
+    return `${SAVE_KEY_PREFIX}${n}`;
+  }
+
+  function readSlot(n) {
+    const raw = localStorage.getItem(slotKey(n));
+    if (!raw) return null;
+    try {
+      const saved = JSON.parse(raw);
+      if (!saved || !saved.state || typeof saved.state.turn !== 'number') return null;
+      return saved;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function writeSlot(n) {
+    const payload = {
+      name: state.name,
+      turn: state.turn,
+      totalTurns: TOTAL_TURNS,
+      savedAt: new Date().toISOString(),
+      state,
+    };
+    localStorage.setItem(slotKey(n), JSON.stringify(payload));
+  }
+
+  function deleteSlotSave(n) {
+    localStorage.removeItem(slotKey(n));
+  }
+
+  function formatSavedAt(iso) {
+    const d = new Date(iso);
+    const pad = (v) => String(v).padStart(2, '0');
+    return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   function saveGame() {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    if (activeSlot == null) return;
+    writeSlot(activeSlot);
   }
 
   function clearSave() {
-    localStorage.removeItem(SAVE_KEY);
+    if (activeSlot == null) return;
+    deleteSlotSave(activeSlot);
   }
 
-  function loadGame() {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return false;
-    try {
-      const loaded = JSON.parse(raw);
-      if (!loaded || typeof loaded.turn !== 'number') return false;
-      loaded.items = loaded.items || {};
-      loaded.npcs = loaded.npcs || NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20) }));
-      state = loaded;
-      return true;
-    } catch (e) {
-      return false;
+  function loadSlot(n) {
+    const saved = readSlot(n);
+    if (!saved) return;
+    state = saved.state;
+    state.items = state.items || {};
+    state.npcs = state.npcs || NPC_DEFS.map((d) => ({ id: d.id, affection: randInt(10, 20) }));
+    if (typeof state.name !== 'string' || !state.name) state.name = '이름없음';
+    activeSlot = n;
+    showScreen('main');
+    renderMain();
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function renderSlotList() {
+    el.slotList.innerHTML = '';
+    for (let n = 1; n <= SAVE_SLOT_COUNT; n++) {
+      const saved = readSlot(n);
+      if (saved) {
+        const wrap = document.createElement('div');
+        wrap.className = 'level-card slot-card';
+        wrap.innerHTML = `
+          <button class="slot-load-btn">
+            <span class="level-badge-num">👑</span>
+            <span class="level-info">
+              <span class="level-title">${escapeHtml(saved.name || '이름없음')}</span>
+              <span class="slot-meta">${yearMonthLabel(saved.turn, saved.totalTurns || TOTAL_TURNS)}</span>
+              <span class="slot-meta">저장일 ${formatSavedAt(saved.savedAt)}</span>
+            </span>
+          </button>
+          <button class="slot-delete-btn" aria-label="슬롯 삭제">✕</button>
+        `;
+        wrap.querySelector('.slot-load-btn').addEventListener('click', () => loadSlot(n));
+        wrap.querySelector('.slot-delete-btn').addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm(`"${saved.name || '이름없음'}"의 저장 데이터를 삭제할까요?`)) {
+            deleteSlotSave(n);
+            renderSlotList();
+          }
+        });
+        el.slotList.appendChild(wrap);
+      } else {
+        const btn = document.createElement('button');
+        btn.className = 'level-card slot-card empty';
+        btn.innerHTML = `
+          <span class="level-badge-num">＋</span>
+          <span class="level-info">
+            <span class="level-title">빈 슬롯</span>
+            <span class="slot-meta">눌러서 새 이야기를 시작해요</span>
+          </span>
+        `;
+        btn.addEventListener('click', () => openNameEntry(n));
+        el.slotList.appendChild(btn);
+      }
     }
+  }
+
+  function openNameEntry(slotNum) {
+    pendingSlot = slotNum;
+    el.nameInput.value = '';
+    showScreen('nameEntry');
+    setTimeout(() => el.nameInput.focus(), 50);
   }
 
   function comboMultiplier(combo) {
@@ -276,10 +378,10 @@
     return 1.0;
   }
 
-  function yearMonthLabel(turn) {
+  function yearMonthLabel(turn, total = TOTAL_TURNS) {
     const year = Math.floor((turn - 1) / 12) + 1;
     const month = ((turn - 1) % 12) + 1;
-    return `${year}년차 ${month}월 · 턴 ${turn}/${TOTAL_TURNS}`;
+    return `${year}년차 ${month}월 · 턴 ${turn}/${total}`;
   }
 
   function renderStatPanel(container, stats) {
@@ -304,6 +406,7 @@
     const outfit = currentOutfit(state.stats);
     // 품위가 최고 단계(공주 드레스)에 닿으면, 나이와 상관없이 공주의 모습으로 보여준다.
     el.characterEmoji.textContent = outfit.name === '공주 드레스' ? '👸' : STAGE_EMOJIS[stageIdx];
+    el.characterName.textContent = state.name || '이름없음';
     el.outfitBadge.textContent = `${outfit.emoji} ${outfit.name}`;
     renderStatPanel(el.statPanel, state.stats);
   }
@@ -652,6 +755,7 @@
 
   function showEnding() {
     clearSave();
+    activeSlot = null;
     const ending = E.computeEnding(state.stats, state.npcs);
     el.endingEmoji.textContent = ending.emoji;
     el.endingTitle.textContent = ending.title;
@@ -677,30 +781,48 @@
   }
 
   el.btnEndingRestart.addEventListener('click', () => {
-    state = makeInitialState();
-    clearSave();
-    showScreen('main');
-    renderMain();
+    renderSlotList();
+    showScreen('start');
   });
 
-  /* ---------------- 시작 화면 ---------------- */
+  el.btnEndingHome.addEventListener('click', () => {
+    renderSlotList();
+    showScreen('start');
+  });
 
-  el.btnNewGame.addEventListener('click', () => {
+  /* ---------------- 시작 화면 / 저장 슬롯 ---------------- */
+
+  el.btnNameBack.addEventListener('click', () => {
+    pendingSlot = null;
+    showScreen('start');
+  });
+
+  el.btnNameConfirm.addEventListener('click', () => {
+    if (pendingSlot == null) return;
+    const name = el.nameInput.value.trim() || '우리 딸';
     state = makeInitialState();
-    clearSave();
+    state.name = name;
+    activeSlot = pendingSlot;
+    pendingSlot = null;
     saveGame();
     showScreen('main');
     renderMain();
   });
 
-  el.btnContinue.addEventListener('click', () => {
-    if (loadGame()) {
-      showScreen('main');
-      renderMain();
-    }
+  el.nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') el.btnNameConfirm.click();
   });
 
-  if (loadGame()) {
-    el.btnContinue.style.display = 'block';
-  }
+  el.btnSave.addEventListener('click', () => {
+    saveGame();
+    const original = el.btnSave.textContent;
+    el.btnSave.textContent = '✅ 저장됨';
+    el.btnSave.disabled = true;
+    setTimeout(() => {
+      el.btnSave.textContent = original;
+      el.btnSave.disabled = false;
+    }, 900);
+  });
+
+  renderSlotList();
 })();

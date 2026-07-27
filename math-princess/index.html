@@ -19,10 +19,19 @@
         <p class="subtitle">수학 문제를 풀어 돈을 벌고 교양을 쌓으면<br/>평범한 옷이 예쁜 드레스로 바뀌어요!</p>
         <p class="subtitle-sub">품위가 오를수록 만날 수 있는 사람도 늘어나요.<br/>한 턴은 한 달, 총 <span id="total-turns-label">24</span>개월(2년) 동안<br/>공주가 되는 그날까지 키워보세요.</p>
 
-        <div class="start-buttons">
-          <button id="btn-new-game" class="btn btn-primary">새로 시작하기</button>
-          <button id="btn-continue" class="btn btn-secondary" style="display:none">이어하기</button>
-        </div>
+        <div id="slot-list" class="level-list slot-list"></div>
+      </div>
+    </section>
+
+    <!-- 이름 짓기 화면 -->
+    <section id="screen-name-entry" class="screen">
+      <div class="card">
+        <button id="btn-name-back" class="btn-back name-back-btn">‹ 뒤로</button>
+        <div class="title-emoji">✨</div>
+        <h2>이름을 지어주세요</h2>
+        <p class="subtitle">이 이름으로 이야기가 저장돼요</p>
+        <input id="name-input" class="quiz-input name-input" type="text" maxlength="10" placeholder="예: 우리 딸" autocomplete="off" />
+        <button id="btn-name-confirm" class="btn btn-primary name-confirm-btn">시작하기</button>
       </div>
     </section>
 
@@ -32,6 +41,7 @@
         <div class="hud-row">
           <div id="turn-label" class="turn-label">1년차 1월 · 턴 1/24</div>
           <div class="hud-right">
+            <button id="btn-save" class="btn-shop">💾 저장</button>
             <button id="btn-open-shop" class="btn-shop">🛍️ 상점</button>
             <div id="gold-label" class="gold-label">💰 0G</div>
           </div>
