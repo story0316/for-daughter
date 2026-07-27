@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>스도쿠</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔢</text></svg>" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- 시작 화면 -->
+    <section id="screen-start" class="screen active">
+      <div class="card">
+        <a href="../index.html" class="home-link">🏠 홈으로</a>
+        <div class="title-emoji">🔢</div>
+        <h1>스도쿠</h1>
+        <p class="subtitle">가로, 세로, 3×3 칸에<br/>1~9가 겹치지 않게 채워보세요!</p>
+
+        <div class="difficulty-picker">
+          <p class="picker-label">난이도를 선택하세요</p>
+          <div class="difficulty-buttons" id="difficulty-buttons">
+            <button class="diff-btn active" data-diff="easy">쉬움<br/><span>빈칸 41개</span></button>
+            <button class="diff-btn" data-diff="normal">보통<br/><span>빈칸 49개</span></button>
+            <button class="diff-btn" data-diff="hard">어려움<br/><span>빈칸 55개</span></button>
+          </div>
+          <p class="difficulty-desc" id="difficulty-desc">가장 쉬운 단계예요. 힌트도 3번 쓸 수 있어요.</p>
+          <p class="best-score" id="best-time"></p>
+        </div>
+
+        <div class="hearts-preview">
+          <span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span>
+          <span class="hearts-preview-text">하트 3개로 시작해요</span>
+        </div>
+
+        <button id="btn-start" class="btn btn-primary">시작하기</button>
+      </div>
+    </section>
+
+    <!-- 게임 화면 -->
+    <section id="screen-game" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <div id="hearts" class="hearts"></div>
+          <div id="timer" class="timer">⏱ 00:00</div>
+        </div>
+        <div class="hud-row">
+          <button id="btn-hint" class="btn-hint">💡 힌트 <span id="hint-count">3</span></button>
+          <div id="diff-badge" class="diff-badge">쉬움</div>
+        </div>
+        <div id="progress-text" class="progress-text">채운 칸 0 / 81</div>
+      </header>
+
+      <div class="board-wrap">
+        <div id="board" class="board"></div>
+      </div>
+
+      <div class="numpad" id="numpad">
+        <button class="num-btn" data-num="1">1</button>
+        <button class="num-btn" data-num="2">2</button>
+        <button class="num-btn" data-num="3">3</button>
+        <button class="num-btn" data-num="4">4</button>
+        <button class="num-btn" data-num="5">5</button>
+        <button class="num-btn" data-num="6">6</button>
+        <button class="num-btn" data-num="7">7</button>
+        <button class="num-btn" data-num="8">8</button>
+        <button class="num-btn" data-num="9">9</button>
+        <button class="num-btn erase-btn" id="btn-erase" data-num="0">⌫</button>
+      </div>
+
+      <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-box">퍼즐을 만들고 있어요...</div>
+      </div>
+    </section>
+
+    <!-- 결과 화면 -->
+    <section id="screen-result" class="screen overlay-screen">
+      <div class="card">
+        <div id="result-emoji" class="title-emoji">🎉</div>
+        <h2 id="result-title">클리어!</h2>
+        <p id="result-desc">3분 12초만에 풀었어요!</p>
+        <div class="result-stats">
+          <div class="stat"><span class="stat-num" id="stat-time">00:00</span><span class="stat-label">시간</span></div>
+          <div class="stat"><span class="stat-num" id="stat-mistakes">0</span><span class="stat-label">실수</span></div>
+          <div class="stat"><span class="stat-num" id="stat-hints">0</span><span class="stat-label">힌트 사용</span></div>
+        </div>
+        <div class="result-buttons">
+          <button id="btn-retry" class="btn btn-secondary">다시하기</button>
+          <button id="btn-next" class="btn btn-primary">다음 난이도 도전!</button>
+          <button id="btn-home" class="btn btn-secondary">난이도 선택</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
