@@ -178,6 +178,11 @@
       title: '연회 참석',
       entryEmoji: '💃',
       status: 'ready',
+      // 이미 스케줄 메뉴의 "연회 참석" 활동으로 별도 구현되어 있는 항목이라,
+      // "친구 만나기"의 범용 시나리오 엔진(findActiveScenario)이 이 항목을
+      // 중복으로 실행하지 않도록 표시만 해둔다. 실제 게임 로직은
+      // script.js의 startBanquetSession()/ETIQUETTE_QUESTIONS를 그대로 쓴다.
+      bespoke: true,
       unlock: {},
       quiz: {
         questionsPerSession: 3,
@@ -222,6 +227,338 @@
             path: 'assets/npcs/prince.png',
             purpose: '왕자님 이벤트 장면에 쓰이는 초상화',
             generationPrompt: 'Children\'s storybook illustration, Princess Maker style, a kind young prince in formal royal attire, warm smile, soft painterly lighting, pastel palette, upper body portrait, no text.',
+          },
+        ],
+      },
+    },
+
+    // 다른 AI가 이전 프롬프트 형식에 맞춰 채워온 시나리오 7편. 원본에서는
+    // quiz.bank[].answer가 choices 배열의 인덱스(숫자)였는데, 이 게임의 정답
+    // 판정 로직(P.checkAnswer)은 choices 중 하나와 정확히 같은 문자열을
+    // 기대하므로 인덱스를 실제 정답 문자열로 변환해서 담았다.
+    {
+      id: 'first-royal-etiquette',
+      arc: '사교 예절',
+      tier: 0,
+      type: 'quiz',
+      npcId: 'teacher',
+      title: '왕실 예절의 첫걸음',
+      entryEmoji: '👑',
+      status: 'ready',
+      unlock: {},
+      quiz: {
+        questionsPerSession: 3,
+        passCount: 2,
+        bank: [
+          {
+            question: '왕실 연회에서 높은 분을 만났을 때 올바른 인사법은 무엇일까요?',
+            choices: ['손을 크게 흔들며 인사한다', '허리를 살짝 숙이고 드레스 자락을 잡아 커트시를 한다', '고개를 돌리고 모른 척한다', '큰 소리로 이름을 부른다'],
+            answer: '허리를 살짝 숙이고 드레스 자락을 잡아 커트시를 한다',
+            explanation: '공주님다운 품위 있는 인사는 드레스 자락을 살짝 잡고 무릎을 굽히는 커트시랍니다.',
+          },
+          {
+            question: '식사 중 음식을 씹을 때 지켜야 할 예절은 무엇일까요?',
+            choices: ['입을 다물고 소리가 나지 않게 씹는다', '입을 벌리고 소리를 내며 씹는다', '음식을 입에 물고 계속 말한다', '음식을 숟가락으로 두드리며 먹는다'],
+            answer: '입을 다물고 소리가 나지 않게 씹는다',
+            explanation: '음식은 입을 다물고 조용히 씹는 것이 고운 식사 예절이에요.',
+          },
+          {
+            question: '차를 마실 때 티컵을 바르게 잡는 방법은 무엇일까요?',
+            choices: ['손잡이에 손가락을 다 넣고 꽉 쥔다', '손잡이를 손가락 끝으로 가볍게 집는다', '양손으로 컵 전체를 감싸 쥔다', '티스푼을 컵에 넣은 채로 마신다'],
+            answer: '손잡이를 손가락 끝으로 가볍게 집는다',
+            explanation: '찻잔 손잡이는 손가락 끝으로 살포시 집어 올려 마시는 것이 우아합니다.',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { intelligence: 5, focus: 5, stress: -2 },
+          npcEffects: { teacher: [5, 10] },
+          narrative: { emoji: '👏', title: '훌륭한 예절 수업!', desc: '선생님께서 미소를 지으며 고개를 끄덕이셨습니다. 기본 예절을 멋지게 익혔네요!' },
+        },
+        fail: {
+          statEffects: { stress: 5 },
+          narrative: { emoji: '😅', title: '조금 더 연습해봐요', desc: '선생님께서 차근차근 다시 설명해주셨습니다. 다음엔 더 잘할 수 있을 거예요.' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'bg-classroom',
+            path: 'assets/scenarios/first-royal-etiquette/bg-classroom.png',
+            purpose: '예절 수업 배경',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, a cozy royal etiquette classroom with elegant wooden desks and sunlight streaming through arched windows.',
+          },
+        ],
+      },
+    },
+    {
+      id: 'lost-kitten-in-garden',
+      arc: '우정',
+      tier: 0,
+      type: 'branching',
+      npcId: 'friend',
+      title: '정원의 길 잃은 아기 고양이',
+      entryEmoji: '🐱',
+      status: 'ready',
+      unlock: {},
+      branching: {
+        prompt: '정원을 산책하던 중 나무 위에서 울고 있는 아기 고양이를 발견했습니다. 친구가 걱정스러운 눈빛으로 바라보고 있네요.',
+        options: [
+          {
+            label: '나무에 직접 올라가 아기 고양이를 구해준다',
+            statEffects: { stamina: 8, stress: 3, charm: 2 },
+            npcEffects: { friend: [5, 8] },
+            resultLine: '조심스럽게 나무를 타올라 아기 고양이를 품에 안고 내려왔습니다! 옷은 조금 더러워졌지만 마음은 따뜻해졌어요.',
+          },
+          {
+            label: '친구와 함께 따뜻한 우유를 가져와 유인한다',
+            statEffects: { creativity: 5, focus: 5 },
+            npcEffects: { friend: [10, 15] },
+            resultLine: '친구와 아이디어를 모아 우유 그릇을 놓아주자 아기 고양이가 스스로 살금살금 내려왔습니다. 기발한 협동이었어요!',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { charm: 5, luck: 3 },
+          npcEffects: { friend: [5, 10] },
+          narrative: { emoji: '✨', title: '새로운 작은 친구', desc: '고양이는 무사히 엄마 품으로 돌아갔습니다. 친구와의 우정도 한층 더 깊어졌어요.' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'garden-kitten',
+            path: 'assets/scenarios/lost-kitten-in-garden/garden-kitten.png',
+            purpose: '정원 이벤트 장면',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, a young girl and her friend looking up at a cute little kitten perched on a blooming garden tree branch.',
+          },
+        ],
+      },
+    },
+    {
+      id: 'baking-cookies-with-rival',
+      arc: '사교 예절',
+      tier: 1,
+      type: 'branching',
+      npcId: 'rival',
+      title: '쿠키 만들기 대결',
+      entryEmoji: '🍪',
+      status: 'ready',
+      unlock: { minGrace: 20 },
+      branching: {
+        prompt: '왕실 요리 교실에서 라이벌과 쿠키 만들기 대결을 하게 되었습니다. 라이벌이 자신만만한 표정으로 차례를 기다리고 있네요.',
+        options: [
+          {
+            label: '정통 왕실 레시피대로 신중하게 반죽을 만든다',
+            statEffects: { focus: 10, intelligence: 5 },
+            npcEffects: { rival: [2, 5] },
+            resultLine: '완벽한 비율로 만들어진 정갈하고 맛있는 왕실 쿠키가 완성되었습니다!',
+          },
+          {
+            label: '예쁜 꽃 모양 장식을 추가해 창의적으로 쿠키를 꾸민다',
+            statEffects: { creativity: 12, charm: 5 },
+            npcEffects: { rival: [5, 10] },
+            resultLine: '알록달록 예쁜 모양의 쿠키가 완성되었습니다. 라이벌도 내심 감탄한 표정이에요!',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { charm: 5, stress: -5 },
+          npcEffects: { rival: [5, 10] },
+          narrative: { emoji: '🧁', title: '훈훈한 디저트 시간', desc: '서로 만든 쿠키를 나누어 먹으며 즐거운 시간을 보냈습니다. 라이벌과 조금 더 가까워진 것 같아요.' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'baking-scene',
+            path: 'assets/scenarios/baking-cookies-with-rival/baking-scene.png',
+            purpose: '쿠키 만들기 장면',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, two young girls in cute aprons baking colorful flower-shaped cookies in a warm royal kitchen.',
+          },
+        ],
+      },
+    },
+    {
+      id: 'noble-tea-party-invitation',
+      arc: '사교 예절',
+      tier: 1,
+      type: 'narrative',
+      npcId: 'noble',
+      title: '사교계의 초대장',
+      entryEmoji: '💌',
+      status: 'ready',
+      unlock: { minGrace: 35 },
+      narrative: {
+        lines: [
+          '정원에 향기로운 장미가 가득 피어난 날, 우아한 사교계 친구로부터 다과회 초대장이 도착했습니다.',
+          '분홍색 리본으로 묶인 향수 냄새 나는 편지지에는 따뜻한 안부 인사가 적혀 있네요.',
+          '친구들과 다과를 나누며 즐거운 사교 예절을 익히는 귀한 시간이 되었습니다.',
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { charm: 8, intelligence: 4, stress: -8 },
+          npcEffects: { noble: [10, 15] },
+          narrative: { emoji: '☕', title: '즐거운 다과회', desc: '아름다운 정원에서 향긋한 차를 마시며 품격 있는 대화를 나누었습니다.' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'tea-party',
+            path: 'assets/scenarios/noble-tea-party-invitation/tea-party.png',
+            purpose: '다과회 전경',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, an elegant tea party in a rose garden with dainty teacups, cake stands, and young noble girls chatting happily.',
+          },
+        ],
+      },
+    },
+    {
+      id: 'prince-and-stray-dog',
+      arc: '우정',
+      tier: 2,
+      type: 'branching',
+      npcId: 'prince',
+      title: '왕자님과의 산책길',
+      entryEmoji: '🐕',
+      status: 'ready',
+      unlock: { minGrace: 60, minAffection: { npcId: 'prince', value: 20 } },
+      branching: {
+        prompt: '왕성 호숫가를 산책하던 중 왕자님과 마주쳤습니다. 왕자님이 다리에 상처를 입은 강아지를 보살피고 계시네요.',
+        options: [
+          {
+            label: '손수건을 꺼내 강아지의 상처를 정성껏 감싸준다',
+            statEffects: { charm: 10, focus: 5, stress: -3 },
+            npcEffects: { prince: [12, 18] },
+            resultLine: '상처를 꼼꼼하게 치료해주자 왕자님이 감탄하며 고마운 미소를 보냈습니다.',
+          },
+          {
+            label: '왕자님에게 다정한 말로 위로와 용기를 북돋아 준다',
+            statEffects: { charm: 8, intelligence: 6 },
+            npcEffects: { prince: [10, 15] },
+            resultLine: '따뜻한 한마디에 왕자님의 마음이 한결 가벼워진 듯 환하게 웃었습니다.',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { charm: 5, luck: 5 },
+          npcEffects: { prince: [8, 12] },
+          narrative: { emoji: '💖', title: '따뜻했던 호숫가 산책', desc: '강아지는 안전하게 보호소로 보내졌고, 왕자님과 더 깊은 신뢰를 쌓게 되었습니다.' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'lakeside-stroll',
+            path: 'assets/scenarios/prince-and-stray-dog/lakeside-stroll.png',
+            purpose: '호숫가에서의 치료 장면',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, a young girl and a young prince caring for a small puppy by a serene lakeside filled with blooming flowers.',
+          },
+        ],
+      },
+    },
+    {
+      id: 'royal-history-quiz',
+      arc: '왕실 생활',
+      tier: 2,
+      type: 'quiz',
+      npcId: 'sage',
+      title: '왕실 스승님의 지혜 시험',
+      entryEmoji: '📜',
+      status: 'ready',
+      unlock: { minGrace: 70, minStat: { key: 'intelligence', value: 50 } },
+      quiz: {
+        questionsPerSession: 3,
+        passCount: 2,
+        bank: [
+          {
+            question: '왕국을 평화롭게 다스리기 위해 가장 중요한 마음가짐은 무엇일까요?',
+            choices: ['백성을 사랑하는 따뜻한 마음과 공정함', '무조건 강한 힘으로 명령하기', '혼자만 좋은 음식을 먹기', '어려운 일은 모두 모른 척하기'],
+            answer: '백성을 사랑하는 따뜻한 마음과 공정함',
+            explanation: '진정한 공주는 백성들의 마음을 헤아리고 늘 공정하게 판단해야 한답니다.',
+          },
+          {
+            question: '다른 나라의 사신이 방문했을 때 보여주어야 할 올바른 태도는 무엇일까요?',
+            choices: ['화려한 옷만 자랑한다', '자국의 문화와 예의를 정중하게 갖추어 환영한다', '질문을 해도 대답하지 않는다', '사신의 말을 비웃는다'],
+            answer: '자국의 문화와 예의를 정중하게 갖추어 환영한다',
+            explanation: '타국의 손님을 정성껏 대접하고 존중하는 것이 왕실의 품격입니다.',
+          },
+          {
+            question: '어려움에 처한 백성을 보았을 때 올바른 행동은 무엇일까요?',
+            choices: ['도울 수 있는 방법을 찾아 적극적으로 지원한다', '나와 관계없으니 지나친다', '혼을 내서 쫓아낸다', '나중에 생각하겠다고 잊어버린다'],
+            answer: '도울 수 있는 방법을 찾아 적극적으로 지원한다',
+            explanation: '곤경에 처한 이를 외면하지 않고 돕는 용기가 참된 공주의 자질입니다.',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { intelligence: 15, focus: 10, stress: -5 },
+          npcEffects: { sage: [15, 20] },
+          narrative: { emoji: '🦉', title: '스승님의 칭찬', desc: '왕실 스승님께서 흡족한 미소를 지으며 깊은 지혜를 갖추었다고 인정해주셨습니다.' },
+        },
+        fail: {
+          statEffects: { stress: 8 },
+          narrative: { emoji: '📚', title: '배움의 길은 끝이 없는 법', desc: '스승님께서 도서관에서 더 많은 책을 읽어보라고 따뜻하게 권유하셨습니다.' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'royal-library',
+            path: 'assets/scenarios/royal-history-quiz/royal-library.png',
+            purpose: '왕실 서재 공부 장면',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, a grand royal library filled with ancient books, an old wise scholar mentor guiding a young girl wearing a cute dress.',
+          },
+        ],
+      },
+    },
+    {
+      id: 'grand-ball-debut',
+      arc: '왕실 생활',
+      tier: 3,
+      type: 'branching',
+      npcId: 'prince',
+      title: '왕실 무도회의 주인공',
+      entryEmoji: '💃',
+      status: 'ready',
+      unlock: { minGrace: 100, minStat: { key: 'charm', value: 80 } },
+      branching: {
+        prompt: '화려한 왕실 대무도회가 열렸습니다. 눈부신 드레스를 입은 당신에게 왕자님이 손을 내밀며 댄스를 청합니다.',
+        options: [
+          {
+            label: '우아하고 완벽한 발걸음으로 궁정 왈츠를 춘다',
+            statEffects: { charm: 15, focus: 10, stress: 5 },
+            npcEffects: { prince: [15, 25] },
+            resultLine: '음악에 맞춰 완벽한 무대를 선보이자 연회장의 모든 사람이 박수갈채를 보냈습니다!',
+          },
+          {
+            label: '기분 좋은 미소와 함께 자연스럽고 즐겁게 춤을 춘다',
+            statEffects: { charm: 12, creativity: 10, stress: -10 },
+            npcEffects: { prince: [20, 25] },
+            resultLine: '당신의 밝고 진심 어린 미소가 연회장 전체를 따뜻하고 화기애애하게 만들었습니다!',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { charm: 10, luck: 10 },
+          npcEffects: { prince: [10, 15], noble: [10, 15] },
+          narrative: { emoji: '✨', title: '가장 빛나는 별', desc: '오늘 밤 당신은 무도회에서 가장 빛나는 진짜 공주님처럼 모두의 존경을 받았습니다.' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'grand-ballroom',
+            path: 'assets/scenarios/grand-ball-debut/grand-ballroom.png',
+            purpose: '대무도회 장면',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, a magnificent grand royal ballroom with sparkling chandeliers, a young princess in a beautiful gown dancing with a prince under romantic warm lights.',
           },
         ],
       },

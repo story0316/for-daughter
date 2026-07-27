@@ -42,6 +42,7 @@ html, body {
 #screen-start,
 #screen-session-summary,
 #screen-event,
+#screen-branching,
 #screen-ending {
   align-items: center;
   justify-content: center;
@@ -54,6 +55,7 @@ html, body {
 
 #screen-session-summary,
 #screen-event,
+#screen-branching,
 #screen-ending {
   background: rgba(28, 20, 40, 0.78);
   padding: 20px;
@@ -165,6 +167,32 @@ html, body {
   flex-direction: column;
   gap: 10px;
   margin-top: 6px;
+}
+
+.branching-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.branching-option-btn {
+  border: none;
+  border-radius: 16px;
+  padding: 14px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.7);
+  color: #6a3a5a;
+  border: 2px solid rgba(150, 90, 130, 0.25);
+  transition: transform 0.12s ease;
+}
+
+.branching-option-btn:active {
+  transform: scale(0.97);
+  background: rgba(255, 176, 207, 0.35);
 }
 
 /* ---------- 메인 허브 ---------- */
@@ -468,6 +496,13 @@ html, body {
   padding: 8px 12px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.08);
+}
+
+.npc-affection-wrap {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .status-npc-row .npc-affection-track {
@@ -881,6 +916,23 @@ html, body {
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, #ffb0cf, #ff6fa0);
+}
+
+.npc-affection-label {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #b3446c;
+}
+
+.status-npc-row .npc-affection-label {
+  color: #ffd0e2;
+}
+
+.npc-scenario-hint {
+  color: #b3446c;
+  font-weight: 800;
 }
 
 .ending-npc-line {
