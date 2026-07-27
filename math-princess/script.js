@@ -4,6 +4,19 @@
   const P = window.MathPrincessProblems;
   const E = window.MathPrincessEndings;
   const SC = window.MathPrincessScenarios;
+  const SUBJ = window.MathPrincessSubjects;
+
+  // "공부"를 비롯한 여러 활동에서 수학뿐 아니라 영어·과학 문제도 섞여
+  // 나오도록 하는 과목 레지스트리. 세 과목 모두 같은 지능 스탯으로
+  // 해금되며(영어·과학은 초4~중1 범위인 1~4단계까지만), 정답 판정은
+  // problems.js의 checkAnswer를 그대로 재사용한다(선택형 문제는 과목과
+  // 무관하게 동일한 방식으로 채점되기 때문).
+  const SUBJECTS = {
+    math: { name: '수학', isLevelUnlocked: P.isLevelUnlocked, generateProblem: P.generateProblem, maxLevel: 10 },
+    english: { name: '영어', isLevelUnlocked: SUBJ.isEnglishLevelUnlocked, generateProblem: SUBJ.generateEnglishProblem, maxLevel: 4 },
+    science: { name: '과학', isLevelUnlocked: SUBJ.isScienceLevelUnlocked, generateProblem: SUBJ.generateScienceProblem, maxLevel: 4 },
+  };
+  const SUBJECT_KEYS = Object.keys(SUBJECTS);
 
   const STAT_KEYS = ['intelligence', 'focus', 'stamina', 'charm', 'creativity', 'stress', 'luck'];
   const STAT_LABELS = {
@@ -520,25 +533,37 @@
 
   /* ---------------- 활동: 공부 / 알바 ---------------- */
 
-  // 현재 지능으로 풀 수 있는 레벨 목록(오름차순)을 돌려준다.
-  function unlockedLevelIds() {
-    return P.LEVELS.filter((l) => P.isLevelUnlocked(l.id, state.stats.intelligence)).map((l) => l.id);
+  // 현재 지능으로 어떤 과목의 어떤 레벨까지 풀 수 있는지 확인한다.
+  function unlockedLevelsFor(subjectKey) {
+    const subj = SUBJECTS[subjectKey];
+    const ids = [];
+    for (let i = 1; i <= subj.maxLevel; i++) {
+      if (subj.isLevelUnlocked(i, state.stats.intelligence)) ids.push(i);
+    }
+    return ids;
   }
 
-  // 어떤 과목을 공부할지 플레이어가 직접 고르지 않고, 최근에 해금된
-  // 상위 레벨들(최대 3개) 중에서 무작위로 골라준다. 항상 가장 쉬운
-  // 레벨만 골라 콤보를 안전하게 farming하는 것을 막고, 실력에 맞는
-  // 다양한 과목을 자연스럽게 접하게 한다.
-  function pickRandomStudyLevel() {
-    const unlocked = unlockedLevelIds();
+  // 어떤 과목·레벨을 공부할지 플레이어가 직접 고르지 않고, 수학/영어/과학
+  // 중 하나를 무작위로 고른 뒤 그 과목에서 최근 해금된 상위 레벨들(최대
+  // 3개) 중에서 다시 무작위로 골라준다(매 문제마다 다시 고르므로 한
+  // 세션 안에서도 과목이 섞여 나온다). 항상 가장 쉬운 레벨만 골라
+  // 콤보를 안전하게 farming하는 것을 막고, 세 과목을 고루 접하게 한다.
+  function pickRandomSubjectAndLevel() {
+    const subjectKey = randChoice(SUBJECT_KEYS);
+    const unlocked = unlockedLevelsFor(subjectKey);
     const recentBand = unlocked.slice(-3);
-    return randChoice(recentBand);
+    const level = randChoice(recentBand.length ? recentBand : [1]);
+    return { subject: subjectKey, level };
   }
 
-  function startStudySession(levelId) {
+  // 알바는 항상 가장 쉬운(레벨 1) 문제만 나오되, 과목은 무작위로 섞인다.
+  function pickRandomSubjectLevel1() {
+    return { subject: randChoice(SUBJECT_KEYS), level: 1 };
+  }
+
+  function startStudySession() {
     session = {
       type: 'study',
-      level: levelId,
       count: QUESTIONS_PER_STUDY,
       index: 0,
       correctCount: 0,
@@ -546,6 +571,7 @@
       goldEarned: 0,
       answered: false,
       currentProblem: null,
+      currentSubject: null,
     };
     showScreen('quiz');
     nextQuizQuestion();
@@ -554,7 +580,6 @@
   function startJobSession() {
     session = {
       type: 'job',
-      level: 1,
       count: QUESTIONS_PER_JOB,
       index: 0,
       correctCount: 0,
@@ -562,6 +587,7 @@
       goldEarned: 0,
       answered: false,
       currentProblem: null,
+      currentSubject: null,
     };
     showScreen('quiz');
     nextQuizQuestion();
@@ -600,31 +626,42 @@
     };
   }
 
+  // "공부/알바/운동 보너스/휴식 보너스"는 수학·영어·과학이 매 문제마다
+  // 무작위로 섞여 나온다. 알바는 항상 가장 쉬운 레벨만, 나머지는 지능에
+  // 맞는 레벨 범위에서 고른다.
+  const MULTI_SUBJECT_TYPES = ['study', 'job', 'exercise-bonus', 'rest-bonus'];
+
   function nextQuizQuestion() {
     if (session.index >= session.count) {
       finishSession();
       return;
     }
     session.answered = false;
-    const problem =
-      session.type === 'banquet'
-        ? generateEtiquetteQuestion(session)
-        : session.type === 'scenario-quiz'
-          ? generateScenarioQuestion(session)
-          : P.generateProblem(session.level);
+    let problem;
+    if (session.type === 'banquet') {
+      problem = generateEtiquetteQuestion(session);
+    } else if (session.type === 'scenario-quiz') {
+      problem = generateScenarioQuestion(session);
+    } else if (MULTI_SUBJECT_TYPES.includes(session.type)) {
+      const picked = session.type === 'job' ? pickRandomSubjectLevel1() : pickRandomSubjectAndLevel();
+      session.currentSubject = picked.subject;
+      problem = SUBJECTS[picked.subject].generateProblem(picked.level);
+    } else {
+      problem = P.generateProblem(session.level);
+    }
     session.currentProblem = problem;
 
     el.quizSessionLabel.textContent =
       session.type === 'study'
-        ? '📖 공부 중'
+        ? `📖 공부 중 · ${SUBJECTS[session.currentSubject].name}`
         : session.type === 'job'
-          ? '💼 알바 중'
+          ? `💼 알바 중 · ${SUBJECTS[session.currentSubject].name}`
           : session.type === 'banquet'
             ? '💃 연회 참석 중'
             : session.type === 'exercise-bonus'
-              ? '🏃 운동 보너스 문제'
+              ? `🏃 운동 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
               : session.type === 'rest-bonus'
-                ? '🛌 휴식 보너스 문제'
+                ? `🛌 휴식 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
                 : `${session.scenario.entryEmoji} ${session.scenario.title}`;
     el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
@@ -831,7 +868,6 @@
   function doExercise() {
     session = {
       type: 'exercise-bonus',
-      level: pickRandomStudyLevel(),
       count: 1,
       index: 0,
       correctCount: 0,
@@ -839,6 +875,7 @@
       goldEarned: 0,
       answered: false,
       currentProblem: null,
+      currentSubject: null,
     };
     showScreen('quiz');
     nextQuizQuestion();
@@ -864,7 +901,6 @@
   function doRest() {
     session = {
       type: 'rest-bonus',
-      level: pickRandomStudyLevel(),
       count: 1,
       index: 0,
       correctCount: 0,
@@ -872,6 +908,7 @@
       goldEarned: 0,
       answered: false,
       currentProblem: null,
+      currentSubject: null,
     };
     showScreen('quiz');
     nextQuizQuestion();
@@ -1262,7 +1299,7 @@
   };
 
   function runActivity(activity) {
-    if (activity === 'study') startStudySession(pickRandomStudyLevel());
+    if (activity === 'study') startStudySession();
     else if (activity === 'job') startJobSession();
     else if (activity === 'exercise') doExercise();
     else if (activity === 'rest') doRest();
