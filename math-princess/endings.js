@@ -6,7 +6,33 @@
 (function (root) {
   'use strict';
 
+  function affectionOf(npcs, id) {
+    const npc = (npcs || []).find((n) => n.id === id);
+    return npc ? npc.affection : 0;
+  }
+
   const ENDINGS = [
+    {
+      id: 'best-friend-forever',
+      emoji: '👭',
+      title: '평생 단짝',
+      desc: '어떤 진로보다 먼저, 무슨 일이 있어도 곁을 지켜주는 둘도 없는 단짝을 얻었다.',
+      requirement: (s, npcs) => affectionOf(npcs, 'friend') >= 80,
+    },
+    {
+      id: 'rival-partnership',
+      emoji: '🤝',
+      title: '라이벌에서 파트너로',
+      desc: '서로를 이기려고 애쓰던 두 사람은, 어느새 서로를 가장 잘 이해하는 동업자가 되어 함께 회사를 차렸다.',
+      requirement: (s, npcs) => affectionOf(npcs, 'rival') >= 80 && s.intelligence >= 55,
+    },
+    {
+      id: 'teachers-successor',
+      emoji: '🍎',
+      title: '은사님의 뒤를 이어',
+      desc: '가장 존경했던 선생님처럼, 이제는 자신이 후배들의 길잡이가 되어주는 선생님이 되었다.',
+      requirement: (s, npcs) => affectionOf(npcs, 'teacher') >= 80 && s.intelligence >= 50,
+    },
     {
       id: 'fields-medalist',
       emoji: '🏅',
@@ -108,10 +134,10 @@
     return clamped;
   }
 
-  function computeEnding(stats) {
+  function computeEnding(stats, npcs) {
     const s = clampStats(stats);
     for (const ending of ENDINGS) {
-      if (ending.requirement(s)) return ending;
+      if (ending.requirement(s, npcs || [])) return ending;
     }
     return ENDINGS[ENDINGS.length - 1];
   }

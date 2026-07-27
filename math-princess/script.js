@@ -22,7 +22,7 @@
   const STAGE_EMOJIS = ['🌱', '🧒', '👧', '👩'];
 
   const EVENTS = [
-    { emoji: '😄', title: '친구와 즐거운 시간', desc: '친구와 수다를 떨며 즐거운 시간을 보냈어요.', apply: (s) => { s.stats.charm += 3; } },
+    { emoji: '😄', title: '즐거운 시간', desc: '친구와 수다를 떨며 즐거운 시간을 보냈어요.', apply: (s) => { s.stats.charm += 3; } },
     { emoji: '😤', title: '라이벌의 도발', desc: '라이벌이 시험 자랑을 해서 오기가 생겼어요!', apply: (s) => { s.stats.intelligence += 2; s.stats.stress += 3; } },
     { emoji: '🍀', title: '행운의 동전', desc: '길에서 동전을 주웠어요!', apply: (s) => { s.gold += 20; s.stats.luck += 1; } },
     { emoji: '🤒', title: '감기몸살', desc: '감기에 걸려서 며칠 앓아누웠어요.', apply: (s) => { s.stats.stamina -= 10; } },
@@ -30,10 +30,48 @@
     { emoji: '🏆', title: '장학금 획득!', desc: '열심히 공부한 결과 장학금을 받았어요!', apply: (s) => { s.gold += 100; }, requirement: (s) => s.stats.intelligence >= 50 },
   ];
 
+  const ITEMS = [
+    { id: 'sharp', emoji: '✏️', name: '샤프', cost: 1500, desc: '문제 정답 시 골드 +10%', goldBonus: 0.1 },
+    { id: 'tablet', emoji: '📱', name: '태블릿', cost: 5000, desc: '공부 정답 시 지능 +1 추가 획득', intBonus: 1 },
+    { id: 'laptop', emoji: '💻', name: '노트북', cost: 12000, desc: '콤보 보상 배율 +0.2', comboBonus: 0.2 },
+    { id: 'aiTutor', emoji: '🤖', name: 'AI 학습기', cost: 30000, desc: '문제 정답 시 골드 +25%, 지능 +2 추가', goldBonus: 0.25, intBonus: 2 },
+    { id: 'apartment', emoji: '🏢', name: '아파트로 이사', cost: 8000, desc: '휴식 효과 +50%', restBonus: 0.5 },
+    { id: 'house', emoji: '🏡', name: '단독주택으로 이사', cost: 25000, desc: '휴식 효과 추가 +50% (총 100%)', restBonus: 0.5 },
+  ];
+
+  const NPC_DEFS = [
+    {
+      id: 'friend',
+      emoji: '😊',
+      name: '친구',
+      desc: '함께 있으면 마음이 편안해지는 단짝',
+      apply: (s) => { s.stats.charm += 6; },
+      lines: ['같이 떡볶이를 먹으며 수다를 떨었어요.', '친구가 요즘 고민을 털어놓았어요.', '같이 만화책을 보며 깔깔 웃었어요.'],
+    },
+    {
+      id: 'rival',
+      emoji: '😏',
+      name: '라이벌',
+      desc: '괜히 신경 쓰이지만 자꾸 실력이 느는 상대',
+      apply: (s) => { s.stats.intelligence += 3; s.stats.stress += 3; },
+      lines: ['라이벌이 이번 시험 점수를 자랑했어요. 오기가 생겨요!', '라이벌과 문제풀이 대결을 했어요.', '라이벌이 은근히 신경 쓰이는 하루였어요.'],
+    },
+    {
+      id: 'teacher',
+      emoji: '👩‍🏫',
+      name: '선생님',
+      desc: '어려운 문제도 척척 알려주는 든든한 선생님',
+      apply: (s) => { s.stats.intelligence += 2; s.stats.stress -= 5; },
+      lines: ['선생님이 어려운 문제 풀이법을 알려주셨어요.', '선생님과 진로 상담을 했어요.', '선생님이 숙제를 칭찬해주셨어요.'],
+    },
+  ];
+
   const el = {
     screens: {
       start: document.getElementById('screen-start'),
       main: document.getElementById('screen-main'),
+      shop: document.getElementById('screen-shop'),
+      npcSelect: document.getElementById('screen-npc-select'),
       levelSelect: document.getElementById('screen-level-select'),
       quiz: document.getElementById('screen-quiz'),
       sessionSummary: document.getElementById('screen-session-summary'),
@@ -49,6 +87,14 @@
     characterEmoji: document.getElementById('character-emoji'),
     statPanel: document.getElementById('stat-panel'),
     activityGrid: document.getElementById('activity-grid'),
+
+    btnOpenShop: document.getElementById('btn-open-shop'),
+    btnShopBack: document.getElementById('btn-shop-back'),
+    shopList: document.getElementById('shop-list'),
+    shopGoldLabel: document.getElementById('shop-gold-label'),
+
+    btnNpcBack: document.getElementById('btn-npc-back'),
+    npcList: document.getElementById('npc-list'),
 
     btnLevelBack: document.getElementById('btn-level-back'),
     levelList: document.getElementById('level-list'),
@@ -79,10 +125,12 @@
     endingEmoji: document.getElementById('ending-emoji'),
     endingTitle: document.getElementById('ending-title'),
     endingDesc: document.getElementById('ending-desc'),
+    endingNpcLine: document.getElementById('ending-npc-line'),
     endingStatPanel: document.getElementById('ending-stat-panel'),
     endingTotalCorrect: document.getElementById('ending-total-correct'),
     endingBestCombo: document.getElementById('ending-best-combo'),
     endingGold: document.getElementById('ending-gold'),
+    endingItems: document.getElementById('ending-items'),
     btnEndingRestart: document.getElementById('btn-ending-restart'),
     btnEndingHome: document.getElementById('btn-ending-home'),
   };
@@ -113,18 +161,26 @@
       totalCorrect: 0,
       combo: 0,
       bestCombo: 0,
+      items: {},
+      npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20) })),
     };
   }
 
   let state = makeInitialState();
   let session = null;
-  let pendingAfterEvent = null;
 
   function clampStats() {
     STAT_KEYS.forEach((k) => {
       state.stats[k] = Math.max(0, Math.min(100, state.stats[k]));
     });
     state.gold = Math.max(0, state.gold);
+    (state.npcs || []).forEach((n) => {
+      n.affection = Math.max(0, Math.min(100, n.affection));
+    });
+  }
+
+  function itemBonusSum(key) {
+    return ITEMS.filter((i) => state.items[i.id]).reduce((sum, i) => sum + (i[key] || 0), 0);
   }
 
   function showScreen(name) {
@@ -146,6 +202,8 @@
     try {
       const loaded = JSON.parse(raw);
       if (!loaded || typeof loaded.turn !== 'number') return false;
+      loaded.items = loaded.items || {};
+      loaded.npcs = loaded.npcs || NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20) }));
       state = loaded;
       return true;
     } catch (e) {
@@ -339,14 +397,15 @@
     state.bestCombo = Math.max(state.bestCombo, state.combo);
     session.sessionBestCombo = Math.max(session.sessionBestCombo, state.combo);
 
-    const multiplier = comboMultiplier(state.combo);
+    const multiplier = comboMultiplier(state.combo) + itemBonusSum('comboBonus');
     const jobBonus = session.type === 'job' ? 1.5 : 1;
-    const goldGain = Math.round(problem.rewardGold * multiplier * jobBonus);
+    const goldMultiplier = 1 + itemBonusSum('goldBonus');
+    const goldGain = Math.round(problem.rewardGold * multiplier * jobBonus * goldMultiplier);
     state.gold += goldGain;
     session.goldEarned += goldGain;
 
     if (session.type === 'study') {
-      state.stats.intelligence += problem.level;
+      state.stats.intelligence += problem.level + itemBonusSum('intBonus');
     } else {
       state.stats.stamina -= 2;
     }
@@ -391,16 +450,11 @@
   }
 
   function doRest() {
-    state.stats.stress -= 12;
-    state.stats.stamina += 10;
+    const restMultiplier = 1 + itemBonusSum('restBonus');
+    state.stats.stress -= 12 * restMultiplier;
+    state.stats.stamina += 10 * restMultiplier;
     clampStats();
     maybeTriggerEvent(0.15);
-  }
-
-  function doFriend() {
-    state.stats.charm += 6;
-    clampStats();
-    maybeTriggerEvent(1);
   }
 
   function maybeTriggerEvent(chance) {
@@ -423,6 +477,90 @@
     advanceTurn();
   });
 
+  /* ---------------- 친구 만나기: 상대 선택 ---------------- */
+
+  function openNpcSelect() {
+    el.npcList.innerHTML = '';
+    NPC_DEFS.forEach((def) => {
+      const npcState = state.npcs.find((n) => n.id === def.id);
+      const card = document.createElement('button');
+      card.className = 'level-card npc-card';
+      card.innerHTML = `
+        <span class="level-badge-num">${def.emoji}</span>
+        <span class="level-info">
+          <span class="level-title">${def.name}</span>
+          <span class="level-desc">${def.desc}</span>
+          <span class="npc-affection-track"><span class="npc-affection-fill" style="width:${npcState.affection}%"></span></span>
+        </span>
+        <span class="level-lock-icon">›</span>
+      `;
+      card.addEventListener('click', () => meetNpc(def.id));
+      el.npcList.appendChild(card);
+    });
+    showScreen('npcSelect');
+  }
+
+  el.btnNpcBack.addEventListener('click', () => showScreen('main'));
+
+  function meetNpc(npcId) {
+    const def = NPC_DEFS.find((n) => n.id === npcId);
+    const npcState = state.npcs.find((n) => n.id === npcId);
+    def.apply(state);
+    npcState.affection += randInt(8, 14);
+    clampStats();
+
+    el.eventEmoji.textContent = def.emoji;
+    el.eventTitle.textContent = `${def.name}과(와)의 시간`;
+    el.eventDesc.textContent = `${randChoice(def.lines)} (애정도 ${Math.round(npcState.affection)})`;
+    showScreen('event');
+  }
+
+  /* ---------------- 상점 ---------------- */
+
+  function openShop() {
+    renderShopList();
+    el.shopGoldLabel.textContent = `💰 ${state.gold}G`;
+    showScreen('shop');
+  }
+
+  function renderShopList() {
+    el.shopList.innerHTML = '';
+    ITEMS.forEach((item) => {
+      const owned = !!state.items[item.id];
+      const canAfford = state.gold >= item.cost;
+      const card = document.createElement('div');
+      card.className = `level-card shop-item${owned ? ' owned' : ''}`;
+      card.innerHTML = `
+        <span class="level-badge-num">${item.emoji}</span>
+        <span class="level-info">
+          <span class="level-title">${item.name}</span>
+          <span class="level-desc">${item.desc}</span>
+          <span class="shop-cost">${owned ? '보유 중' : `💰 ${item.cost}G`}</span>
+        </span>
+        <button class="shop-buy-btn" ${owned || !canAfford ? 'disabled' : ''}>${owned ? '완료' : canAfford ? '구매' : '골드 부족'}</button>
+      `;
+      if (!owned && canAfford) {
+        card.querySelector('.shop-buy-btn').addEventListener('click', () => buyItem(item.id));
+      }
+      el.shopList.appendChild(card);
+    });
+  }
+
+  function buyItem(itemId) {
+    const item = ITEMS.find((i) => i.id === itemId);
+    if (!item || state.items[itemId] || state.gold < item.cost) return;
+    state.gold -= item.cost;
+    state.items[itemId] = true;
+    el.shopGoldLabel.textContent = `💰 ${state.gold}G`;
+    renderShopList();
+  }
+
+  el.btnOpenShop.addEventListener('click', openShop);
+  el.btnShopBack.addEventListener('click', () => {
+    renderMain();
+    showScreen('main');
+  });
+
   /* ---------------- 활동 버튼 ---------------- */
 
   el.activityGrid.addEventListener('click', (e) => {
@@ -433,7 +571,7 @@
     else if (activity === 'job') startJobSession();
     else if (activity === 'exercise') doExercise();
     else if (activity === 'rest') doRest();
-    else if (activity === 'friend') doFriend();
+    else if (activity === 'friend') openNpcSelect();
   });
 
   /* ---------------- 턴 진행 / 엔딩 ---------------- */
@@ -451,14 +589,24 @@
 
   function showEnding() {
     clearSave();
-    const ending = E.computeEnding(state.stats);
+    const ending = E.computeEnding(state.stats, state.npcs);
     el.endingEmoji.textContent = ending.emoji;
     el.endingTitle.textContent = ending.title;
     el.endingDesc.textContent = ending.desc;
+
+    const closestNpc = state.npcs.reduce((best, n) => (n.affection > best.affection ? n : best), state.npcs[0]);
+    if (closestNpc && closestNpc.affection >= 30) {
+      const def = NPC_DEFS.find((n) => n.id === closestNpc.id);
+      el.endingNpcLine.textContent = `${def.emoji} 가장 가까운 사이: ${def.name} (애정도 ${Math.round(closestNpc.affection)})`;
+    } else {
+      el.endingNpcLine.textContent = '';
+    }
+
     renderStatPanel(el.endingStatPanel, state.stats);
     el.endingTotalCorrect.textContent = state.totalCorrect;
     el.endingBestCombo.textContent = state.bestCombo;
     el.endingGold.textContent = state.gold;
+    el.endingItems.textContent = Object.values(state.items).filter(Boolean).length;
     showScreen('ending');
   }
 

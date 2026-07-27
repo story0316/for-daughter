@@ -31,7 +31,10 @@
       <header class="hud">
         <div class="hud-row">
           <div id="turn-label" class="turn-label">1년차 1월 · 턴 1/24</div>
-          <div id="gold-label" class="gold-label">💰 0G</div>
+          <div class="hud-right">
+            <button id="btn-open-shop" class="btn-shop">🛍️ 상점</button>
+            <div id="gold-label" class="gold-label">💰 0G</div>
+          </div>
         </div>
       </header>
 
@@ -64,6 +67,29 @@
           <span class="activity-name">친구 만나기</span>
         </button>
       </div>
+    </section>
+
+    <!-- 상점 화면 -->
+    <section id="screen-shop" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-shop-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label">상점</div>
+          <div id="shop-gold-label" class="gold-label">💰 0G</div>
+        </div>
+      </header>
+      <div id="shop-list" class="level-list"></div>
+    </section>
+
+    <!-- 친구 만나기: 상대 선택 -->
+    <section id="screen-npc-select" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-npc-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label">누구를 만날까요?</div>
+        </div>
+      </header>
+      <div id="npc-list" class="level-list"></div>
     </section>
 
     <!-- 학원(레벨) 선택 화면 -->
@@ -134,11 +160,13 @@
         <div id="ending-emoji" class="title-emoji">🏅</div>
         <h2 id="ending-title">엔딩 타이틀</h2>
         <p id="ending-desc">엔딩 설명</p>
+        <p id="ending-npc-line" class="ending-npc-line"></p>
         <div id="ending-stat-panel" class="stat-panel ending-stat-panel"></div>
         <div class="result-stats">
           <div class="stat-box"><span class="stat-num" id="ending-total-correct">0</span><span class="stat-label">푼 문제 수</span></div>
           <div class="stat-box"><span class="stat-num" id="ending-best-combo">0</span><span class="stat-label">최고 콤보</span></div>
           <div class="stat-box"><span class="stat-num" id="ending-gold">0</span><span class="stat-label">누적 골드</span></div>
+          <div class="stat-box"><span class="stat-num" id="ending-items">0</span><span class="stat-label">보유 장비</span></div>
         </div>
         <div class="result-buttons">
           <button id="btn-ending-restart" class="btn btn-primary">다시 시작하기</button>
