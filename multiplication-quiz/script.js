@@ -57,6 +57,7 @@
     typedWrap: document.getElementById('typed-answer-wrap'),
     typedInput: document.getElementById('typed-input'),
     btnSubmit: document.getElementById('btn-submit'),
+    keypad: document.getElementById('keypad'),
     feedback: document.getElementById('feedback'),
     fxLayer: document.getElementById('fx-layer'),
 
@@ -152,6 +153,16 @@
   el.btnSubmit.addEventListener('click', handleSubmit);
   el.typedInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleSubmit();
+  });
+
+  el.keypad.addEventListener('click', (e) => {
+    const btn = e.target.closest('.keypad-btn');
+    if (!btn || state.answered) return;
+    if (btn.dataset.key === 'erase') {
+      el.typedInput.value = el.typedInput.value.slice(0, -1);
+    } else if (el.typedInput.value.length < 3) {
+      el.typedInput.value += btn.dataset.key;
+    }
   });
 
   function generateQuestions(diff) {
@@ -257,7 +268,6 @@
       el.typedInput.classList.remove('correct', 'wrong');
       el.typedInput.disabled = false;
       el.btnSubmit.disabled = false;
-      setTimeout(() => el.typedInput.focus(), 50);
     }
 
     startTimer(diff.time);
@@ -334,7 +344,6 @@
     if (diff.mode !== 'input') return;
     const raw = el.typedInput.value.trim();
     if (raw === '') {
-      el.typedInput.focus();
       return;
     }
     state.answered = true;

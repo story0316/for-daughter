@@ -58,8 +58,23 @@
         <div id="choices" class="choices"></div>
 
         <div id="typed-answer-wrap" class="typed-answer-wrap">
-          <input id="typed-input" class="typed-input" type="number" inputmode="numeric" placeholder="정답을 입력하세요" autocomplete="off" />
-          <button id="btn-submit" class="btn btn-primary btn-submit">확인</button>
+          <div class="typed-input-row">
+            <input id="typed-input" class="typed-input" type="text" inputmode="none" placeholder="정답을 입력하세요" autocomplete="off" readonly />
+            <button id="btn-submit" class="btn btn-primary btn-submit">확인</button>
+          </div>
+          <div class="keypad" id="keypad">
+            <button class="keypad-btn" data-key="1">1</button>
+            <button class="keypad-btn" data-key="2">2</button>
+            <button class="keypad-btn" data-key="3">3</button>
+            <button class="keypad-btn" data-key="4">4</button>
+            <button class="keypad-btn" data-key="5">5</button>
+            <button class="keypad-btn" data-key="6">6</button>
+            <button class="keypad-btn" data-key="7">7</button>
+            <button class="keypad-btn" data-key="8">8</button>
+            <button class="keypad-btn" data-key="9">9</button>
+            <button class="keypad-btn" data-key="0">0</button>
+            <button class="keypad-btn keypad-erase" data-key="erase">⌫</button>
+          </div>
         </div>
 
         <div id="feedback" class="feedback"></div>

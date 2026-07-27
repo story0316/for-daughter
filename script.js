@@ -26,10 +26,9 @@
     {
       href: 'math-princess/index.html',
       emoji: '👑',
-      title: '프린세스 메이커',
+      title: '수학 프린세스 메이커',
       desc: '공부해서 교양을 쌓고 진짜 공주가 되어보세요',
       theme: 'gold',
-      image: 'math-princess/hero.jpg',
     },
   ];
 
@@ -52,13 +51,8 @@
     slidesData.forEach((game) => {
       const slide = document.createElement('div');
       slide.className = `slide theme-${game.theme}`;
-      if (game.image) {
-        slide.style.backgroundImage = `linear-gradient(180deg, rgba(30,18,8,0.15) 0%, rgba(30,18,8,0.55) 65%, rgba(20,12,8,0.78) 100%), url('${game.image}')`;
-        slide.style.backgroundSize = 'cover';
-        slide.style.backgroundPosition = 'center 30%';
-      }
       slide.innerHTML = `
-        ${game.image ? '' : `<div class="slide-emoji">${game.emoji}</div>`}
+        <div class="slide-emoji">${game.emoji}</div>
         <h1 class="slide-title">${game.title}</h1>
         <p class="slide-desc">${game.desc}</p>
         <a class="slide-play" href="${game.href}">▶ 시작하기</a>
