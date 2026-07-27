@@ -842,6 +842,7 @@
 
     if (success) {
       princeState.affection += randInt(10, 16) + itemBonusSum('affectionBonus');
+      princeState.lastMetTurn = state.turn;
       clampStats();
       announceStatLevelUps(beforeTiers);
       el.eventEmoji.innerHTML = npcAvatarHTML(prince, 'npc-avatar-lg');
