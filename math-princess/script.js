@@ -4,6 +4,19 @@
   const P = window.MathPrincessProblems;
   const E = window.MathPrincessEndings;
   const SC = window.MathPrincessScenarios;
+  const SUBJ = window.MathPrincessSubjects;
+
+  // "공부"를 비롯한 여러 활동에서 수학뿐 아니라 영어·과학 문제도 섞여
+  // 나오도록 하는 과목 레지스트리. 세 과목 모두 같은 지능 스탯으로
+  // 해금되며(영어·과학은 초4~중1 범위인 1~4단계까지만), 정답 판정은
+  // problems.js의 checkAnswer를 그대로 재사용한다(선택형 문제는 과목과
+  // 무관하게 동일한 방식으로 채점되기 때문).
+  const SUBJECTS = {
+    math: { name: '수학', isLevelUnlocked: P.isLevelUnlocked, generateProblem: P.generateProblem, maxLevel: 10 },
+    english: { name: '영어', isLevelUnlocked: SUBJ.isEnglishLevelUnlocked, generateProblem: SUBJ.generateEnglishProblem, maxLevel: 4 },
+    science: { name: '과학', isLevelUnlocked: SUBJ.isScienceLevelUnlocked, generateProblem: SUBJ.generateScienceProblem, maxLevel: 4 },
+  };
+  const SUBJECT_KEYS = Object.keys(SUBJECTS);
 
   const STAT_KEYS = ['intelligence', 'focus', 'stamina', 'charm', 'creativity', 'stress', 'luck'];
   const STAT_LABELS = {
@@ -125,17 +138,21 @@
     '오늘 있었던 일을 조잘조잘 들어줬어요.',
   ];
 
+  // 가격은 48턴 동안 실제로 벌 수 있는 골드 범위(정답률 60~85% 기준
+  // 대략 2,500~5,300G, 콤보를 놓치지 않는 이상적인 플레이로도 최대
+  // 16,000~21,000G 정도)에 맞춰 책정했다. 예전 가격(1,500~60,000G)은
+  // 실제로는 상위 몇 개 외엔 사실상 평생 살 수 없는 장식품이었다.
   const ITEMS = [
-    { id: 'sharp', emoji: '✏️', name: '샤프', cost: 1500, desc: '문제 정답 시 골드 +10%', goldBonus: 0.1 },
-    { id: 'tablet', emoji: '📱', name: '태블릿', cost: 5000, desc: '공부 정답 시 지능 +1 추가 획득', intBonus: 1 },
-    { id: 'laptop', emoji: '💻', name: '노트북', cost: 12000, desc: '콤보 보상 배율 +0.2', comboBonus: 0.2 },
-    { id: 'tiara', emoji: '👑', name: '작은 티아라', cost: 18000, desc: '연회에서 정답 맞힐 때 매력 +1 추가 획득', charmBonus: 1 },
-    { id: 'invitation', emoji: '✉️', name: '왕실 초대장', cost: 22000, desc: '인물을 만날 때 호감도 +2 추가 획득', affectionBonus: 2 },
-    { id: 'aiTutor', emoji: '🤖', name: 'AI 학습기', cost: 30000, desc: '문제 정답 시 골드 +25%, 지능 +2 추가', goldBonus: 0.25, intBonus: 2 },
-    { id: 'orchestra', emoji: '🎻', name: '개인 오케스트라 레슨', cost: 45000, desc: '공부 정답 시 지능 +2 추가 획득', intBonus: 2 },
-    { id: 'apartment', emoji: '🏢', name: '아파트로 이사', cost: 8000, desc: '휴식 효과 +50%', restBonus: 0.5 },
-    { id: 'house', emoji: '🏡', name: '단독주택으로 이사', cost: 25000, desc: '휴식 효과 추가 +50% (총 100%)', restBonus: 0.5 },
-    { id: 'palace', emoji: '🏰', name: '별궁으로 이사', cost: 60000, desc: '휴식 효과 추가 +50% (총 150%)', restBonus: 0.5 },
+    { id: 'sharp', emoji: '✏️', name: '샤프', cost: 300, desc: '문제 정답 시 골드 +10%', goldBonus: 0.1 },
+    { id: 'tablet', emoji: '📱', name: '태블릿', cost: 600, desc: '공부 정답 시 지능 +1 추가 획득', intBonus: 1 },
+    { id: 'apartment', emoji: '🏢', name: '아파트로 이사', cost: 1000, desc: '휴식 효과 +50%', restBonus: 0.5 },
+    { id: 'laptop', emoji: '💻', name: '노트북', cost: 1200, desc: '콤보 보상 배율 +0.2', comboBonus: 0.2 },
+    { id: 'tiara', emoji: '👑', name: '작은 티아라', cost: 1500, desc: '연회에서 정답 맞힐 때 매력 +1 추가 획득', charmBonus: 1 },
+    { id: 'invitation', emoji: '✉️', name: '왕실 초대장', cost: 2000, desc: '인물을 만날 때 호감도 +2 추가 획득', affectionBonus: 2 },
+    { id: 'house', emoji: '🏡', name: '단독주택으로 이사', cost: 2500, desc: '휴식 효과 추가 +50% (총 100%)', restBonus: 0.5 },
+    { id: 'aiTutor', emoji: '🤖', name: 'AI 학습기', cost: 3500, desc: '문제 정답 시 골드 +25%, 지능 +2 추가', goldBonus: 0.25, intBonus: 2 },
+    { id: 'orchestra', emoji: '🎻', name: '개인 오케스트라 레슨', cost: 4000, desc: '공부 정답 시 지능 +2 추가 획득', intBonus: 2 },
+    { id: 'palace', emoji: '🏰', name: '별궁으로 이사', cost: 5000, desc: '휴식 효과 추가 +50% (총 150%)', restBonus: 0.5 },
   ];
 
   // 품위(교양) 점수: 매력·창의력·지능을 섞어 계산한다. 이 점수가 오를수록
@@ -163,8 +180,12 @@
 
   // 한동안 만나지 않고 방치한 인물은 호감도가 서서히 식는다.
   // (삼국지 시리즈처럼, 자주 만나야 친밀도를 유지·상승시킬 수 있다)
-  const AFFECTION_DECAY_GRACE_TURNS = 2;
-  const AFFECTION_DECAY_AMOUNT = 2;
+  // 유예 2턴/감쇠 2는 인물 6명을 고르게 순환 방문(6턴 주기)해도 호감도가
+  // 55점에서 멈춰 어떤 히든 엔딩(호감도 80 이상)도 열 수 없을 만큼 가혹했다.
+  // 유예 3턴/감쇠 1로 완화하면 같은 6턴 순환에서도 87점까지 오르면서,
+  // 오래 방치(10턴 이상)하면 여전히 뚜렷하게 식는 균형을 유지한다.
+  const AFFECTION_DECAY_GRACE_TURNS = 3;
+  const AFFECTION_DECAY_AMOUNT = 1;
 
   const OUTFIT_TIERS = [
     { min: 0, emoji: '👕', name: '평범한 옷', wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
@@ -256,7 +277,6 @@
       status: document.getElementById('screen-status'),
       shop: document.getElementById('screen-shop'),
       npcSelect: document.getElementById('screen-npc-select'),
-      levelSelect: document.getElementById('screen-level-select'),
       quiz: document.getElementById('screen-quiz'),
       sessionSummary: document.getElementById('screen-session-summary'),
       event: document.getElementById('screen-event'),
@@ -275,6 +295,7 @@
     mainMenuGrid: document.getElementById('main-menu-grid'),
     scheduleBanner: document.getElementById('schedule-banner'),
     scheduleBannerText: document.getElementById('schedule-banner-text'),
+    mainStatPanel: document.getElementById('main-stat-panel'),
 
     btnScheduleBack: document.getElementById('btn-schedule-back'),
     scheduleList: document.getElementById('schedule-list'),
@@ -297,9 +318,6 @@
 
     btnNpcBack: document.getElementById('btn-npc-back'),
     npcList: document.getElementById('npc-list'),
-
-    btnLevelBack: document.getElementById('btn-level-back'),
-    levelList: document.getElementById('level-list'),
 
     quizSessionLabel: document.getElementById('quiz-session-label'),
     quizProgress: document.getElementById('quiz-progress'),
@@ -511,39 +529,43 @@
     const equippedTier = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.characterPortrait, state.wardrobe.equipped, 'main');
     el.outfitBadge.textContent = `${equippedTier.emoji} ${equippedTier.name}`;
+    renderStatPanel(el.mainStatPanel, state.stats);
     updateScheduleBanner();
   }
 
   /* ---------------- 활동: 공부 / 알바 ---------------- */
 
-  function openLevelSelect() {
-    el.levelList.innerHTML = '';
-    P.LEVELS.forEach((level) => {
-      const unlocked = P.isLevelUnlocked(level.id, state.stats.intelligence);
-      const card = document.createElement('button');
-      card.className = `level-card${unlocked ? '' : ' locked'}`;
-      card.innerHTML = `
-        <span class="level-badge-num">${level.id}</span>
-        <span class="level-info">
-          <span class="level-title">${level.name}</span>
-          <span class="level-desc">${unlocked ? level.desc : `지능 ${level.unlockIntelligence} 필요 (현재 ${Math.round(state.stats.intelligence)})`}</span>
-        </span>
-        <span class="level-lock-icon">${unlocked ? '›' : '🔒'}</span>
-      `;
-      if (unlocked) {
-        card.addEventListener('click', () => startStudySession(level.id));
-      }
-      el.levelList.appendChild(card);
-    });
-    showScreen('levelSelect');
+  // 현재 지능으로 어떤 과목의 어떤 레벨까지 풀 수 있는지 확인한다.
+  function unlockedLevelsFor(subjectKey) {
+    const subj = SUBJECTS[subjectKey];
+    const ids = [];
+    for (let i = 1; i <= subj.maxLevel; i++) {
+      if (subj.isLevelUnlocked(i, state.stats.intelligence)) ids.push(i);
+    }
+    return ids;
   }
 
-  el.btnLevelBack.addEventListener('click', () => showScreen('main'));
+  // 어떤 과목·레벨을 공부할지 플레이어가 직접 고르지 않고, 수학/영어/과학
+  // 중 하나를 무작위로 고른 뒤 그 과목에서 최근 해금된 상위 레벨들(최대
+  // 3개) 중에서 다시 무작위로 골라준다(매 문제마다 다시 고르므로 한
+  // 세션 안에서도 과목이 섞여 나온다). 항상 가장 쉬운 레벨만 골라
+  // 콤보를 안전하게 farming하는 것을 막고, 세 과목을 고루 접하게 한다.
+  function pickRandomSubjectAndLevel() {
+    const subjectKey = randChoice(SUBJECT_KEYS);
+    const unlocked = unlockedLevelsFor(subjectKey);
+    const recentBand = unlocked.slice(-3);
+    const level = randChoice(recentBand.length ? recentBand : [1]);
+    return { subject: subjectKey, level };
+  }
 
-  function startStudySession(levelId) {
+  // 알바는 항상 가장 쉬운(레벨 1) 문제만 나오되, 과목은 무작위로 섞인다.
+  function pickRandomSubjectLevel1() {
+    return { subject: randChoice(SUBJECT_KEYS), level: 1 };
+  }
+
+  function startStudySession() {
     session = {
       type: 'study',
-      level: levelId,
       count: QUESTIONS_PER_STUDY,
       index: 0,
       correctCount: 0,
@@ -551,6 +573,7 @@
       goldEarned: 0,
       answered: false,
       currentProblem: null,
+      currentSubject: null,
     };
     showScreen('quiz');
     nextQuizQuestion();
@@ -559,7 +582,6 @@
   function startJobSession() {
     session = {
       type: 'job',
-      level: 1,
       count: QUESTIONS_PER_JOB,
       index: 0,
       correctCount: 0,
@@ -567,6 +589,7 @@
       goldEarned: 0,
       answered: false,
       currentProblem: null,
+      currentSubject: null,
     };
     showScreen('quiz');
     nextQuizQuestion();
@@ -605,28 +628,43 @@
     };
   }
 
+  // "공부/알바/운동 보너스/휴식 보너스"는 수학·영어·과학이 매 문제마다
+  // 무작위로 섞여 나온다. 알바는 항상 가장 쉬운 레벨만, 나머지는 지능에
+  // 맞는 레벨 범위에서 고른다.
+  const MULTI_SUBJECT_TYPES = ['study', 'job', 'exercise-bonus', 'rest-bonus'];
+
   function nextQuizQuestion() {
     if (session.index >= session.count) {
       finishSession();
       return;
     }
     session.answered = false;
-    const problem =
-      session.type === 'banquet'
-        ? generateEtiquetteQuestion(session)
-        : session.type === 'scenario-quiz'
-          ? generateScenarioQuestion(session)
-          : P.generateProblem(session.level);
+    let problem;
+    if (session.type === 'banquet') {
+      problem = generateEtiquetteQuestion(session);
+    } else if (session.type === 'scenario-quiz') {
+      problem = generateScenarioQuestion(session);
+    } else if (MULTI_SUBJECT_TYPES.includes(session.type)) {
+      const picked = session.type === 'job' ? pickRandomSubjectLevel1() : pickRandomSubjectAndLevel();
+      session.currentSubject = picked.subject;
+      problem = SUBJECTS[picked.subject].generateProblem(picked.level);
+    } else {
+      problem = P.generateProblem(session.level);
+    }
     session.currentProblem = problem;
 
     el.quizSessionLabel.textContent =
       session.type === 'study'
-        ? '📖 공부 중'
+        ? `📖 공부 중 · ${SUBJECTS[session.currentSubject].name}`
         : session.type === 'job'
-          ? '💼 알바 중'
+          ? `💼 알바 중 · ${SUBJECTS[session.currentSubject].name}`
           : session.type === 'banquet'
             ? '💃 연회 참석 중'
-            : `${session.scenario.entryEmoji} ${session.scenario.title}`;
+            : session.type === 'exercise-bonus'
+              ? `🏃 운동 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
+              : session.type === 'rest-bonus'
+                ? `🛌 휴식 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
+                : `${session.scenario.entryEmoji} ${session.scenario.title}`;
     el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
     el.quizLevelBadge.textContent = session.type === 'banquet' ? '예절' : session.type === 'scenario-quiz' ? session.scenario.arc : `Lv.${problem.level}`;
@@ -724,6 +762,9 @@
     } else if (session.type === 'scenario-quiz') {
       // 시나리오 퀴즈는 문제마다 즉시 보상을 주지 않고, 세션이 끝난 뒤
       // scenario.outcomes.success/fail 효과를 한 번에 적용한다.
+    } else if (session.type === 'exercise-bonus' || session.type === 'rest-bonus') {
+      // 운동/휴식 보너스 문제도 세션 종료 시(finishExerciseBonusSession/
+      // finishRestBonusSession) 한 번에 보너스 효과를 적용한다.
     } else {
       const multiplier = comboMultiplier(state.combo) + itemBonusSum('comboBonus');
       const jobBonus = session.type === 'job' ? 1.5 : 1;
@@ -734,6 +775,11 @@
 
       if (session.type === 'study') {
         state.stats.intelligence += problem.level + itemBonusSum('intBonus');
+        // 창의력은 이전까지 사교계 친구/왕실 스승을 만날 때만 소량 올랐는데,
+        // 그 두 인물을 자주 못 만나면 품위(=매력*0.4+창의력*0.3+지능*0.3)가
+        // 매력·지능만큼 오르지 못해 무도회/대관식 드레스 단계에 사실상
+        // 도달할 수 없었다. 공부에도 소폭의 창의력 트리클을 더해 균형을 맞춘다.
+        state.stats.creativity += problem.level * 0.2;
       } else {
         state.stats.stamina -= 2;
       }
@@ -749,6 +795,8 @@
       state.stats.stress += 2;
     } else if (session.type === 'scenario-quiz') {
       // 시나리오 퀴즈는 outcomes.fail 효과가 세션 종료 시 한 번에 적용된다.
+    } else if (session.type === 'exercise-bonus' || session.type === 'rest-bonus') {
+      // 틀려도 페널티 없이 원래 운동/휴식 효과만 그대로 받는다.
     } else if (session.type === 'study') {
       state.stats.stress += 6;
       state.stats.stamina -= 4;
@@ -765,6 +813,14 @@
     }
     if (session.type === 'scenario-quiz') {
       finishScenarioQuizSession();
+      return;
+    }
+    if (session.type === 'exercise-bonus') {
+      finishExerciseBonusSession();
+      return;
+    }
+    if (session.type === 'rest-bonus') {
+      finishRestBonusSession();
       return;
     }
     el.summaryEmoji.textContent = session.correctCount === session.count ? '🌟' : '✅';
@@ -809,25 +865,71 @@
 
   /* ---------------- 활동: 운동 / 휴식 / 친구 만나기 ---------------- */
 
+  // 운동/휴식도 공부와 연계되도록, 시작 전에 보너스 문제 1개를 낸다.
+  // 맞히면 추가 효과가 붙고, 틀려도 원래 효과는 그대로 받으니 부담은 없다.
   function doExercise() {
+    session = {
+      type: 'exercise-bonus',
+      count: 1,
+      index: 0,
+      correctCount: 0,
+      sessionBestCombo: 0,
+      goldEarned: 0,
+      answered: false,
+      currentProblem: null,
+      currentSubject: null,
+    };
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
+  function finishExerciseBonusSession() {
+    const bonus = session.correctCount > 0;
     const beforeTiers = snapshotGrowthTiers(state.stats);
     state.stats.stamina += 8;
     state.stats.focus += 4;
     state.stats.stress += 3;
+    if (bonus) {
+      state.stats.focus += 3;
+      state.stats.stamina += 2;
+    }
     clampStats();
     announceStatLevelUps(beforeTiers);
     saveGame();
+    if (bonus) showLevelToast('💪 문제까지 맞혀서 운동 효과가 더 좋아졌어요!');
     maybeTriggerEvent(0.25);
   }
 
   function doRest() {
+    session = {
+      type: 'rest-bonus',
+      count: 1,
+      index: 0,
+      correctCount: 0,
+      sessionBestCombo: 0,
+      goldEarned: 0,
+      answered: false,
+      currentProblem: null,
+      currentSubject: null,
+    };
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
+  function finishRestBonusSession() {
+    const bonus = session.correctCount > 0;
     const beforeTiers = snapshotGrowthTiers(state.stats);
     const restMultiplier = 1 + itemBonusSum('restBonus');
     state.stats.stress -= 12 * restMultiplier;
     state.stats.stamina += 10 * restMultiplier;
+    if (bonus) {
+      state.stats.stress -= 5;
+      state.stats.stamina += 3;
+    }
     clampStats();
     announceStatLevelUps(beforeTiers);
     saveGame();
+    if (bonus) showLevelToast('😴 문제까지 맞혀서 푹 쉬었어요!');
     maybeTriggerEvent(0.15);
   }
 
@@ -1199,7 +1301,7 @@
   };
 
   function runActivity(activity) {
-    if (activity === 'study') openLevelSelect();
+    if (activity === 'study') startStudySession();
     else if (activity === 'job') startJobSession();
     else if (activity === 'exercise') doExercise();
     else if (activity === 'rest') doRest();

@@ -564,10 +564,8 @@
       },
     },
 
-    // 아래는 아직 내용이 채워지지 않은 "준비중" 시나리오 예고편이다. 상태 화면에
-    // 잠금 카드로만 노출되고 실제로 플레이되지는 않는다. 다른 AI가 이 목록의
-    // id를 그대로 이어받아 quiz/narrative/branching/outcomes/assets를 채우고
-    // status를 'ready'로 바꾸면 그대로 게임에 반영할 수 있다.
+    // 다른 AI가 두 번째 배치로 채워온 나머지 6편(원래 "준비중" 예고편이었던
+    // 항목들). 이미지도 함께 받아 assets/scenarios/<id>/ 아래에 반영했다.
     {
       id: 'rival-study-duel',
       arc: '라이벌',
@@ -576,8 +574,53 @@
       npcId: 'rival',
       title: '라이벌과의 특별 대결',
       entryEmoji: '⚔️',
-      status: 'coming-soon',
+      status: 'ready',
       unlock: {},
+      quiz: {
+        questionsPerSession: 3,
+        passCount: 2,
+        bank: [
+          {
+            question: '공부를 더 효율적으로 하기 위해 가장 필요한 태도는 무엇일까요?',
+            choices: ['매일 조금씩 꾸준히 정해진 시간에 공부하기', '시험 전날에만 잠을 안 자고 공부하기', '어려운 문제는 모두 넘어가기', '친구의 숙제를 똑같이 베끼기'],
+            answer: '매일 조금씩 꾸준히 정해진 시간에 공부하기',
+            explanation: '꾸준한 습관이 가장 훌륭한 학습의 밑거름이 된답니다.',
+          },
+          {
+            question: '책을 읽다가 모르는 단어가 나왔을 때는 어떻게 하는 것이 좋을까요?',
+            choices: ['사전을 찾아보거나 선생님께 여쭈어본다', '그냥 모르는 채로 그냥 넘어간다', '책을 덮고 다시는 읽지 않는다', '단어를 마음대로 새로 만든다'],
+            answer: '사전을 찾아보거나 선생님께 여쭈어본다',
+            explanation: '궁금한 점을 찾아보고 배우려는 호기심이 지능을 높여줍니다.',
+          },
+          {
+            question: '친구나 라이벌이 나보다 공부를 더 잘했을 때 보여줄 바른 태도는?',
+            choices: ['진심으로 축하해주며 나도 더 노력하기로 다짐한다', '화가 나서 며칠 동안 말을 걸지 않는다', '상대방의 책을 몰래 숨긴다', '별것 아니라고 비웃는다'],
+            answer: '진심으로 축하해주며 나도 더 노력하기로 다짐한다',
+            explanation: '라이벌의 성장을 축하하고 함께 발전하는 것이 진정한 공주의 품격입니다.',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { intelligence: 8, focus: 6, stress: -3 },
+          npcEffects: { rival: [5, 10] },
+          narrative: { emoji: '👏', title: '멋진 퀴즈 대결!', desc: '퀴즈를 훌륭하게 맞히자 라이벌도 미소를 지으며 다음엔 지지 않겠다고 악수를 건넸습니다.' },
+        },
+        fail: {
+          statEffects: { stress: 5, focus: 3 },
+          narrative: { emoji: '📘', title: '다음을 기약하며', desc: '조금 아쉬웠지만 라이벌이 친절하게 정답을 설명해 주었습니다. 다음번엔 더 잘할 수 있을 거예요!' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'quiz-duel-scene',
+            path: 'assets/scenarios/rival-study-duel/quiz-duel-scene.png',
+            purpose: '라이벌과 함께 퀴즈 대결을 펼치는 장면',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, two young girls sitting at a cozy wooden desk with books, engaging in a friendly study competition.',
+          },
+        ],
+      },
     },
     {
       id: 'friend-birthday',
@@ -587,8 +630,32 @@
       npcId: 'friend',
       title: '친구의 생일 파티',
       entryEmoji: '🎂',
-      status: 'coming-soon',
+      status: 'ready',
       unlock: { minAffection: { npcId: 'friend', value: 40 } },
+      narrative: {
+        lines: [
+          '소중한 친구의 생일을 맞아 정성껏 만든 꽃다발과 직접 쓴 편지를 준비했습니다.',
+          '친구는 예상치 못한 선물에 깜짝 놀라며 눈시울을 붉히고 나를 꼭 안아주었습니다.',
+          '맛있는 케이크를 나누어 먹으며 웃음꽃을 피운, 세상에서 가장 따뜻하고 특별한 하루였습니다.',
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { charm: 8, creativity: 5, stress: -10 },
+          npcEffects: { friend: [15, 20] },
+          narrative: { emoji: '🎁', title: '잊지 못할 추억', desc: '친구와 마음을 주고받으며 두 사람의 우정이 더욱 끈끈해졌습니다.' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'friend-birthday-party',
+            path: 'assets/scenarios/friend-birthday/friend-birthday-party.png',
+            purpose: '친구에게 생일 선물과 꽃다발을 전해주는 장면',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, a cheerful birthday celebration with two young friends, a decorated cake, and flowers.',
+          },
+        ],
+      },
     },
     {
       id: 'tea-party-manners',
@@ -598,8 +665,53 @@
       npcId: 'noble',
       title: '다과회 초대',
       entryEmoji: '🍵',
-      status: 'coming-soon',
+      status: 'ready',
       unlock: { minGrace: 35 },
+      quiz: {
+        questionsPerSession: 3,
+        passCount: 2,
+        bank: [
+          {
+            question: '다과회에서 빵에 잼을 발라 먹을 때의 올바른 예절은 무엇일까요?',
+            choices: ['빵을 한 입 크기로 떼어낸 후 잼을 발라 먹는다', '통째로 든 빵 전체에 잼을 가득 바르고 베어 먹는다', '잼만 스푼으로 떠서 먼저 먹는다', '빵을 차에 적셔서 먹는다'],
+            answer: '빵을 한 입 크기로 떼어낸 후 잼을 발라 먹는다',
+            explanation: '빵은 한 입 크기로 조심스럽게 떼어낸 후 잼을 발라 먹는 것이 정석입니다.',
+          },
+          {
+            question: '찻잔을 들고 마실 때 접시(소서)는 어떻게 해야 할까요?',
+            choices: ['서서 마실 때는 접시를 가슴 높이로 함께 들고 마신다', '접시를 바닥에 내려놓고 밟는다', '접시에 차를 부어서 마신다', '접시를 다른 사람에게 건넨다'],
+            answer: '서서 마실 때는 접시를 가슴 높이로 함께 들고 마신다',
+            explanation: '서서 차를 마실 때는 왼손으로 접시를 가슴 높이로 받치고 마시는 것이 우아합니다.',
+          },
+          {
+            question: '상대방이 차를 따라줄 때 지켜야 할 예절은?',
+            choices: ['감사의 미소를 지으며 찻잔을 건드리지 않고 기다린다', '찻잔을 손으로 들고 흔든다', '차가 넘치도록 많이 따라달라고 요구한다', '따라주는 동안 고개를 돌리고 딴청을 피운다'],
+            answer: '감사의 미소를 지으며 찻잔을 건드리지 않고 기다린다',
+            explanation: '차를 따르는 동안 잔을 테이블 위에 두고 가만히 기다리는 것이 예의입니다.',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { charm: 7, intelligence: 5, stress: -4 },
+          npcEffects: { noble: [8, 12] },
+          narrative: { emoji: '✨', title: '우아한 영애', desc: '다과회 귀족들이 당신의 완벽한 예절에 감탄하며 연신 칭찬을 아끼지 않았습니다.' },
+        },
+        fail: {
+          statEffects: { stress: 4 },
+          narrative: { emoji: '🍵', title: '배워가는 단계', desc: '사교계 친구가 가볍게 힌트를 주며 도왔습니다. 다음엔 더 세련된 모습을 보여줄 수 있을 거예요.' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'tea-party-quiz-scene',
+            path: 'assets/scenarios/tea-party-manners/tea-party-quiz-scene.png',
+            purpose: '화려한 야외 테라스에서의 다과회 장면',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, an afternoon tea party on a sunny garden terrace with delicate porcelain teacups and pastries.',
+          },
+        ],
+      },
     },
     {
       id: 'library-secret',
@@ -609,8 +721,42 @@
       npcId: 'sage',
       title: '왕실 서고의 비밀',
       entryEmoji: '📚',
-      status: 'coming-soon',
+      status: 'ready',
       unlock: { minStat: { key: 'intelligence', value: 60 } },
+      branching: {
+        prompt: '오래된 왕실 서고를 정리하던 중, 비밀 기호가 적힌 고서적을 발견했습니다. 왕실 스승님이 지켜보고 계시네요.',
+        options: [
+          {
+            label: '도서관의 다른 고문헌들을 비교하여 비밀 기호를 스스로 해독한다',
+            statEffects: { intelligence: 12, focus: 8, stress: 3 },
+            npcEffects: { sage: [10, 15] },
+            resultLine: '집중력을 발휘해 기호를 해독해내자, 고대 왕국의 평화로운 역사가 담긴 기록임이 밝혀졌습니다!',
+          },
+          {
+            label: '스승님께 질문을 건네며 비밀에 대해 함께 탐구해본다',
+            statEffects: { intelligence: 8, charm: 6, focus: 5 },
+            npcEffects: { sage: [15, 20] },
+            resultLine: '스승님께서 기쁨을 금치 못하시며 고서적에 얽힌 흥미진진한 옛이야기를 들려주셨습니다.',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { intelligence: 5, luck: 5 },
+          npcEffects: { sage: [5, 10] },
+          narrative: { emoji: '📖', title: '지혜의 열매', desc: '서고에서의 탐구를 통해 학문에 대한 깊은 매력과 탐구심을 깨달았습니다.' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'secret-book-scene',
+            path: 'assets/scenarios/library-secret/secret-book-scene.png',
+            purpose: '왕실 서고에서 비밀 고서적을 조사하는 장면',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, a young girl reading an ancient glowing storybook in a majestic royal library with a wise old mentor nearby.',
+          },
+        ],
+      },
     },
     {
       id: 'garden-walk-prince',
@@ -620,8 +766,42 @@
       npcId: 'prince',
       title: '정원 산책 초대',
       entryEmoji: '🌹',
-      status: 'coming-soon',
+      status: 'ready',
       unlock: { minAffection: { npcId: 'prince', value: 50 } },
+      branching: {
+        prompt: '왕자님이 왕실 정원의 비밀 장미 원으로 초대했습니다. 미로 같은 정원 길 한가운데 아름다운 분수대가 보이네요.',
+        options: [
+          {
+            label: '장미의 품종과 꽃말에 대한 상식을 나누며 우아하게 거닌다',
+            statEffects: { intelligence: 8, charm: 10 },
+            npcEffects: { prince: [10, 15] },
+            resultLine: '해박한 지식과 우아한 대화 방식에 왕자님이 깊은 인상을 받은 듯 미소를 지었습니다.',
+          },
+          {
+            label: '정원에 피어난 꽃으로 작고 예쁜 꽃반지를 만들어 선물한다',
+            statEffects: { creativity: 12, charm: 8, stress: -5 },
+            npcEffects: { prince: [15, 20] },
+            resultLine: '뜻밖의 순수하고 다정한 선물에 왕자님이 소년처럼 크게 기뻐하며 소중히 간직하겠다고 했습니다.',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { charm: 6, luck: 4 },
+          npcEffects: { prince: [5, 10] },
+          narrative: { emoji: '🌹', title: '향기로운 추억', desc: '장미 향기 가득한 정원에서 왕자님과 더욱 깊은 교감을 나누었습니다.' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'rose-garden-walk',
+            path: 'assets/scenarios/garden-walk-prince/rose-garden-walk.png',
+            purpose: '장미 정원에서 왕자님과 대화를 나누며 산책하는 장면',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, a young princess and prince walking near a fountain in a lush rose garden, surrounding by blooming flowers.',
+          },
+        ],
+      },
     },
     {
       id: 'coronation-ball',
@@ -631,8 +811,32 @@
       npcId: 'prince',
       title: '대관식 무도회',
       entryEmoji: '👑',
-      status: 'coming-soon',
+      status: 'ready',
       unlock: { minGrace: 100 },
+      narrative: {
+        lines: [
+          '오랜 수련과 노력이 결실을 맺어, 마침내 왕국의 참된 리더를 축하하는 대관식 날이 밝았습니다.',
+          '성스러운 성당의 종소리가 온 왕국에 울려 퍼지고, 왕자님과 국왕 전하께서 따뜻한 눈빛으로 성류관을 내어줍니다.',
+          '백성들의 환호 속에서 머리에 반짝이는 왕관이 올려지는 순간, 당신은 품위와 지혜를 갖춘 진정한 공주로 거듭났습니다.',
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { charm: 20, intelligence: 15, focus: 15, stress: -20, luck: 20 },
+          npcEffects: { prince: [20, 30], sage: [20, 30], noble: [20, 30] },
+          narrative: { emoji: '👑', title: '진정한 공주의 탄생', desc: '온 왕국의 축복 속에 가장 고귀하고 따뜻한 마음을 가진 진짜 공주님이 되었습니다!' },
+        },
+      },
+      assets: {
+        images: [
+          {
+            key: 'coronation-ceremony',
+            path: 'assets/scenarios/coronation-ball/coronation-ceremony.png',
+            purpose: '대관식에서 왕관을 받아 쓰고 진짜 공주가 되는 순간',
+            generationPrompt: 'Children’s storybook illustration, Princess Maker style, warm painterly lighting, soft pastel palette, gentle and wholesome, no text in image, a grand coronation ceremony where a young princess receives a golden tiara in a majestic hall with cheered crowds.',
+          },
+        ],
+      },
     },
   ];
 
