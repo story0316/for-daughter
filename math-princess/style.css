@@ -51,7 +51,7 @@ html, body {
 
 #screen-start,
 #screen-name-entry {
-  background: linear-gradient(180deg, #ffe6b3 0%, #ffd0e8 45%, #d8c8ff 100%);
+  background: linear-gradient(180deg, #fbe9bd 0%, #f2c988 45%, #d99a86 100%);
 }
 
 #screen-session-summary,
@@ -66,12 +66,29 @@ html, body {
   z-index: 2;
   text-align: center;
   padding: 30px 26px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 250, 236, 0.86);
+  border: 1px solid rgba(212, 162, 68, 0.45);
   border-radius: 28px;
   box-shadow: 0 10px 30px rgba(90, 50, 40, 0.2);
   backdrop-filter: blur(4px);
   max-width: 100%;
   width: 340px;
+}
+
+.hero-card {
+  width: 360px;
+  padding-top: 0;
+  overflow: hidden;
+}
+
+.hero-image {
+  display: block;
+  width: calc(100% + 52px);
+  margin: 0 -26px 16px;
+  max-height: 190px;
+  object-fit: cover;
+  object-position: center 30%;
+  border-bottom: 1px solid rgba(212, 162, 68, 0.45);
 }
 
 .home-link {
@@ -94,21 +111,26 @@ html, body {
 
 .card h1 {
   margin: 4px 0 10px;
-  font-size: 25px;
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
   line-height: 1.3;
-  color: #6a3a5a;
-  text-shadow: 0 2px 0 rgba(255,255,255,0.6);
+  background: linear-gradient(180deg, #fff2c4 0%, #e3a83f 55%, #b9782a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(255,255,255,0.55)) drop-shadow(0 1px 1px rgba(120,70,20,0.25));
 }
 
 .card h2 {
   margin: 4px 0 8px;
   font-size: 22px;
-  color: #6a3a5a;
+  color: #7a4a23;
 }
 
 .card p {
   margin: 0 0 8px;
-  color: #7a5a6a;
+  color: #7a5a4a;
   font-size: 13.5px;
 }
 
@@ -120,7 +142,7 @@ html, body {
   margin: 0 0 22px !important;
   font-size: 12.5px !important;
   line-height: 1.6;
-  color: #9a6a7a !important;
+  color: #9a7a5a !important;
 }
 
 .start-buttons {
@@ -218,19 +240,19 @@ html, body {
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, #ffb0cf, #ff8fb3);
-  color: #fff;
-  box-shadow: 0 6px 0 #d9527e, 0 10px 18px rgba(217, 82, 126, 0.35);
+  background: linear-gradient(180deg, #ffe08a, #e8a63c);
+  color: #6a3d10;
+  box-shadow: 0 6px 0 #b9782a, 0 10px 18px rgba(185, 120, 42, 0.35);
 }
 
 .btn-primary:active {
-  box-shadow: 0 2px 0 #d9527e, 0 4px 10px rgba(217, 82, 126, 0.35);
+  box-shadow: 0 2px 0 #b9782a, 0 4px 10px rgba(185, 120, 42, 0.35);
 }
 
 .btn-secondary {
   background: rgba(255, 255, 255, 0.7);
-  color: #6a3a5a;
-  border: 2px solid rgba(150, 90, 130, 0.3);
+  color: #7a4a23;
+  border: 2px solid rgba(180, 130, 60, 0.35);
   box-shadow: none;
 }
 
@@ -327,7 +349,7 @@ html, body {
   margin-top: 2px;
   font-size: 13px;
   font-weight: 700;
-  color: #d8c8ff;
+  color: #ffe4a8;
 }
 
 .outfit-badge {
@@ -335,7 +357,7 @@ html, body {
   margin-top: 6px;
   font-size: 11.5px;
   font-weight: 800;
-  color: #ffe3ef;
+  color: #ffe4a8;
   background: rgba(255, 255, 255, 0.15);
   padding: 3px 12px;
   border-radius: 999px;
@@ -366,7 +388,7 @@ html, body {
   flex: 0 0 44px;
   font-size: 11.5px;
   font-weight: 700;
-  color: #d8c8ff;
+  color: #f0dcc0;
 }
 
 .stat-row-track {
@@ -378,9 +400,10 @@ html, body {
 }
 
 .stat-row-fill {
+  display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #ffb0cf, #b48fff);
+  background: linear-gradient(90deg, #ffd873, #e8935a);
 }
 
 .stat-row-fill.stress-fill {
@@ -476,7 +499,7 @@ html, body {
   justify-content: center;
   font-weight: 800;
   font-size: 14px;
-  background: linear-gradient(180deg, #b48fff, #8f6fff);
+  background: linear-gradient(180deg, #f0c26a, #d4923c);
   color: #fff;
 }
 
@@ -563,6 +586,7 @@ html, body {
 }
 
 .npc-affection-fill {
+  display: block;
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, #ffb0cf, #ff6fa0);

@@ -47,7 +47,7 @@
     {
       id: 'fields-medalist',
       emoji: '🏅',
-      title: '세계적인 수학자',
+      title: '세계적인 천재 학자',
       desc: '어려운 문제일수록 눈을 반짝이던 아이는, 결국 아무도 풀지 못한 문제를 푸는 사람이 되었다.',
       requirement: (s) => s.intelligence >= 90 && s.creativity >= 70,
     },
@@ -55,7 +55,7 @@
       id: 'ai-engineer',
       emoji: '🤖',
       title: 'AI 개발자',
-      desc: '수학과 상상력을 함께 갈고닦은 끝에, 세상을 바꾸는 인공지능을 만드는 사람이 되었다.',
+      desc: '논리와 상상력을 함께 갈고닦은 끝에, 세상을 바꾸는 인공지능을 만드는 사람이 되었다.',
       requirement: (s) => s.intelligence >= 80 && s.creativity >= 70 && s.focus >= 55,
     },
     {
@@ -82,15 +82,15 @@
     {
       id: 'math-youtuber',
       emoji: '🎥',
-      title: '인기 수학 유튜버',
-      desc: '어려운 수학도 재미있게 설명하는 매력으로, 많은 사람들의 수학 선생님이 되었다.',
+      title: '인기 지식 유튜버',
+      desc: '어려운 개념도 재미있게 설명하는 매력으로, 많은 사람들의 든든한 선생님이 되었다.',
       requirement: (s) => s.intelligence >= 55 && s.charm >= 70,
     },
     {
       id: 'math-teacher',
       emoji: '🍎',
-      title: '수학 선생님',
-      desc: '자신이 좋아했던 수학의 재미를, 이제는 다른 아이들에게 전해주는 선생님이 되었다.',
+      title: '다정한 선생님',
+      desc: '자신이 좋아했던 공부의 재미를, 이제는 다른 아이들에게 전해주는 선생님이 되었다.',
       requirement: (s) => s.intelligence >= 50 && s.charm >= 50,
     },
     {
