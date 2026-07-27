@@ -9,40 +9,20 @@
 </head>
 <body>
   <div id="app">
-    <div class="hub-card">
-      <div class="hub-emoji">🎮</div>
-      <h1>무슨 게임 할까?</h1>
-      <p class="hub-subtitle">하고 싶은 게임을 골라보세요!</p>
+    <div class="hub-header">
+      <span class="hub-badge">🎮 게임 고르기</span>
+      <p class="hub-hint">옆으로 밀어서 골라보세요</p>
+    </div>
 
-      <div class="game-list">
-        <a class="game-card" href="hidden-picture/index.html">
-          <span class="game-thumb">✨</span>
-          <span class="game-info">
-            <span class="game-title">반짝반짝 그림찾기</span>
-            <span class="game-desc">벚꽃길에 숨은 그림을 찾아보세요</span>
-          </span>
-          <span class="game-arrow">›</span>
-        </a>
+    <div id="carousel" class="carousel">
+      <div id="track" class="track"></div>
 
-        <a class="game-card" href="multiplication-quiz/index.html">
-          <span class="game-thumb">🧮</span>
-          <span class="game-info">
-            <span class="game-title">구구단 맞추기</span>
-            <span class="game-desc">하트 3개! 구구단에 도전해요</span>
-          </span>
-          <span class="game-arrow">›</span>
-        </a>
+      <button id="arrow-left" class="nav-arrow nav-arrow-left" aria-label="이전 게임">‹</button>
+      <button id="arrow-right" class="nav-arrow nav-arrow-right" aria-label="다음 게임">›</button>
 
-        <a class="game-card" href="sudoku/index.html">
-          <span class="game-thumb">🔢</span>
-          <span class="game-info">
-            <span class="game-title">스도쿠</span>
-            <span class="game-desc">9×9 칸을 1~9로 채워보세요</span>
-          </span>
-          <span class="game-arrow">›</span>
-        </a>
-      </div>
+      <div id="dots" class="dots"></div>
     </div>
   </div>
+  <script src="script.js"></script>
 </body>
 </html>
