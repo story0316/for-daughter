@@ -32,10 +32,7 @@
       <header class="hud">
         <div class="hud-row">
           <div id="turn-label" class="turn-label">1년차 1월 · 턴 1/24</div>
-          <div class="hud-right">
-            <button id="btn-open-shop" class="btn-shop">🛍️ 상점</button>
-            <div id="gold-label" class="gold-label">💰 0G</div>
-          </div>
+          <div id="gold-label" class="gold-label">💰 0G</div>
         </div>
       </header>
 
@@ -48,29 +45,112 @@
         <div id="outfit-badge" class="outfit-badge">👕 평범한 옷</div>
       </div>
 
-      <div id="stat-panel" class="stat-panel"></div>
+      <div id="schedule-banner" class="schedule-banner" style="display:none">
+        이번 달 예정: <span id="schedule-banner-text">-</span>
+      </div>
 
-      <div class="activity-grid" id="activity-grid">
-        <button class="activity-btn" data-activity="study">
-          <span class="activity-emoji">📖</span>
-          <span class="activity-name">공부</span>
+      <div class="main-menu-grid" id="main-menu-grid">
+        <button class="main-menu-btn" data-menu="schedule">
+          <span class="main-menu-emoji">🗓️</span>
+          <span class="main-menu-name">스케줄</span>
         </button>
-        <button class="activity-btn" data-activity="job">
-          <span class="activity-emoji">💼</span>
-          <span class="activity-name">알바</span>
+        <button class="main-menu-btn" data-menu="execute">
+          <span class="main-menu-emoji">▶️</span>
+          <span class="main-menu-name">실행</span>
         </button>
-        <button class="activity-btn" data-activity="exercise">
-          <span class="activity-emoji">🏃</span>
-          <span class="activity-name">운동</span>
+        <button class="main-menu-btn" data-menu="shop">
+          <span class="main-menu-emoji">🛍️</span>
+          <span class="main-menu-name">쇼핑</span>
         </button>
-        <button class="activity-btn" data-activity="rest">
-          <span class="activity-emoji">🛌</span>
-          <span class="activity-name">휴식</span>
+        <button class="main-menu-btn" data-menu="wardrobe">
+          <span class="main-menu-emoji">👗</span>
+          <span class="main-menu-name">옷갈아입기</span>
         </button>
-        <button class="activity-btn" data-activity="friend">
-          <span class="activity-emoji">🎡</span>
-          <span class="activity-name">친구 만나기</span>
+        <button class="main-menu-btn" data-menu="talk">
+          <span class="main-menu-emoji">💬</span>
+          <span class="main-menu-name">대화</span>
         </button>
+        <button class="main-menu-btn" data-menu="status">
+          <span class="main-menu-emoji">📋</span>
+          <span class="main-menu-name">상태</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 스케줄 선택 화면 -->
+    <section id="screen-schedule" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-schedule-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label">이번 달 예정을 골라주세요</div>
+        </div>
+      </header>
+      <div class="level-list" id="schedule-list">
+        <button class="level-card" data-activity="study">
+          <span class="level-badge-num">📖</span>
+          <span class="level-info">
+            <span class="level-title">공부</span>
+            <span class="level-desc">수학 문제를 풀고 골드와 지능을 얻어요</span>
+          </span>
+          <span class="level-lock-icon">›</span>
+        </button>
+        <button class="level-card" data-activity="job">
+          <span class="level-badge-num">💼</span>
+          <span class="level-info">
+            <span class="level-title">알바</span>
+            <span class="level-desc">쉬운 문제를 풀고 골드를 벌어요</span>
+          </span>
+          <span class="level-lock-icon">›</span>
+        </button>
+        <button class="level-card" data-activity="exercise">
+          <span class="level-badge-num">🏃</span>
+          <span class="level-info">
+            <span class="level-title">운동</span>
+            <span class="level-desc">체력과 집중력이 올라요</span>
+          </span>
+          <span class="level-lock-icon">›</span>
+        </button>
+        <button class="level-card" data-activity="rest">
+          <span class="level-badge-num">🛌</span>
+          <span class="level-info">
+            <span class="level-title">휴식</span>
+            <span class="level-desc">스트레스가 줄고 체력을 회복해요</span>
+          </span>
+          <span class="level-lock-icon">›</span>
+        </button>
+        <button class="level-card" data-activity="friend">
+          <span class="level-badge-num">🎡</span>
+          <span class="level-info">
+            <span class="level-title">친구 만나기</span>
+            <span class="level-desc">인물을 골라 만나며 호감도를 쌓아요</span>
+          </span>
+          <span class="level-lock-icon">›</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 상태 화면 -->
+    <section id="screen-status" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-status-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label">상태</div>
+        </div>
+      </header>
+      <div class="status-scroll">
+        <div class="status-section">
+          <div class="portrait-frame portrait-frame-small">
+            <div class="portrait-frame-ring"></div>
+            <div id="status-portrait" class="character-portrait"></div>
+          </div>
+          <div id="status-outfit-badge" class="outfit-badge">👕 평범한 옷</div>
+        </div>
+        <div class="status-section-title">능력치</div>
+        <div id="status-stat-panel" class="stat-panel status-stat-panel"></div>
+        <div class="status-section-title">인물 호감도</div>
+        <div id="status-npc-list" class="status-npc-list"></div>
+        <div class="status-section-title">보유 장비</div>
+        <div id="status-item-list" class="status-item-list"></div>
       </div>
     </section>
 

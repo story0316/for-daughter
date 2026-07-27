@@ -50,6 +50,15 @@
     { emoji: '🏆', title: '장학금 획득!', desc: '열심히 공부한 결과 장학금을 받았어요!', apply: (s) => { s.gold += 100; }, requirement: (s) => s.stats.intelligence >= 50 },
   ];
 
+  // "대화"는 턴을 소모하지 않는 가벼운 상호작용이라 한 달에 한 번만 가능하다.
+  const TALK_LINES = [
+    '오늘 하루도 애썼다고 꼭 안아줬어요.',
+    '요즘 어떤 게 제일 재밌냐고 물어봤어요.',
+    '같이 창밖을 보며 시답잖은 농담을 주고받았어요.',
+    '"엄마는 항상 네 편이야" 라고 말해줬어요.',
+    '오늘 있었던 일을 조잘조잘 들어줬어요.',
+  ];
+
   const ITEMS = [
     { id: 'sharp', emoji: '✏️', name: '샤프', cost: 1500, desc: '문제 정답 시 골드 +10%', goldBonus: 0.1 },
     { id: 'tablet', emoji: '📱', name: '태블릿', cost: 5000, desc: '공부 정답 시 지능 +1 추가 획득', intBonus: 1 },
@@ -149,6 +158,8 @@
     screens: {
       start: document.getElementById('screen-start'),
       main: document.getElementById('screen-main'),
+      schedule: document.getElementById('screen-schedule'),
+      status: document.getElementById('screen-status'),
       shop: document.getElementById('screen-shop'),
       npcSelect: document.getElementById('screen-npc-select'),
       levelSelect: document.getElementById('screen-level-select'),
@@ -165,10 +176,20 @@
     goldLabel: document.getElementById('gold-label'),
     characterPortrait: document.getElementById('character-portrait'),
     outfitBadge: document.getElementById('outfit-badge'),
-    statPanel: document.getElementById('stat-panel'),
-    activityGrid: document.getElementById('activity-grid'),
+    mainMenuGrid: document.getElementById('main-menu-grid'),
+    scheduleBanner: document.getElementById('schedule-banner'),
+    scheduleBannerText: document.getElementById('schedule-banner-text'),
 
-    btnOpenShop: document.getElementById('btn-open-shop'),
+    btnScheduleBack: document.getElementById('btn-schedule-back'),
+    scheduleList: document.getElementById('schedule-list'),
+
+    btnStatusBack: document.getElementById('btn-status-back'),
+    statusPortrait: document.getElementById('status-portrait'),
+    statusOutfitBadge: document.getElementById('status-outfit-badge'),
+    statusStatPanel: document.getElementById('status-stat-panel'),
+    statusNpcList: document.getElementById('status-npc-list'),
+    statusItemList: document.getElementById('status-item-list'),
+
     btnShopBack: document.getElementById('btn-shop-back'),
     shopList: document.getElementById('shop-list'),
     shopGoldLabel: document.getElementById('shop-gold-label'),
@@ -251,6 +272,8 @@
       items: {},
       npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20) })),
       wardrobe: { unlockedMax: 0, equipped: 0 },
+      scheduledActivity: null,
+      talkedThisTurn: false,
     };
   }
 
@@ -293,6 +316,8 @@
       loaded.items = loaded.items || {};
       loaded.npcs = loaded.npcs || NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20) }));
       loaded.wardrobe = loaded.wardrobe || { unlockedMax: 0, equipped: 0 };
+      if (typeof loaded.scheduledActivity === 'undefined') loaded.scheduledActivity = null;
+      if (typeof loaded.talkedThisTurn === 'undefined') loaded.talkedThisTurn = false;
       state = loaded;
       return true;
     } catch (e) {
@@ -354,7 +379,7 @@
     const equippedTier = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.characterPortrait, state.wardrobe.equipped, 'main');
     el.outfitBadge.textContent = `${equippedTier.emoji} ${equippedTier.name}`;
-    renderStatPanel(el.statPanel, state.stats);
+    updateScheduleBanner();
   }
 
   /* ---------------- 활동: 공부 / 알바 ---------------- */
@@ -647,11 +672,17 @@
 
   /* ---------------- 상점 ---------------- */
 
-  function openShop() {
-    el.shopTabBtns.forEach((b) => b.classList.toggle('active', b.dataset.tab === 'items'));
-    el.shopList.style.display = 'flex';
-    el.wardrobeList.style.display = 'none';
-    renderShopList();
+  function switchShopTab(tab) {
+    el.shopTabBtns.forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+    const isWardrobe = tab === 'wardrobe';
+    el.shopList.style.display = isWardrobe ? 'none' : 'flex';
+    el.wardrobeList.style.display = isWardrobe ? 'grid' : 'none';
+    if (isWardrobe) renderWardrobeList();
+    else renderShopList();
+  }
+
+  function openShop(tab) {
+    switchShopTab(tab || 'items');
     el.shopGoldLabel.textContent = `💰 ${state.gold}G`;
     showScreen('shop');
   }
@@ -688,20 +719,13 @@
     renderShopList();
   }
 
-  el.btnOpenShop.addEventListener('click', openShop);
   el.btnShopBack.addEventListener('click', () => {
     renderMain();
     showScreen('main');
   });
 
   el.shopTabBtns.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      el.shopTabBtns.forEach((b) => b.classList.toggle('active', b === btn));
-      const isWardrobe = btn.dataset.tab === 'wardrobe';
-      el.shopList.style.display = isWardrobe ? 'none' : 'flex';
-      el.wardrobeList.style.display = isWardrobe ? 'grid' : 'none';
-      if (isWardrobe) renderWardrobeList();
-    });
+    btn.addEventListener('click', () => switchShopTab(btn.dataset.tab));
   });
 
   /* ---------------- 옷장 ---------------- */
@@ -772,23 +796,139 @@
     }
   }
 
-  /* ---------------- 활동 버튼 ---------------- */
+  /* ---------------- 메인 메뉴 (스케줄 / 실행 / 쇼핑 / 옷갈아입기 / 대화 / 상태) ---------------- */
 
-  el.activityGrid.addEventListener('click', (e) => {
-    const btn = e.target.closest('.activity-btn');
-    if (!btn) return;
-    const activity = btn.dataset.activity;
+  const ACTIVITY_DEFS = {
+    study: { emoji: '📖', name: '공부' },
+    job: { emoji: '💼', name: '알바' },
+    exercise: { emoji: '🏃', name: '운동' },
+    rest: { emoji: '🛌', name: '휴식' },
+    friend: { emoji: '🎡', name: '친구 만나기' },
+  };
+
+  function runActivity(activity) {
     if (activity === 'study') openLevelSelect();
     else if (activity === 'job') startJobSession();
     else if (activity === 'exercise') doExercise();
     else if (activity === 'rest') doRest();
     else if (activity === 'friend') openNpcSelect();
+  }
+
+  function updateScheduleBanner() {
+    if (state.scheduledActivity && ACTIVITY_DEFS[state.scheduledActivity]) {
+      const def = ACTIVITY_DEFS[state.scheduledActivity];
+      el.scheduleBannerText.textContent = `${def.emoji} ${def.name}`;
+      el.scheduleBanner.style.display = 'block';
+    } else {
+      el.scheduleBanner.style.display = 'none';
+    }
+  }
+
+  function openSchedule() {
+    showScreen('schedule');
+  }
+
+  el.scheduleList.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-activity]');
+    if (!btn) return;
+    state.scheduledActivity = btn.dataset.activity;
+    saveGame();
+    updateScheduleBanner();
+    showScreen('main');
+  });
+
+  el.btnScheduleBack.addEventListener('click', () => showScreen('main'));
+
+  function executeSchedule() {
+    if (!state.scheduledActivity) {
+      openSchedule();
+      return;
+    }
+    runActivity(state.scheduledActivity);
+  }
+
+  function talkToDaughter() {
+    if (state.talkedThisTurn) {
+      showLevelToast('💬 오늘은 이미 충분히 대화했어요');
+      return;
+    }
+    state.talkedThisTurn = true;
+    const line = randChoice(TALK_LINES);
+    const beforeTiers = snapshotGrowthTiers(state.stats);
+    state.stats.charm += 1;
+    state.stats.stress = Math.max(0, state.stats.stress - 1);
+    clampStats();
+    announceStatLevelUps(beforeTiers);
+    showLevelToast(`💬 ${line}`);
+    saveGame();
+  }
+
+  function openStatusScreen() {
+    renderStatusScreen();
+    showScreen('status');
+  }
+
+  function renderStatusScreen() {
+    const outfit = OUTFIT_TIERS[state.wardrobe.equipped];
+    renderPortraitInto(el.statusPortrait, state.wardrobe.equipped, 'status');
+    el.statusOutfitBadge.textContent = `${outfit.emoji} ${outfit.name}`;
+    renderStatPanel(el.statusStatPanel, state.stats);
+
+    el.statusNpcList.innerHTML = '';
+    NPC_DEFS.forEach((def) => {
+      const unlocked = def.unlock(state.stats);
+      const npcState = state.npcs.find((n) => n.id === def.id);
+      const row = document.createElement('div');
+      row.className = 'status-npc-row';
+      if (unlocked) {
+        row.innerHTML = `
+          <span class="status-npc-row-name">${def.emoji} ${def.name}</span>
+          <span class="npc-affection-track"><span class="npc-affection-fill" style="width:${npcState.affection}%"></span></span>
+          <span class="status-npc-row-value">${Math.round(npcState.affection)}</span>
+        `;
+      } else {
+        row.innerHTML = `
+          <span class="status-npc-row-name">🔒 ???</span>
+          <span class="status-npc-row-value">-</span>
+        `;
+      }
+      el.statusNpcList.appendChild(row);
+    });
+
+    const ownedItems = ITEMS.filter((i) => state.items[i.id]);
+    el.statusItemList.innerHTML = '';
+    if (ownedItems.length === 0) {
+      el.statusItemList.innerHTML = '<div class="status-empty">아직 산 장비가 없어요</div>';
+    } else {
+      ownedItems.forEach((item) => {
+        const row = document.createElement('div');
+        row.className = 'status-item-row';
+        row.innerHTML = `<span class="status-item-row-name">${item.emoji} ${item.name}</span><span class="status-npc-row-value">✔️</span>`;
+        el.statusItemList.appendChild(row);
+      });
+    }
+  }
+
+  el.btnStatusBack.addEventListener('click', () => showScreen('main'));
+
+  el.mainMenuGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.main-menu-btn');
+    if (!btn) return;
+    const menu = btn.dataset.menu;
+    if (menu === 'schedule') openSchedule();
+    else if (menu === 'execute') executeSchedule();
+    else if (menu === 'shop') openShop('items');
+    else if (menu === 'wardrobe') openShop('wardrobe');
+    else if (menu === 'talk') talkToDaughter();
+    else if (menu === 'status') openStatusScreen();
   });
 
   /* ---------------- 턴 진행 / 엔딩 ---------------- */
 
   function advanceTurn() {
     state.turn++;
+    state.scheduledActivity = null;
+    state.talkedThisTurn = false;
     if (state.turn > TOTAL_TURNS) {
       showEnding();
       return;
