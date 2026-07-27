@@ -19,7 +19,6 @@
   const QUESTIONS_PER_STUDY = 4;
   const QUESTIONS_PER_JOB = 3;
   const SAVE_KEY = 'math-princess-save-v1';
-  const STAGE_EMOJIS = ['🌱', '🧒', '👧', '👩'];
 
   const EVENTS = [
     { emoji: '😄', title: '즐거운 시간', desc: '친구와 수다를 떨며 즐거운 시간을 보냈어요.', apply: (s) => { s.stats.charm += 3; } },
@@ -55,10 +54,14 @@
   function currentOutfit(stats) {
     const grace = graceScore(stats);
     let tier = OUTFIT_TIERS[0];
-    OUTFIT_TIERS.forEach((t) => {
-      if (grace >= t.min) tier = t;
+    let tierIndex = 0;
+    OUTFIT_TIERS.forEach((t, i) => {
+      if (grace >= t.min) {
+        tier = t;
+        tierIndex = i;
+      }
     });
-    return tier;
+    return Object.assign({ tierIndex }, tier);
   }
 
   const NPC_DEFS = [
@@ -139,7 +142,7 @@
 
     turnLabel: document.getElementById('turn-label'),
     goldLabel: document.getElementById('gold-label'),
-    characterEmoji: document.getElementById('character-emoji'),
+    characterPortrait: document.getElementById('character-portrait'),
     outfitBadge: document.getElementById('outfit-badge'),
     statPanel: document.getElementById('stat-panel'),
     activityGrid: document.getElementById('activity-grid'),
@@ -183,6 +186,7 @@
     endingDesc: document.getElementById('ending-desc'),
     endingNpcLine: document.getElementById('ending-npc-line'),
     endingOutfitBadge: document.getElementById('ending-outfit-badge'),
+    endingCharacterPortrait: document.getElementById('ending-character-portrait'),
     endingStatPanel: document.getElementById('ending-stat-panel'),
     endingTotalCorrect: document.getElementById('ending-total-correct'),
     endingBestCombo: document.getElementById('ending-best-combo'),
@@ -300,10 +304,8 @@
   function renderMain() {
     el.turnLabel.textContent = yearMonthLabel(state.turn);
     el.goldLabel.textContent = `💰 ${state.gold}G`;
-    const stageIdx = Math.min(3, Math.floor(((state.turn - 1) / TOTAL_TURNS) * 4));
     const outfit = currentOutfit(state.stats);
-    // 품위가 최고 단계(공주 드레스)에 닿으면, 나이와 상관없이 공주의 모습으로 보여준다.
-    el.characterEmoji.textContent = outfit.name === '공주 드레스' ? '👸' : STAGE_EMOJIS[stageIdx];
+    el.characterPortrait.innerHTML = MathPrincessPortrait.buildPortraitSVG(outfit.tierIndex, { uid: 'main' });
     el.outfitBadge.textContent = `${outfit.emoji} ${outfit.name}`;
     renderStatPanel(el.statPanel, state.stats);
   }
@@ -666,7 +668,8 @@
     }
 
     const finalOutfit = currentOutfit(state.stats);
-    el.endingOutfitBadge.textContent = `${finalOutfit.name === '공주 드레스' ? '👸' : finalOutfit.emoji} ${finalOutfit.name}`;
+    el.endingCharacterPortrait.innerHTML = MathPrincessPortrait.buildPortraitSVG(finalOutfit.tierIndex, { uid: 'ending' });
+    el.endingOutfitBadge.textContent = `${finalOutfit.emoji} ${finalOutfit.name}`;
 
     renderStatPanel(el.endingStatPanel, state.stats);
     el.endingTotalCorrect.textContent = state.totalCorrect;

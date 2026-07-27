@@ -244,9 +244,43 @@ html, body {
   padding: 14px 0 6px;
 }
 
-.character-emoji {
-  font-size: 56px;
-  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3));
+.portrait-frame {
+  position: relative;
+  width: 128px;
+  height: 128px;
+  margin: 0 auto;
+  border-radius: 50%;
+  padding: 6px;
+  background: linear-gradient(145deg, #fff3c4, #ffd873 45%, #d99a2b 75%, #ffe9a8 100%);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+}
+
+.portrait-frame-ring {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}
+
+.character-portrait {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 30%, #3f2d5e, #1c1428 75%);
+}
+
+.character-portrait svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.portrait-frame-small {
+  width: 84px;
+  height: 84px;
+  margin: 6px auto;
 }
 
 .character-name {

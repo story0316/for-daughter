@@ -39,7 +39,10 @@
       </header>
 
       <div class="character-wrap">
-        <div id="character-emoji" class="character-emoji">🌱</div>
+        <div class="portrait-frame">
+          <div class="portrait-frame-ring"></div>
+          <div id="character-portrait" class="character-portrait"></div>
+        </div>
         <div id="character-name" class="character-name">우리 딸</div>
         <div id="outfit-badge" class="outfit-badge">👕 평범한 옷</div>
       </div>
@@ -162,6 +165,10 @@
         <h2 id="ending-title">엔딩 타이틀</h2>
         <p id="ending-desc">엔딩 설명</p>
         <p id="ending-npc-line" class="ending-npc-line"></p>
+        <div class="portrait-frame portrait-frame-small">
+          <div class="portrait-frame-ring"></div>
+          <div id="ending-character-portrait" class="character-portrait"></div>
+        </div>
         <div id="ending-outfit-badge" class="outfit-badge ending-outfit-badge">👕 평범한 옷</div>
         <div id="ending-stat-panel" class="stat-panel ending-stat-panel"></div>
         <div class="result-stats">
@@ -180,6 +187,7 @@
   </div>
   <script src="problems.js"></script>
   <script src="endings.js"></script>
+  <script src="portrait.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
