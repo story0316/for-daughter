@@ -15,6 +15,27 @@
     luck: '행운',
   };
 
+  // 스트레스는 낮을수록 좋은 지표라 "성장 능력치" 레벨/색 시스템에서 제외한다.
+  const GROWTH_STAT_KEYS = ['intelligence', 'focus', 'stamina', 'charm', 'creativity', 'luck'];
+  const STAT_TIER_THRESHOLDS = [0, 20, 40, 60, 80];
+  const STAT_TIER_COLORS = ['#8a93b8', '#6fa8ff', '#b48fff', '#ff8fb3', '#ffd873'];
+
+  function statTierIndex(value) {
+    let idx = 0;
+    STAT_TIER_THRESHOLDS.forEach((min, i) => {
+      if (value >= min) idx = i;
+    });
+    return idx;
+  }
+
+  function snapshotGrowthTiers(stats) {
+    const snap = {};
+    GROWTH_STAT_KEYS.forEach((k) => {
+      snap[k] = statTierIndex(stats[k]);
+    });
+    return snap;
+  }
+
   const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 24;
   const QUESTIONS_PER_STUDY = 4;
   const QUESTIONS_PER_JOB = 3;
@@ -45,10 +66,10 @@
   }
 
   const OUTFIT_TIERS = [
-    { min: 0, emoji: '👕', name: '평범한 옷' },
-    { min: 25, emoji: '👚', name: '단정한 옷' },
-    { min: 50, emoji: '👗', name: '예쁜 드레스' },
-    { min: 75, emoji: '👑', name: '공주 드레스' },
+    { min: 0, emoji: '👕', name: '평범한 옷', wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
+    { min: 25, emoji: '👚', name: '단정한 옷', wardrobeDesc: '품위 25 이상에서 해금' },
+    { min: 50, emoji: '👗', name: '예쁜 드레스', wardrobeDesc: '품위 50 이상에서 해금' },
+    { min: 75, emoji: '👑', name: '공주 드레스', wardrobeDesc: '품위 75 이상에서 해금' },
   ];
 
   function currentOutfit(stats) {
@@ -151,6 +172,10 @@
     btnShopBack: document.getElementById('btn-shop-back'),
     shopList: document.getElementById('shop-list'),
     shopGoldLabel: document.getElementById('shop-gold-label'),
+    shopTabBtns: document.querySelectorAll('.shop-tab-btn'),
+    wardrobeList: document.getElementById('wardrobe-list'),
+
+    levelToast: document.getElementById('level-toast'),
 
     btnNpcBack: document.getElementById('btn-npc-back'),
     npcList: document.getElementById('npc-list'),
@@ -225,6 +250,7 @@
       bestCombo: 0,
       items: {},
       npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20) })),
+      wardrobe: { unlockedMax: 0, equipped: 0 },
     };
   }
 
@@ -266,6 +292,7 @@
       if (!loaded || typeof loaded.turn !== 'number') return false;
       loaded.items = loaded.items || {};
       loaded.npcs = loaded.npcs || NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20) }));
+      loaded.wardrobe = loaded.wardrobe || { unlockedMax: 0, equipped: 0 };
       state = loaded;
       return true;
     } catch (e) {
@@ -293,10 +320,14 @@
       const row = document.createElement('div');
       row.className = 'stat-row';
       const value = Math.round(stats[key]);
+      const isGrowth = key !== 'stress';
+      const tier = isGrowth ? statTierIndex(value) : 0;
+      const fillColor = isGrowth ? STAT_TIER_COLORS[tier] : '';
+      const fillStyle = `width:${value}%${fillColor ? `;background:${fillColor}` : ''}`;
       row.innerHTML = `
         <span class="stat-row-label">${STAT_LABELS[key]}</span>
-        <span class="stat-row-track"><span class="stat-row-fill${key === 'stress' ? ' stress-fill' : ''}" style="width:${value}%"></span></span>
-        <span class="stat-row-value">${value}</span>
+        <span class="stat-row-track"><span class="stat-row-fill${key === 'stress' ? ' stress-fill' : ''}" style="${fillStyle}"></span></span>
+        <span class="stat-row-value">${value}${isGrowth ? ` <span class="stat-row-tier">Lv${tier + 1}</span>` : ''}</span>
       `;
       container.appendChild(row);
     });
@@ -319,9 +350,10 @@
   function renderMain() {
     el.turnLabel.textContent = yearMonthLabel(state.turn);
     el.goldLabel.textContent = `💰 ${state.gold}G`;
-    const outfit = currentOutfit(state.stats);
-    renderPortraitInto(el.characterPortrait, outfit.tierIndex, 'main');
-    el.outfitBadge.textContent = `${outfit.emoji} ${outfit.name}`;
+    updateWardrobeUnlocks();
+    const equippedTier = OUTFIT_TIERS[state.wardrobe.equipped];
+    renderPortraitInto(el.characterPortrait, state.wardrobe.equipped, 'main');
+    el.outfitBadge.textContent = `${equippedTier.emoji} ${equippedTier.name}`;
     renderStatPanel(el.statPanel, state.stats);
   }
 
@@ -463,7 +495,9 @@
     }
 
     if (correct) {
+      const beforeTiers = snapshotGrowthTiers(state.stats);
       applyCorrect(problem);
+      announceStatLevelUps(beforeTiers);
       el.quizFeedback.textContent = `정답이에요! 🎉 ${problem.explanation}`;
     } else {
       applyWrong(problem);
@@ -527,18 +561,22 @@
   /* ---------------- 활동: 운동 / 휴식 / 친구 만나기 ---------------- */
 
   function doExercise() {
+    const beforeTiers = snapshotGrowthTiers(state.stats);
     state.stats.stamina += 8;
     state.stats.focus += 4;
     state.stats.stress += 3;
     clampStats();
+    announceStatLevelUps(beforeTiers);
     maybeTriggerEvent(0.25);
   }
 
   function doRest() {
+    const beforeTiers = snapshotGrowthTiers(state.stats);
     const restMultiplier = 1 + itemBonusSum('restBonus');
     state.stats.stress -= 12 * restMultiplier;
     state.stats.stamina += 10 * restMultiplier;
     clampStats();
+    announceStatLevelUps(beforeTiers);
     maybeTriggerEvent(0.15);
   }
 
@@ -549,8 +587,10 @@
     }
     const pool = EVENTS.filter((ev) => !ev.requirement || ev.requirement(state));
     const event = randChoice(pool);
+    const beforeTiers = snapshotGrowthTiers(state.stats);
     event.apply(state);
     clampStats();
+    announceStatLevelUps(beforeTiers);
 
     el.eventEmoji.textContent = event.emoji;
     el.eventTitle.textContent = event.title;
@@ -593,9 +633,11 @@
   function meetNpc(npcId) {
     const def = NPC_DEFS.find((n) => n.id === npcId);
     const npcState = state.npcs.find((n) => n.id === npcId);
+    const beforeTiers = snapshotGrowthTiers(state.stats);
     def.apply(state);
     npcState.affection += randInt(8, 14);
     clampStats();
+    announceStatLevelUps(beforeTiers);
 
     el.eventEmoji.textContent = def.emoji;
     el.eventTitle.textContent = `${def.name}과(와)의 시간`;
@@ -606,6 +648,9 @@
   /* ---------------- 상점 ---------------- */
 
   function openShop() {
+    el.shopTabBtns.forEach((b) => b.classList.toggle('active', b.dataset.tab === 'items'));
+    el.shopList.style.display = 'flex';
+    el.wardrobeList.style.display = 'none';
     renderShopList();
     el.shopGoldLabel.textContent = `💰 ${state.gold}G`;
     showScreen('shop');
@@ -648,6 +693,84 @@
     renderMain();
     showScreen('main');
   });
+
+  el.shopTabBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      el.shopTabBtns.forEach((b) => b.classList.toggle('active', b === btn));
+      const isWardrobe = btn.dataset.tab === 'wardrobe';
+      el.shopList.style.display = isWardrobe ? 'none' : 'flex';
+      el.wardrobeList.style.display = isWardrobe ? 'grid' : 'none';
+      if (isWardrobe) renderWardrobeList();
+    });
+  });
+
+  /* ---------------- 옷장 ---------------- */
+
+  function renderWardrobeList() {
+    el.wardrobeList.innerHTML = '';
+    OUTFIT_TIERS.forEach((tier, tierIndex) => {
+      const unlocked = tierIndex <= state.wardrobe.unlockedMax;
+      const equipped = tierIndex === state.wardrobe.equipped;
+      const card = document.createElement('button');
+      card.className = `wardrobe-card${unlocked ? '' : ' locked'}${equipped ? ' equipped' : ''}`;
+      card.innerHTML = `
+        ${equipped ? '<span class="wardrobe-card-badge">착용 중</span>' : ''}
+        <img src="assets/wardrobe/tier${tierIndex}.png" alt="${tier.name}" />
+        <span class="wardrobe-card-label">${tier.emoji} ${tier.name}</span>
+      `;
+      if (unlocked) {
+        card.addEventListener('click', () => equipOutfit(tierIndex));
+      } else {
+        card.querySelector('.wardrobe-card-label').textContent = tier.wardrobeDesc;
+      }
+      el.wardrobeList.appendChild(card);
+    });
+  }
+
+  function equipOutfit(tierIndex) {
+    if (tierIndex > state.wardrobe.unlockedMax) return;
+    state.wardrobe.equipped = tierIndex;
+    renderWardrobeList();
+    renderMain();
+  }
+
+  // 품위가 새 단계에 닿으면 그 옷을 영구 해금하고 자동으로 갈아입힌다.
+  // (옷장에서는 이후 이미 해금한 옷들 중 원하는 것으로 자유롭게 갈아입을 수 있다)
+  function updateWardrobeUnlocks() {
+    const tierIndex = currentOutfit(state.stats).tierIndex;
+    if (tierIndex > state.wardrobe.unlockedMax) {
+      state.wardrobe.unlockedMax = tierIndex;
+      state.wardrobe.equipped = tierIndex;
+      const tier = OUTFIT_TIERS[tierIndex];
+      showLevelToast(`✨ 새 옷 해금: ${tier.name}!`);
+    }
+  }
+
+  /* ---------------- 레벨업 토스트 ---------------- */
+
+  let toastTimeoutId = null;
+
+  function showLevelToast(message) {
+    clearTimeout(toastTimeoutId);
+    el.levelToast.textContent = message;
+    el.levelToast.classList.add('show');
+    toastTimeoutId = setTimeout(() => {
+      el.levelToast.classList.remove('show');
+    }, 2200);
+  }
+
+  function announceStatLevelUps(beforeTiers) {
+    const leveledUp = [];
+    GROWTH_STAT_KEYS.forEach((k) => {
+      const afterTier = statTierIndex(state.stats[k]);
+      if (afterTier > beforeTiers[k]) {
+        leveledUp.push(`${STAT_LABELS[k]} Lv.${afterTier + 1}`);
+      }
+    });
+    if (leveledUp.length) {
+      showLevelToast(`🎉 ${leveledUp.join(' · ')} 달성!`);
+    }
+  }
 
   /* ---------------- 활동 버튼 ---------------- */
 

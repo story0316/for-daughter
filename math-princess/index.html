@@ -9,6 +9,7 @@
 </head>
 <body>
   <div id="app">
+    <div id="level-toast" class="level-toast"></div>
 
     <!-- 시작 화면 -->
     <section id="screen-start" class="screen active">
@@ -81,8 +82,13 @@
           <div class="turn-label">상점</div>
           <div id="shop-gold-label" class="gold-label">💰 0G</div>
         </div>
+        <div class="hud-row shop-tabs">
+          <button class="shop-tab-btn active" data-tab="items">🛠️ 장비</button>
+          <button class="shop-tab-btn" data-tab="wardrobe">👗 옷장</button>
+        </div>
       </header>
-      <div id="shop-list" class="level-list"></div>
+      <div id="shop-list" class="level-list shop-tab-panel"></div>
+      <div id="wardrobe-list" class="wardrobe-list shop-tab-panel" style="display:none"></div>
     </section>
 
     <!-- 친구 만나기: 상대 선택 -->

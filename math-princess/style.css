@@ -350,11 +350,25 @@ html, body {
 }
 
 .stat-row-value {
-  flex: 0 0 26px;
+  flex: 0 0 54px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
   font-size: 11px;
   font-weight: 800;
   color: #fff;
   text-align: right;
+}
+
+.stat-row-tier {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffe9b8;
+  white-space: nowrap;
 }
 
 .activity-grid {
@@ -507,6 +521,137 @@ html, body {
 
 .shop-item.owned .shop-buy-btn {
   background: rgba(95, 200, 115, 0.85);
+}
+
+.shop-tabs {
+  gap: 8px;
+}
+
+.shop-tab-btn {
+  flex: 1 1 0;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 6px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #d8c8ff;
+  font-weight: 800;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.shop-tab-btn.active {
+  background: linear-gradient(180deg, #ffb0cf, #ff8fb3);
+  color: #fff;
+}
+
+/* ---------- 옷장 ---------- */
+.wardrobe-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 14px 16px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-content: start;
+}
+
+.wardrobe-card {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  border: 3px solid transparent;
+  padding: 0;
+}
+
+.wardrobe-card:active {
+  transform: scale(0.97);
+}
+
+.wardrobe-card img {
+  width: 100%;
+  height: 118px;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  background: #f4ecd8;
+}
+
+.wardrobe-card-label {
+  padding: 7px 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #4a3a5a;
+  text-align: center;
+}
+
+.wardrobe-card.locked {
+  cursor: default;
+}
+
+.wardrobe-card.locked img {
+  filter: grayscale(0.9) brightness(0.55);
+}
+
+.wardrobe-card.locked::after {
+  content: '🔒';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 118px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+}
+
+.wardrobe-card.equipped {
+  border-color: #ffd873;
+  box-shadow: 0 0 0 2px #ffd873, 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.wardrobe-card-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #ffd873;
+  color: #5a3a1a;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* ---------- 레벨업 토스트 ---------- */
+.level-toast {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: linear-gradient(180deg, #fff3c4, #ffd873);
+  color: #5a3a1a;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  z-index: 60;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  white-space: nowrap;
+  max-width: 88%;
+  text-align: center;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.level-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(6px);
 }
 
 /* ---------- 친구 목록 (NPC) ---------- */
@@ -727,6 +872,11 @@ html, body {
 
 .ending-stat-panel .stat-row-label,
 .ending-stat-panel .stat-row-value {
+  color: #6a3a5a;
+}
+
+.ending-stat-panel .stat-row-tier {
+  background: rgba(106, 58, 90, 0.12);
   color: #6a3a5a;
 }
 
