@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFE3C2"/>
+      <stop offset="52%" stop-color="#FFD1DC"/>
+      <stop offset="100%" stop-color="#D8C8F7"/>
+    </linearGradient>
+    <clipPath id="squircle">
+      <rect x="32" y="32" width="960" height="960" rx="210" ry="210"/>
+    </clipPath>
+    <clipPath id="archClip">
+      <rect x="32" y="32" width="960" height="628" rx="0" ry="0"/>
+    </clipPath>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFDF6" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#FFFDF6" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#7A4E82" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+
+  <g clip-path="url(#squircle)">
+    <rect x="32" y="32" width="960" height="960" fill="url(#bgGrad)"/>
+
+    <!-- rainbow arcs -->
+    <g clip-path="url(#archClip)">
+      <circle cx="512" cy="660" r="440" fill="none" stroke="#FF6B6B" stroke-width="38"/>
+      <circle cx="512" cy="660" r="402" fill="none" stroke="#FFA94D" stroke-width="38"/>
+      <circle cx="512" cy="660" r="364" fill="none" stroke="#FFD43B" stroke-width="38"/>
+      <circle cx="512" cy="660" r="326" fill="none" stroke="#69DB7C" stroke-width="38"/>
+      <circle cx="512" cy="660" r="288" fill="none" stroke="#4DABF7" stroke-width="38"/>
+      <circle cx="512" cy="660" r="250" fill="none" stroke="#B197FC" stroke-width="38"/>
+    </g>
+
+    <!-- soft halo behind star+heart -->
+    <circle cx="512" cy="560" r="270" fill="url(#halo)"/>
+
+    <!-- sparkles -->
+    <g fill="#FFFFFF" opacity="0.9">
+      <path d="M170,210 l14,34 34,14 -34,14 -14,34 -14,-34 -34,-14 34,-14 Z"/>
+      <path d="M840,300 l10,24 24,10 -24,10 -10,24 -10,-24 -24,-10 24,-10 Z"/>
+      <path d="M820,780 l8,20 20,8 -20,8 -8,20 -8,-20 -20,-8 20,-8 Z"/>
+    </g>
+
+    <!-- star -->
+    <path fill="#FFD43B" stroke="#F59F00" stroke-width="10" stroke-linejoin="round"
+      d="M 512.0,335.0 L 549.0,449.0 L 668.9,449.0 L 571.9,519.5 L 609.0,633.5 L 512.0,563.0 L 415.0,633.5 L 452.1,519.5 L 355.1,449.0 L 475.0,449.0 Z"/>
+
+    <!-- heart -->
+    <path fill="#FF6B8B" stroke="#F0447A" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"
+      transform="translate(376,527.4) scale(8.5)"
+      d="M16,28.261C16,28.261 2,19.819 2,11.174C2,6.377 5.377,3 9.174,3C12.098,3 14.161,4.508 16,7.144C17.839,4.508 19.902,3 22.826,3C26.623,3 30,6.377 30,11.174C30,19.819 16,28.261 16,28.261Z"/>
+
+    <!-- heart shine -->
+    <ellipse cx="452" cy="600" rx="26" ry="16" fill="#FFFFFF" opacity="0.55" transform="rotate(-28 452 600)"/>
+
+    <!-- squircle edge highlight -->
+    <rect x="32" y="32" width="960" height="960" rx="210" ry="210" fill="none" stroke="#FFFFFF" stroke-opacity="0.5" stroke-width="6"/>
+  </g>
+</svg>
