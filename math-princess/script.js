@@ -167,6 +167,7 @@
     quizInputWrap: document.getElementById('quiz-input-wrap'),
     quizInput: document.getElementById('quiz-input'),
     btnQuizSubmit: document.getElementById('btn-quiz-submit'),
+    quizKeypad: document.getElementById('quiz-keypad'),
     quizFeedback: document.getElementById('quiz-feedback'),
 
     summaryEmoji: document.getElementById('summary-emoji'),
@@ -402,7 +403,6 @@
       el.quizInput.value = '';
       el.quizInput.disabled = false;
       el.btnQuizSubmit.disabled = false;
-      setTimeout(() => el.quizInput.focus(), 50);
     }
   }
 
@@ -410,7 +410,6 @@
     if (!session || session.answered) return;
     const raw = el.quizInput.value.trim();
     if (raw === '') {
-      el.quizInput.focus();
       return;
     }
     submitAnswer(raw, null);
@@ -418,6 +417,16 @@
 
   el.quizInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') el.btnQuizSubmit.click();
+  });
+
+  el.quizKeypad.addEventListener('click', (e) => {
+    const btn = e.target.closest('.keypad-btn');
+    if (!btn || !session || session.answered) return;
+    if (btn.dataset.key === 'erase') {
+      el.quizInput.value = el.quizInput.value.slice(0, -1);
+    } else if (el.quizInput.value.length < 8) {
+      el.quizInput.value += btn.dataset.key;
+    }
   });
 
   function submitAnswer(rawAnswer, btnEl) {
