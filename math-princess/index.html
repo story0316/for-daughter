@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>수학 프린세스 메이커</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👑</text></svg>" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- 시작 화면 -->
+    <section id="screen-start" class="screen active">
+      <div class="card">
+        <a href="../index.html" class="home-link">🏠 홈으로</a>
+        <div class="title-emoji">👑</div>
+        <h1>수학 프린세스 메이커</h1>
+        <p class="subtitle">수학 문제를 풀어 돈을 벌고 교양을 쌓으면<br/>평범한 옷이 예쁜 드레스로 바뀌어요!</p>
+        <p class="subtitle-sub">품위가 오를수록 만날 수 있는 사람도 늘어나요.<br/>한 턴은 한 달, 총 <span id="total-turns-label">24</span>개월(2년) 동안<br/>공주가 되는 그날까지 키워보세요.</p>
+
+        <div class="start-buttons">
+          <button id="btn-new-game" class="btn btn-primary">새로 시작하기</button>
+          <button id="btn-continue" class="btn btn-secondary" style="display:none">이어하기</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 메인 허브 화면 -->
+    <section id="screen-main" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <div id="turn-label" class="turn-label">1년차 1월 · 턴 1/24</div>
+          <div class="hud-right">
+            <button id="btn-open-shop" class="btn-shop">🛍️ 상점</button>
+            <div id="gold-label" class="gold-label">💰 0G</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="character-wrap">
+        <div id="character-emoji" class="character-emoji">🌱</div>
+        <div id="character-name" class="character-name">우리 딸</div>
+        <div id="outfit-badge" class="outfit-badge">👕 평범한 옷</div>
+      </div>
+
+      <div id="stat-panel" class="stat-panel"></div>
+
+      <div class="activity-grid" id="activity-grid">
+        <button class="activity-btn" data-activity="study">
+          <span class="activity-emoji">📖</span>
+          <span class="activity-name">공부</span>
+        </button>
+        <button class="activity-btn" data-activity="job">
+          <span class="activity-emoji">💼</span>
+          <span class="activity-name">알바</span>
+        </button>
+        <button class="activity-btn" data-activity="exercise">
+          <span class="activity-emoji">🏃</span>
+          <span class="activity-name">운동</span>
+        </button>
+        <button class="activity-btn" data-activity="rest">
+          <span class="activity-emoji">🛌</span>
+          <span class="activity-name">휴식</span>
+        </button>
+        <button class="activity-btn" data-activity="friend">
+          <span class="activity-emoji">🎡</span>
+          <span class="activity-name">친구 만나기</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 상점 화면 -->
+    <section id="screen-shop" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-shop-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label">상점</div>
+          <div id="shop-gold-label" class="gold-label">💰 0G</div>
+        </div>
+      </header>
+      <div id="shop-list" class="level-list"></div>
+    </section>
+
+    <!-- 친구 만나기: 상대 선택 -->
+    <section id="screen-npc-select" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-npc-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label">누구를 만날까요?</div>
+        </div>
+      </header>
+      <div id="npc-list" class="level-list"></div>
+    </section>
+
+    <!-- 학원(레벨) 선택 화면 -->
+    <section id="screen-level-select" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-level-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label">어떤 공부를 할까요?</div>
+        </div>
+      </header>
+      <div id="level-list" class="level-list"></div>
+    </section>
+
+    <!-- 문제 풀이 화면 -->
+    <section id="screen-quiz" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <div id="quiz-session-label" class="turn-label">공부 중</div>
+          <div id="quiz-progress" class="quiz-progress">1 / 4</div>
+        </div>
+        <div class="hud-row">
+          <div id="quiz-combo" class="quiz-combo">🔥 콤보 0</div>
+          <div id="quiz-level-badge" class="diff-badge">Lv.1</div>
+        </div>
+      </header>
+
+      <div class="quiz-wrap">
+        <div id="quiz-question" class="quiz-question">3 + 4 = ?</div>
+
+        <div id="quiz-choices" class="quiz-choices"></div>
+
+        <div id="quiz-input-wrap" class="quiz-input-wrap">
+          <input id="quiz-input" class="quiz-input" type="text" inputmode="decimal" placeholder="답 입력 (분수 3/4)" autocomplete="off" />
+          <button id="btn-quiz-submit" class="btn btn-primary btn-submit">확인</button>
+        </div>
+
+        <div id="quiz-feedback" class="quiz-feedback"></div>
+      </div>
+    </section>
+
+    <!-- 세션 요약 화면 -->
+    <section id="screen-session-summary" class="screen overlay-screen">
+      <div class="card">
+        <div id="summary-emoji" class="title-emoji">✅</div>
+        <h2 id="summary-title">공부를 마쳤어요!</h2>
+        <p id="summary-desc">4문제 중 3개를 맞혔어요</p>
+        <div class="result-stats">
+          <div class="stat-box"><span class="stat-num" id="summary-gold">0</span><span class="stat-label">획득 골드</span></div>
+          <div class="stat-box"><span class="stat-num" id="summary-combo">0</span><span class="stat-label">최고 콤보</span></div>
+        </div>
+        <button id="btn-summary-confirm" class="btn btn-primary">다음 달로</button>
+      </div>
+    </section>
+
+    <!-- 랜덤 이벤트 -->
+    <section id="screen-event" class="screen overlay-screen">
+      <div class="card">
+        <div id="event-emoji" class="title-emoji">🎉</div>
+        <h2 id="event-title">이벤트</h2>
+        <p id="event-desc">즐거운 일이 생겼어요!</p>
+        <button id="btn-event-confirm" class="btn btn-primary">확인</button>
+      </div>
+    </section>
+
+    <!-- 엔딩 화면 -->
+    <section id="screen-ending" class="screen overlay-screen">
+      <div class="card">
+        <div id="ending-emoji" class="title-emoji">🏅</div>
+        <h2 id="ending-title">엔딩 타이틀</h2>
+        <p id="ending-desc">엔딩 설명</p>
+        <p id="ending-npc-line" class="ending-npc-line"></p>
+        <div id="ending-outfit-badge" class="outfit-badge ending-outfit-badge">👕 평범한 옷</div>
+        <div id="ending-stat-panel" class="stat-panel ending-stat-panel"></div>
+        <div class="result-stats">
+          <div class="stat-box"><span class="stat-num" id="ending-total-correct">0</span><span class="stat-label">푼 문제 수</span></div>
+          <div class="stat-box"><span class="stat-num" id="ending-best-combo">0</span><span class="stat-label">최고 콤보</span></div>
+          <div class="stat-box"><span class="stat-num" id="ending-gold">0</span><span class="stat-label">누적 골드</span></div>
+          <div class="stat-box"><span class="stat-num" id="ending-items">0</span><span class="stat-label">보유 장비</span></div>
+        </div>
+        <div class="result-buttons">
+          <button id="btn-ending-restart" class="btn btn-primary">다시 시작하기</button>
+          <button id="btn-ending-home" class="btn btn-secondary">홈으로</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  <script src="problems.js"></script>
+  <script src="endings.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

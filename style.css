@@ -92,6 +92,10 @@ html, body {
   background: linear-gradient(165deg, #cdeaff 0%, #8fb4ff 45%, #b48fff 100%);
 }
 
+.slide.theme-gold {
+  background: linear-gradient(165deg, #ffe6b3 0%, #ffc16e 45%, #ff8fb3 100%);
+}
+
 .slide-emoji {
   font-size: 84px;
   filter: drop-shadow(0 8px 18px rgba(0,0,0,0.2));

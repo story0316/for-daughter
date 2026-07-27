@@ -1,0 +1,666 @@
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  background: #241a33;
+  touch-action: manipulation;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #1c1428;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+}
+
+.screen.active {
+  display: flex;
+}
+
+.overlay-screen {
+  z-index: 20;
+}
+
+/* ---------- 공통 카드 화면 ---------- */
+#screen-start,
+#screen-session-summary,
+#screen-event,
+#screen-ending {
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+#screen-start {
+  background: linear-gradient(180deg, #ffe6b3 0%, #ffd0e8 45%, #d8c8ff 100%);
+}
+
+#screen-session-summary,
+#screen-event,
+#screen-ending {
+  background: rgba(28, 20, 40, 0.78);
+  padding: 20px;
+}
+
+.card {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  padding: 30px 26px;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 28px;
+  box-shadow: 0 10px 30px rgba(90, 50, 40, 0.2);
+  backdrop-filter: blur(4px);
+  max-width: 100%;
+  width: 340px;
+}
+
+.home-link {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #7a4a2f;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+
+.title-emoji {
+  font-size: 48px;
+  margin-bottom: 4px;
+}
+
+.card h1 {
+  margin: 4px 0 10px;
+  font-size: 25px;
+  line-height: 1.3;
+  color: #6a3a5a;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.6);
+}
+
+.card h2 {
+  margin: 4px 0 8px;
+  font-size: 22px;
+  color: #6a3a5a;
+}
+
+.card p {
+  margin: 0 0 8px;
+  color: #7a5a6a;
+  font-size: 13.5px;
+}
+
+.subtitle {
+  line-height: 1.6;
+}
+
+.subtitle-sub {
+  margin: 0 0 22px !important;
+  font-size: 12.5px !important;
+  line-height: 1.6;
+  color: #9a6a7a !important;
+}
+
+.start-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  touch-action: manipulation;
+  width: 100%;
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #ffb0cf, #ff8fb3);
+  color: #fff;
+  box-shadow: 0 6px 0 #d9527e, 0 10px 18px rgba(217, 82, 126, 0.35);
+}
+
+.btn-primary:active {
+  box-shadow: 0 2px 0 #d9527e, 0 4px 10px rgba(217, 82, 126, 0.35);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.7);
+  color: #6a3a5a;
+  border: 2px solid rgba(150, 90, 130, 0.3);
+  box-shadow: none;
+}
+
+.result-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* ---------- 메인 허브 ---------- */
+#screen-main,
+#screen-level-select,
+#screen-quiz {
+  background: linear-gradient(180deg, #2c2044 0%, #1c1428 55%);
+}
+
+.hud {
+  flex: 0 0 auto;
+  padding: 12px 16px 10px;
+  background: rgba(18, 12, 28, 0.85);
+  color: #fff;
+  z-index: 5;
+}
+
+.hud-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hud-row + .hud-row {
+  margin-top: 6px;
+}
+
+.turn-label {
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffe3ef;
+}
+
+.gold-label {
+  font-size: 13px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 12px;
+  border-radius: 999px;
+  color: #ffe9b8;
+  white-space: nowrap;
+}
+
+.hud-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-shop {
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffe3ef;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-back {
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.character-wrap {
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 14px 0 6px;
+}
+
+.character-emoji {
+  font-size: 56px;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.3));
+}
+
+.character-name {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #d8c8ff;
+}
+
+.outfit-badge {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #ffe3ef;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 3px 12px;
+  border-radius: 999px;
+}
+
+.ending-outfit-badge {
+  color: #b3446c;
+  background: rgba(179, 68, 108, 0.12);
+  margin: 4px 0 8px;
+}
+
+.stat-panel {
+  flex: 1 1 auto;
+  padding: 8px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-row-label {
+  flex: 0 0 44px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #d8c8ff;
+}
+
+.stat-row-track {
+  flex: 1 1 auto;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.stat-row-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffb0cf, #b48fff);
+}
+
+.stat-row-fill.stress-fill {
+  background: linear-gradient(90deg, #ffd873, #ff6b6b);
+}
+
+.stat-row-value {
+  flex: 0 0 26px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  text-align: right;
+}
+
+.activity-grid {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 14px 20px 20px;
+}
+
+.activity-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 8px;
+  border-radius: 18px;
+  border: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: #4a3a5a;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.15), 0 8px 16px rgba(0,0,0,0.2);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.activity-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.activity-btn[data-activity="friend"] {
+  grid-column: span 2;
+}
+
+.activity-emoji {
+  font-size: 30px;
+}
+
+/* ---------- 학원(레벨) 선택 ---------- */
+.level-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 14px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.level-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+}
+
+.level-card:active {
+  transform: scale(0.98);
+}
+
+.level-card.locked {
+  background: rgba(255, 255, 255, 0.35);
+  cursor: default;
+}
+
+.level-badge-num {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  background: linear-gradient(180deg, #b48fff, #8f6fff);
+  color: #fff;
+}
+
+.level-card.locked .level-badge-num {
+  background: rgba(255, 255, 255, 0.3);
+  color: rgba(255,255,255,0.7);
+}
+
+.level-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.level-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #4a3a5a;
+}
+
+.level-desc {
+  font-size: 11.5px;
+  color: #8a6a7a;
+  margin-top: 2px;
+}
+
+.level-card.locked .level-title,
+.level-card.locked .level-desc {
+  color: rgba(255,255,255,0.75);
+}
+
+.level-lock-icon {
+  flex: 0 0 auto;
+  font-size: 16px;
+}
+
+/* ---------- 상점 ---------- */
+.shop-item .level-badge-num {
+  background: linear-gradient(180deg, #ffd873, #ffb84d);
+  font-size: 20px;
+}
+
+.shop-cost {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #b3446c;
+  margin-top: 2px;
+}
+
+.shop-buy-btn {
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  background: linear-gradient(180deg, #ffb0cf, #ff8fb3);
+  color: #fff;
+}
+
+.shop-buy-btn:disabled {
+  background: rgba(0,0,0,0.15);
+  color: rgba(255,255,255,0.6);
+  cursor: default;
+}
+
+.shop-item.owned .shop-buy-btn {
+  background: rgba(95, 200, 115, 0.85);
+}
+
+/* ---------- 친구 목록 (NPC) ---------- */
+.npc-card .level-badge-num {
+  background: linear-gradient(180deg, #8fd4ff, #6fa8ff);
+  font-size: 20px;
+}
+
+.npc-affection-track {
+  margin-top: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(120, 80, 100, 0.15);
+  overflow: hidden;
+  max-width: 160px;
+}
+
+.npc-affection-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffb0cf, #ff6fa0);
+}
+
+.ending-npc-line {
+  font-size: 12.5px !important;
+  font-weight: 700;
+  color: #b3446c !important;
+  margin-bottom: 4px !important;
+}
+
+/* ---------- 퀴즈 ---------- */
+.quiz-progress,
+.diff-badge {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffe3ef;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.quiz-combo {
+  font-size: 13px;
+  font-weight: 800;
+  color: #ffd873;
+}
+
+.quiz-wrap {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 24px;
+  gap: 20px;
+}
+
+.quiz-question {
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 3px 10px rgba(0,0,0,0.35);
+  line-height: 1.4;
+}
+
+.quiz-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.choice-btn {
+  padding: 16px 8px;
+  border-radius: 16px;
+  border: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: #4a3a5a;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 5px 0 rgba(0,0,0,0.15), 0 6px 14px rgba(0,0,0,0.2);
+}
+
+.choice-btn:active {
+  transform: translateY(2px);
+}
+
+.choice-btn.correct {
+  background: linear-gradient(180deg, #8bdf9a, #5fc873);
+  color: #fff;
+}
+
+.choice-btn.wrong {
+  background: linear-gradient(180deg, #ff8f8f, #ff6b6b);
+  color: #fff;
+}
+
+.choice-btn:disabled {
+  cursor: default;
+}
+
+.quiz-input-wrap {
+  display: none;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.quiz-input-wrap.active {
+  display: flex;
+}
+
+.quiz-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 14px 10px;
+  border-radius: 14px;
+  border: none;
+  font-size: 15.5px;
+  font-weight: 700;
+  text-align: center;
+  color: #4a3a5a;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.btn-submit {
+  padding: 14px 16px;
+  font-size: 15px;
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.quiz-feedback {
+  min-height: 40px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffe9b8;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ---------- 결과류 공통 ---------- */
+.result-stats {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 16px 0 20px;
+  flex-wrap: wrap;
+}
+
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-num {
+  font-size: 19px;
+  font-weight: 800;
+  color: #6a3a5a;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #8a6a7a;
+  margin-top: 2px;
+}
+
+.ending-stat-panel {
+  text-align: left;
+  margin: 10px 0 4px;
+}
+
+.ending-stat-panel .stat-row-label,
+.ending-stat-panel .stat-row-value {
+  color: #6a3a5a;
+}
+
+.ending-stat-panel .stat-row-track {
+  background: rgba(120, 80, 100, 0.15);
+}
+
+@media (max-height: 640px) {
+  .title-emoji { font-size: 38px; }
+  .card h1 { font-size: 20px; }
+  .quiz-question { font-size: 21px; }
+  .character-emoji { font-size: 44px; }
+}

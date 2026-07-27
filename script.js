@@ -23,6 +23,13 @@
       desc: '9×9 칸을 1~9로 채워보세요',
       theme: 'blue',
     },
+    {
+      href: 'math-princess/index.html',
+      emoji: '👑',
+      title: '수학 프린세스 메이커',
+      desc: '공부해서 교양을 쌓고 진짜 공주가 되어보세요',
+      theme: 'gold',
+    },
   ];
 
   // 앞뒤에 클론을 하나씩 붙여서 좌우로 끝없이 도는 캐러셀을 만든다.
