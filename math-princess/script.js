@@ -279,6 +279,10 @@
 
   let state = makeInitialState();
   let session = null;
+  // 진짜로 게임을 시작(새 게임/이어하기)한 뒤부터만 페이지 백그라운드/종료 시
+  // 안전망 저장을 하도록 막는 플래그. 시작 화면에 머무른 채로 앱이 닫혀도
+  // 미시작 상태로 기존 저장 데이터를 덮어쓰지 않게 해준다.
+  let gameStarted = false;
 
   function clampStats() {
     STAT_KEYS.forEach((k) => {
@@ -300,11 +304,22 @@
   }
 
   function saveGame() {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      return true;
+    } catch (e) {
+      // 저장 공간이 꽉 찼거나(사파리 시크릿 모드 등) localStorage를 쓸 수 없는 경우에도
+      // 게임 자체가 멈추지 않도록 조용히 실패시킨다.
+      return false;
+    }
   }
 
   function clearSave() {
-    localStorage.removeItem(SAVE_KEY);
+    try {
+      localStorage.removeItem(SAVE_KEY);
+    } catch (e) {
+      // no-op
+    }
   }
 
   function loadGame() {
@@ -539,6 +554,7 @@
       el.quizFeedback.textContent = `아쉬워요! 정답: ${problem.answer}\n${problem.explanation}`;
     }
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
+    saveGame();
 
     setTimeout(() => {
       session.index++;
@@ -602,6 +618,7 @@
     state.stats.stress += 3;
     clampStats();
     announceStatLevelUps(beforeTiers);
+    saveGame();
     maybeTriggerEvent(0.25);
   }
 
@@ -612,6 +629,7 @@
     state.stats.stamina += 10 * restMultiplier;
     clampStats();
     announceStatLevelUps(beforeTiers);
+    saveGame();
     maybeTriggerEvent(0.15);
   }
 
@@ -626,6 +644,7 @@
     event.apply(state);
     clampStats();
     announceStatLevelUps(beforeTiers);
+    saveGame();
 
     el.eventEmoji.textContent = event.emoji;
     el.eventTitle.textContent = event.title;
@@ -673,6 +692,7 @@
     npcState.affection += randInt(8, 14);
     clampStats();
     announceStatLevelUps(beforeTiers);
+    saveGame();
 
     el.eventEmoji.innerHTML = npcAvatarHTML(def, 'npc-avatar-lg');
     el.eventTitle.textContent = `${def.name}과(와)의 시간`;
@@ -726,6 +746,7 @@
     state.gold -= item.cost;
     state.items[itemId] = true;
     el.shopGoldLabel.textContent = `💰 ${state.gold}G`;
+    saveGame();
     renderShopList();
   }
 
@@ -764,6 +785,7 @@
   function equipOutfit(tierIndex) {
     if (tierIndex > state.wardrobe.unlockedMax) return;
     state.wardrobe.equipped = tierIndex;
+    saveGame();
     renderWardrobeList();
     renderMain();
   }
@@ -777,6 +799,7 @@
       state.wardrobe.equipped = tierIndex;
       const tier = OUTFIT_TIERS[tierIndex];
       showLevelToast(`✨ 새 옷 해금: ${tier.name}!`);
+      saveGame();
     }
   }
 
@@ -950,6 +973,7 @@
   }
 
   function showEnding() {
+    gameStarted = false;
     clearSave();
     const ending = E.computeEnding(state.stats, state.npcs);
     el.endingEmoji.textContent = ending.emoji;
@@ -979,6 +1003,8 @@
   el.btnEndingRestart.addEventListener('click', () => {
     state = makeInitialState();
     clearSave();
+    saveGame();
+    gameStarted = true;
     showScreen('main');
     renderMain();
   });
@@ -989,12 +1015,14 @@
     state = makeInitialState();
     clearSave();
     saveGame();
+    gameStarted = true;
     showScreen('main');
     renderMain();
   });
 
   el.btnContinue.addEventListener('click', () => {
     if (loadGame()) {
+      gameStarted = true;
       showScreen('main');
       renderMain();
     }
@@ -1003,4 +1031,15 @@
   if (loadGame()) {
     el.btnContinue.style.display = 'block';
   }
+
+  // 안전망: 앱이 백그라운드로 가거나 탭/창이 닫히는 순간에도 현재 진행 상태를
+  // 즉시 저장해서, 명시적으로 "확인" 버튼을 누르기 전에 앱이 종료되어도
+  // 진행이 사라지지 않도록 한다.
+  function flushSaveIfStarted() {
+    if (gameStarted) saveGame();
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushSaveIfStarted();
+  });
+  window.addEventListener('pagehide', flushSaveIfStarted);
 })();
