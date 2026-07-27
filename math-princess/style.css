@@ -274,11 +274,11 @@ html, body {
 
 .portrait-frame {
   position: relative;
-  width: 128px;
-  height: 128px;
+  width: 220px;
+  height: 220px;
   margin: 0 auto;
   border-radius: 50%;
-  padding: 6px;
+  padding: 8px;
   background: linear-gradient(145deg, #fff3c4, #ffd873 45%, #d99a2b 75%, #ffe9a8 100%);
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
 }
