@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>구구단 맞추기</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧮</text></svg>" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- 시작 화면 -->
+    <section id="screen-start" class="screen active">
+      <div class="card">
+        <div class="title-emoji">🧮</div>
+        <h1>구구단<br/>맞추기</h1>
+        <p class="subtitle">문제를 잘 보고 정답을 골라보세요!<br/>하트를 모두 잃으면 게임이 끝나요.</p>
+
+        <div class="difficulty-picker">
+          <p class="picker-label">난이도를 선택하세요</p>
+          <div class="difficulty-buttons" id="difficulty-buttons">
+            <button class="diff-btn active" data-diff="easy">이지<br/><span>2~5단</span></button>
+            <button class="diff-btn" data-diff="normal">노말<br/><span>2~9단</span></button>
+            <button class="diff-btn" data-diff="hard">하드<br/><span>직접입력</span></button>
+          </div>
+          <p class="difficulty-desc" id="difficulty-desc">2~5단 곱셈이 나와요. 4개 중에 답을 골라요. 시간이 넉넉해요.</p>
+          <p class="best-score" id="best-score"></p>
+        </div>
+
+        <div class="hearts-preview">
+          <span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span>
+          <span class="hearts-preview-text">하트 3개로 시작해요</span>
+        </div>
+
+        <button id="btn-start" class="btn btn-primary">시작하기</button>
+      </div>
+    </section>
+
+    <!-- 게임 화면 -->
+    <section id="screen-game" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <div id="hearts" class="hearts"></div>
+          <div id="score" class="score">점수 0</div>
+        </div>
+        <div class="hud-row">
+          <div id="progress-text" class="progress-text">1 / 10</div>
+          <div id="diff-badge" class="diff-badge">이지</div>
+        </div>
+        <div class="timer-track"><div id="timer-bar" class="timer-bar"></div></div>
+      </header>
+
+      <div class="quiz-wrap">
+        <div id="question" class="question">3 × 4 = ?</div>
+
+        <div id="choices" class="choices"></div>
+
+        <div id="typed-answer-wrap" class="typed-answer-wrap">
+          <input id="typed-input" class="typed-input" type="number" inputmode="numeric" placeholder="정답을 입력하세요" autocomplete="off" />
+          <button id="btn-submit" class="btn btn-primary btn-submit">확인</button>
+        </div>
+
+        <div id="feedback" class="feedback"></div>
+      </div>
+      <div id="fx-layer" class="fx-layer"></div>
+    </section>
+
+    <!-- 결과 화면 -->
+    <section id="screen-result" class="screen overlay-screen">
+      <div class="card">
+        <div id="result-emoji" class="title-emoji">🎉</div>
+        <h2 id="result-title">클리어!</h2>
+        <p id="result-desc">10문제 중 8개 맞혔어요!</p>
+        <div class="result-stats">
+          <div class="stat"><span class="stat-num" id="stat-score">0</span><span class="stat-label">점수</span></div>
+          <div class="stat"><span class="stat-num" id="stat-correct">0</span><span class="stat-label">정답</span></div>
+          <div class="stat"><span class="stat-num" id="stat-best">0</span><span class="stat-label">최고연속</span></div>
+        </div>
+        <div class="result-buttons">
+          <button id="btn-retry" class="btn btn-secondary">다시하기</button>
+          <button id="btn-next" class="btn btn-primary">다음 난이도 도전!</button>
+          <button id="btn-home" class="btn btn-secondary">난이도 선택</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
