@@ -3,6 +3,7 @@
 
   const P = window.MathPrincessProblems;
   const E = window.MathPrincessEndings;
+  const SC = window.MathPrincessScenarios;
 
   const STAT_KEYS = ['intelligence', 'focus', 'stamina', 'charm', 'creativity', 'stress', 'luck'];
   const STAT_LABELS = {
@@ -36,7 +37,7 @@
     return snap;
   }
 
-  const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 24;
+  const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 48;
   const QUESTIONS_PER_STUDY = 4;
   const QUESTIONS_PER_JOB = 3;
   const SAVE_KEY = 'math-princess-save-v1';
@@ -51,7 +52,7 @@
   ];
 
   const QUESTIONS_PER_BANQUET = 3;
-  const BANQUET_PASS_COUNT = 2; // 3문제 중 2개 이상 맞히면 왕자님을 만난다.
+  const BANQUET_PASS_COUNT = 3; // 왕자님을 만나려면 3문제를 모두 맞혀야 한다(난이도 상향).
 
   // 연회에서 나오는 예절 문제 은행. 정답을 잘 맞히면 예절/매력이 오르고,
   // 충분히 잘 대답하면 왕자님을 만날 수 있는 특별한 계기가 된다.
@@ -128,9 +129,13 @@
     { id: 'sharp', emoji: '✏️', name: '샤프', cost: 1500, desc: '문제 정답 시 골드 +10%', goldBonus: 0.1 },
     { id: 'tablet', emoji: '📱', name: '태블릿', cost: 5000, desc: '공부 정답 시 지능 +1 추가 획득', intBonus: 1 },
     { id: 'laptop', emoji: '💻', name: '노트북', cost: 12000, desc: '콤보 보상 배율 +0.2', comboBonus: 0.2 },
+    { id: 'tiara', emoji: '👑', name: '작은 티아라', cost: 18000, desc: '연회에서 정답 맞힐 때 매력 +1 추가 획득', charmBonus: 1 },
+    { id: 'invitation', emoji: '✉️', name: '왕실 초대장', cost: 22000, desc: '인물을 만날 때 호감도 +2 추가 획득', affectionBonus: 2 },
     { id: 'aiTutor', emoji: '🤖', name: 'AI 학습기', cost: 30000, desc: '문제 정답 시 골드 +25%, 지능 +2 추가', goldBonus: 0.25, intBonus: 2 },
+    { id: 'orchestra', emoji: '🎻', name: '개인 오케스트라 레슨', cost: 45000, desc: '공부 정답 시 지능 +2 추가 획득', intBonus: 2 },
     { id: 'apartment', emoji: '🏢', name: '아파트로 이사', cost: 8000, desc: '휴식 효과 +50%', restBonus: 0.5 },
     { id: 'house', emoji: '🏡', name: '단독주택으로 이사', cost: 25000, desc: '휴식 효과 추가 +50% (총 100%)', restBonus: 0.5 },
+    { id: 'palace', emoji: '🏰', name: '별궁으로 이사', cost: 60000, desc: '휴식 효과 추가 +50% (총 150%)', restBonus: 0.5 },
   ];
 
   // 품위(교양) 점수: 매력·창의력·지능을 섞어 계산한다. 이 점수가 오를수록
@@ -139,11 +144,35 @@
     return stats.charm * 0.4 + stats.creativity * 0.3 + stats.intelligence * 0.3;
   }
 
+  // 인물 호감도를 삼국지 시리즈의 "친밀도"처럼 단계 이름으로 보여준다.
+  const AFFECTION_TIERS = [
+    { min: 0, name: '낯선 사이' },
+    { min: 20, name: '아는 사이' },
+    { min: 40, name: '친근한 사이' },
+    { min: 60, name: '가까운 사이' },
+    { min: 80, name: '각별한 사이' },
+  ];
+
+  function affectionTierName(value) {
+    let name = AFFECTION_TIERS[0].name;
+    AFFECTION_TIERS.forEach((t) => {
+      if (value >= t.min) name = t.name;
+    });
+    return name;
+  }
+
+  // 한동안 만나지 않고 방치한 인물은 호감도가 서서히 식는다.
+  // (삼국지 시리즈처럼, 자주 만나야 친밀도를 유지·상승시킬 수 있다)
+  const AFFECTION_DECAY_GRACE_TURNS = 2;
+  const AFFECTION_DECAY_AMOUNT = 2;
+
   const OUTFIT_TIERS = [
     { min: 0, emoji: '👕', name: '평범한 옷', wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
     { min: 25, emoji: '👚', name: '단정한 옷', wardrobeDesc: '품위 25 이상에서 해금' },
     { min: 50, emoji: '👗', name: '예쁜 드레스', wardrobeDesc: '품위 50 이상에서 해금' },
     { min: 75, emoji: '👑', name: '공주 드레스', wardrobeDesc: '품위 75 이상에서 해금' },
+    { min: 90, emoji: '💐', name: '무도회 드레스', wardrobeDesc: '품위 90 이상에서 해금' },
+    { min: 100, emoji: '✨', name: '대관식 드레스', wardrobeDesc: '품위 100(만점)에서만 해금되는 전설의 옷' },
   ];
 
   function currentOutfit(stats) {
@@ -202,8 +231,8 @@
       emoji: '🤴',
       name: '왕자님',
       desc: '무도회에서 우연히 마주친 왕자님',
-      unlock: (stats) => graceScore(stats) >= 45,
-      unlockHint: (stats) => `품위 45 필요 (현재 ${Math.round(graceScore(stats))})`,
+      unlock: (stats) => graceScore(stats) >= 55,
+      unlockHint: (stats) => `품위 55 필요 (현재 ${Math.round(graceScore(stats))})`,
       apply: (s) => { s.stats.charm += 5; s.stats.luck += 2; },
       lines: ['왕자님과 정원을 산책했어요.', '왕자님이 춤을 신청했어요.', '왕자님과 함께 별을 보며 이야기를 나눴어요.'],
     },
@@ -231,9 +260,11 @@
       quiz: document.getElementById('screen-quiz'),
       sessionSummary: document.getElementById('screen-session-summary'),
       event: document.getElementById('screen-event'),
+      branching: document.getElementById('screen-branching'),
       ending: document.getElementById('screen-ending'),
     },
     totalTurnsLabel: document.getElementById('total-turns-label'),
+    totalYearsLabel: document.getElementById('total-years-label'),
     btnNewGame: document.getElementById('btn-new-game'),
     btnContinue: document.getElementById('btn-continue'),
 
@@ -254,6 +285,7 @@
     statusStatPanel: document.getElementById('status-stat-panel'),
     statusNpcList: document.getElementById('status-npc-list'),
     statusItemList: document.getElementById('status-item-list'),
+    statusUpcomingList: document.getElementById('status-upcoming-list'),
 
     btnShopBack: document.getElementById('btn-shop-back'),
     shopList: document.getElementById('shop-list'),
@@ -293,6 +325,10 @@
     eventDesc: document.getElementById('event-desc'),
     btnEventConfirm: document.getElementById('btn-event-confirm'),
 
+    branchingEmoji: document.getElementById('branching-emoji'),
+    branchingPrompt: document.getElementById('branching-prompt'),
+    branchingOptions: document.getElementById('branching-options'),
+
     endingEmoji: document.getElementById('ending-emoji'),
     endingTitle: document.getElementById('ending-title'),
     endingDesc: document.getElementById('ending-desc'),
@@ -309,6 +345,7 @@
   };
 
   el.totalTurnsLabel.textContent = TOTAL_TURNS;
+  el.totalYearsLabel.textContent = Math.round(TOTAL_TURNS / 12);
 
   function randInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -335,10 +372,11 @@
       combo: 0,
       bestCombo: 0,
       items: {},
-      npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20) })),
+      npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 })),
       wardrobe: { unlockedMax: 0, equipped: 0 },
       scheduledActivity: null,
       talkedThisTurn: false,
+      completedScenarios: [],
     };
   }
 
@@ -394,10 +432,14 @@
       const loaded = JSON.parse(raw);
       if (!loaded || typeof loaded.turn !== 'number') return false;
       loaded.items = loaded.items || {};
-      loaded.npcs = loaded.npcs || NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20) }));
+      loaded.npcs = loaded.npcs || NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 }));
+      loaded.npcs.forEach((n) => {
+        if (typeof n.lastMetTurn !== 'number') n.lastMetTurn = 0;
+      });
       loaded.wardrobe = loaded.wardrobe || { unlockedMax: 0, equipped: 0 };
       if (typeof loaded.scheduledActivity === 'undefined') loaded.scheduledActivity = null;
       if (typeof loaded.talkedThisTurn === 'undefined') loaded.talkedThisTurn = false;
+      if (!Array.isArray(loaded.completedScenarios)) loaded.completedScenarios = [];
       state = loaded;
       return true;
     } catch (e) {
@@ -569,13 +611,25 @@
       return;
     }
     session.answered = false;
-    const problem = session.type === 'banquet' ? generateEtiquetteQuestion(session) : P.generateProblem(session.level);
+    const problem =
+      session.type === 'banquet'
+        ? generateEtiquetteQuestion(session)
+        : session.type === 'scenario-quiz'
+          ? generateScenarioQuestion(session)
+          : P.generateProblem(session.level);
     session.currentProblem = problem;
 
-    el.quizSessionLabel.textContent = session.type === 'study' ? '📖 공부 중' : session.type === 'job' ? '💼 알바 중' : '💃 연회 참석 중';
+    el.quizSessionLabel.textContent =
+      session.type === 'study'
+        ? '📖 공부 중'
+        : session.type === 'job'
+          ? '💼 알바 중'
+          : session.type === 'banquet'
+            ? '💃 연회 참석 중'
+            : `${session.scenario.entryEmoji} ${session.scenario.title}`;
     el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
-    el.quizLevelBadge.textContent = session.type === 'banquet' ? '예절' : `Lv.${problem.level}`;
+    el.quizLevelBadge.textContent = session.type === 'banquet' ? '예절' : session.type === 'scenario-quiz' ? session.scenario.arc : `Lv.${problem.level}`;
     el.quizQuestion.textContent = problem.question;
     el.quizFeedback.textContent = '';
 
@@ -666,7 +720,10 @@
     session.sessionBestCombo = Math.max(session.sessionBestCombo, state.combo);
 
     if (session.type === 'banquet') {
-      state.stats.charm += 4;
+      state.stats.charm += 4 + itemBonusSum('charmBonus');
+    } else if (session.type === 'scenario-quiz') {
+      // 시나리오 퀴즈는 문제마다 즉시 보상을 주지 않고, 세션이 끝난 뒤
+      // scenario.outcomes.success/fail 효과를 한 번에 적용한다.
     } else {
       const multiplier = comboMultiplier(state.combo) + itemBonusSum('comboBonus');
       const jobBonus = session.type === 'job' ? 1.5 : 1;
@@ -690,6 +747,8 @@
     state.combo = 0;
     if (session.type === 'banquet') {
       state.stats.stress += 2;
+    } else if (session.type === 'scenario-quiz') {
+      // 시나리오 퀴즈는 outcomes.fail 효과가 세션 종료 시 한 번에 적용된다.
     } else if (session.type === 'study') {
       state.stats.stress += 6;
       state.stats.stamina -= 4;
@@ -702,6 +761,10 @@
   function finishSession() {
     if (session.type === 'banquet') {
       finishBanquetSession();
+      return;
+    }
+    if (session.type === 'scenario-quiz') {
+      finishScenarioQuizSession();
       return;
     }
     el.summaryEmoji.textContent = session.correctCount === session.count ? '🌟' : '✅';
@@ -722,7 +785,7 @@
     const beforeTiers = snapshotGrowthTiers(state.stats);
 
     if (success) {
-      princeState.affection += randInt(10, 16);
+      princeState.affection += randInt(10, 16) + itemBonusSum('affectionBonus');
       clampStats();
       announceStatLevelUps(beforeTiers);
       el.eventEmoji.innerHTML = npcAvatarHTML(prince, 'npc-avatar-lg');
@@ -798,14 +861,15 @@
     NPC_DEFS.forEach((def) => {
       const unlocked = def.unlock(state.stats);
       const npcState = state.npcs.find((n) => n.id === def.id);
+      const activeScenario = unlocked ? findActiveScenario(def.id) : null;
       const card = document.createElement('button');
       card.className = `level-card npc-card${unlocked ? '' : ' locked'}`;
       card.innerHTML = `
         ${unlocked ? npcAvatarHTML(def, 'npc-avatar-md') : '<span class="level-badge-num">🔒</span>'}
         <span class="level-info">
           <span class="level-title">${def.name}</span>
-          <span class="level-desc">${unlocked ? def.desc : def.unlockHint(state.stats)}</span>
-          ${unlocked ? `<span class="npc-affection-track"><span class="npc-affection-fill" style="width:${npcState.affection}%"></span></span>` : ''}
+          <span class="level-desc">${unlocked ? (activeScenario ? `<span class="npc-scenario-hint">✨ ${activeScenario.title}</span>` : def.desc) : def.unlockHint(state.stats)}</span>
+          ${unlocked ? `<span class="npc-affection-track"><span class="npc-affection-fill" style="width:${npcState.affection}%"></span></span><span class="npc-affection-label">${affectionTierName(npcState.affection)} · ${Math.round(npcState.affection)}</span>` : ''}
         </span>
         <span class="level-lock-icon">${unlocked ? '›' : '🔒'}</span>
       `;
@@ -820,19 +884,175 @@
   el.btnNpcBack.addEventListener('click', () => showScreen('main'));
 
   function meetNpc(npcId) {
+    const activeScenario = findActiveScenario(npcId);
+    if (activeScenario) {
+      runScenario(activeScenario);
+      return;
+    }
+
     const def = NPC_DEFS.find((n) => n.id === npcId);
     const npcState = state.npcs.find((n) => n.id === npcId);
     const beforeTiers = snapshotGrowthTiers(state.stats);
     def.apply(state);
-    npcState.affection += randInt(8, 14);
+    npcState.affection += randInt(8, 14) + itemBonusSum('affectionBonus');
+    npcState.lastMetTurn = state.turn;
     clampStats();
     announceStatLevelUps(beforeTiers);
     saveGame();
 
     el.eventEmoji.innerHTML = npcAvatarHTML(def, 'npc-avatar-lg');
     el.eventTitle.textContent = `${def.name}과(와)의 시간`;
-    el.eventDesc.textContent = `${randChoice(def.lines)} (애정도 ${Math.round(npcState.affection)})`;
+    el.eventDesc.textContent = `${randChoice(def.lines)} (애정도 ${Math.round(npcState.affection)} · ${affectionTierName(npcState.affection)})`;
     showScreen('event');
+  }
+
+  /* ---------------- 시나리오 계층(scenarios.js) 실행 ---------------- */
+
+  // scenarios.js에 정의된 unlock 조건(minGrace/minStat/minAffection)을 확인한다.
+  function scenarioUnlocked(scenario, st) {
+    const u = scenario.unlock || {};
+    if (typeof u.minGrace === 'number' && graceScore(st.stats) < u.minGrace) return false;
+    if (u.minStat && st.stats[u.minStat.key] < u.minStat.value) return false;
+    if (u.minAffection) {
+      const npcState = st.npcs.find((n) => n.id === u.minAffection.npcId);
+      if (!npcState || npcState.affection < u.minAffection.value) return false;
+    }
+    return true;
+  }
+
+  // 해당 인물에게 아직 완료하지 않은, 조건을 만족한 "ready" 시나리오를 찾는다.
+  // 있으면 "친구 만나기"에서 일반 대사 대신 이 특별한 이야기가 진행된다.
+  function findActiveScenario(npcId) {
+    if (!SC) return null;
+    return (
+      SC.SCENARIOS.find(
+        (s) =>
+          s.npcId === npcId &&
+          s.status === 'ready' &&
+          !s.bespoke &&
+          !state.completedScenarios.includes(s.id) &&
+          scenarioUnlocked(s, state)
+      ) || null
+    );
+  }
+
+  // 시나리오 전용 일러스트(assets.images[0])가 있으면 그것을, 없으면 이모지를 보여준다.
+  function scenarioImageHTML(scenario, sizeClass) {
+    const img = scenario.assets && scenario.assets.images && scenario.assets.images[0];
+    if (!img) {
+      return `<span class="npc-avatar ${sizeClass || ''}"><span class="npc-avatar-fallback">${scenario.entryEmoji}</span></span>`;
+    }
+    return `
+      <span class="npc-avatar ${sizeClass || ''}">
+        <img src="${img.path}" alt="${scenario.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+        <span class="npc-avatar-fallback">${scenario.entryEmoji}</span>
+      </span>
+    `;
+  }
+
+  function applyStatNpcEffects(statEffects, npcEffects) {
+    if (statEffects) {
+      Object.keys(statEffects).forEach((k) => {
+        state.stats[k] += statEffects[k];
+      });
+    }
+    if (npcEffects) {
+      Object.keys(npcEffects).forEach((npcId) => {
+        const npcState = state.npcs.find((n) => n.id === npcId);
+        if (!npcState) return;
+        const eff = npcEffects[npcId];
+        const gain = Array.isArray(eff) ? randInt(eff[0], eff[1]) : eff;
+        npcState.affection += gain + itemBonusSum('affectionBonus');
+        npcState.lastMetTurn = state.turn;
+      });
+    }
+  }
+
+  function resolveScenarioOutcome(scenario, outcome, resultLine) {
+    const beforeTiers = snapshotGrowthTiers(state.stats);
+    applyStatNpcEffects(outcome.statEffects, outcome.npcEffects);
+    const mainNpcState = state.npcs.find((n) => n.id === scenario.npcId);
+    if (mainNpcState) mainNpcState.lastMetTurn = state.turn;
+    clampStats();
+    announceStatLevelUps(beforeTiers);
+    if (!state.completedScenarios.includes(scenario.id)) {
+      state.completedScenarios.push(scenario.id);
+    }
+    saveGame();
+
+    el.eventEmoji.innerHTML = scenarioImageHTML(scenario, 'npc-avatar-lg');
+    el.eventTitle.textContent = outcome.narrative.title;
+    el.eventDesc.textContent = resultLine ? `${resultLine} ${outcome.narrative.desc}` : outcome.narrative.desc;
+    showScreen('event');
+  }
+
+  function openBranchingScreen(scenario) {
+    el.branchingEmoji.innerHTML = scenarioImageHTML(scenario, 'npc-avatar-lg');
+    el.branchingPrompt.textContent = scenario.branching.prompt;
+    el.branchingOptions.innerHTML = '';
+    scenario.branching.options.forEach((opt) => {
+      const btn = document.createElement('button');
+      btn.className = 'branching-option-btn';
+      btn.textContent = opt.label;
+      btn.addEventListener('click', () => {
+        applyStatNpcEffects(opt.statEffects, opt.npcEffects);
+        resolveScenarioOutcome(scenario, scenario.outcomes.success, opt.resultLine);
+      });
+      el.branchingOptions.appendChild(btn);
+    });
+    showScreen('branching');
+  }
+
+  function resolveNarrativeScenario(scenario) {
+    const line = randChoice(scenario.narrative.lines);
+    resolveScenarioOutcome(scenario, scenario.outcomes.success, line);
+  }
+
+  function generateScenarioQuestion(sess) {
+    const bank = sess.scenario.quiz.bank;
+    const remaining = bank.filter((q) => !sess.askedQuestions.includes(q.question));
+    const pool = remaining.length ? remaining : bank;
+    const picked = randChoice(pool);
+    sess.askedQuestions.push(picked.question);
+    return {
+      type: 'choice',
+      question: picked.question,
+      choices: shuffle(picked.choices),
+      answer: picked.answer,
+      explanation: picked.explanation,
+      rewardGold: 0,
+      level: 0,
+    };
+  }
+
+  function startScenarioQuiz(scenario) {
+    session = {
+      type: 'scenario-quiz',
+      scenario,
+      count: scenario.quiz.questionsPerSession,
+      index: 0,
+      correctCount: 0,
+      sessionBestCombo: 0,
+      goldEarned: 0,
+      answered: false,
+      currentProblem: null,
+      askedQuestions: [],
+    };
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
+  function finishScenarioQuizSession() {
+    const scenario = session.scenario;
+    const pass = session.correctCount >= scenario.quiz.passCount;
+    const outcome = pass ? scenario.outcomes.success : scenario.outcomes.fail;
+    resolveScenarioOutcome(scenario, outcome);
+  }
+
+  function runScenario(scenario) {
+    if (scenario.type === 'quiz') startScenarioQuiz(scenario);
+    else if (scenario.type === 'branching') openBranchingScreen(scenario);
+    else resolveNarrativeScenario(scenario);
   }
 
   /* ---------------- 상점 ---------------- */
@@ -905,7 +1125,10 @@
       card.className = `wardrobe-card${unlocked ? '' : ' locked'}${equipped ? ' equipped' : ''}`;
       card.innerHTML = `
         ${equipped ? '<span class="wardrobe-card-badge">착용 중</span>' : ''}
-        <img src="assets/wardrobe/tier${tierIndex}.png" alt="${tier.name}" />
+        <span class="wardrobe-card-img-wrap">
+          <img src="assets/wardrobe/tier${tierIndex}.png" alt="${tier.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <span class="wardrobe-card-emoji-fallback">${tier.emoji}</span>
+        </span>
         <span class="wardrobe-card-label">${tier.emoji} ${tier.name}</span>
       `;
       if (unlocked) {
@@ -1054,7 +1277,10 @@
         row.innerHTML = `
           ${npcAvatarHTML(def, 'npc-avatar-sm')}
           <span class="status-npc-row-name">${def.name}</span>
-          <span class="npc-affection-track"><span class="npc-affection-fill" style="width:${npcState.affection}%"></span></span>
+          <span class="npc-affection-wrap">
+            <span class="npc-affection-track"><span class="npc-affection-fill" style="width:${npcState.affection}%"></span></span>
+            <span class="npc-affection-label">${affectionTierName(npcState.affection)}</span>
+          </span>
           <span class="status-npc-row-value">${Math.round(npcState.affection)}</span>
         `;
       } else {
@@ -1078,6 +1304,36 @@
         el.statusItemList.appendChild(row);
       });
     }
+
+    renderUpcomingScenarios();
+  }
+
+  // 아직 완성되지 않은(준비중) 시나리오를 잠금 카드로 미리 보여준다.
+  // 실제로 플레이할 수는 없고, 앞으로 어떤 이야기가 추가될지 살짝 엿보는 용도다.
+  function renderUpcomingScenarios() {
+    if (!el.statusUpcomingList) return;
+    el.statusUpcomingList.innerHTML = '';
+    const upcoming = (SC ? SC.SCENARIOS : []).filter((s) => s.status === 'coming-soon');
+    if (upcoming.length === 0) {
+      el.statusUpcomingList.innerHTML = '<div class="status-empty">곧 새로운 이야기가 추가될 예정이에요</div>';
+      return;
+    }
+    upcoming
+      .slice()
+      .sort((a, b) => a.tier - b.tier)
+      .forEach((s) => {
+        const row = document.createElement('div');
+        row.className = 'status-upcoming-row';
+        row.innerHTML = `
+          <span class="status-upcoming-emoji">${s.entryEmoji}</span>
+          <span class="status-upcoming-info">
+            <span class="status-upcoming-title">${s.title}</span>
+            <span class="status-upcoming-arc">${s.arc}</span>
+          </span>
+          <span class="status-upcoming-badge">준비중</span>
+        `;
+        el.statusUpcomingList.appendChild(row);
+      });
   }
 
   el.btnStatusBack.addEventListener('click', () => showScreen('main'));
@@ -1096,10 +1352,22 @@
 
   /* ---------------- 턴 진행 / 엔딩 ---------------- */
 
+  // 한동안 만나지 않은 인물은 호감도가 조금씩 식는다. 자주 만나야
+  // 친밀도가 유지·상승한다는 것을 게이지로도 체감할 수 있게 해준다.
+  function applyAffectionDecay() {
+    state.npcs.forEach((npcState) => {
+      const turnsSinceMet = state.turn - npcState.lastMetTurn;
+      if (turnsSinceMet > AFFECTION_DECAY_GRACE_TURNS) {
+        npcState.affection = Math.max(0, npcState.affection - AFFECTION_DECAY_AMOUNT);
+      }
+    });
+  }
+
   function advanceTurn() {
     state.turn++;
     state.scheduledActivity = null;
     state.talkedThisTurn = false;
+    applyAffectionDecay();
     if (state.turn > TOTAL_TURNS) {
       showEnding();
       return;

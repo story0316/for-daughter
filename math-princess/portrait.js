@@ -1,7 +1,7 @@
 /*
  * 캐릭터 초상화 SVG 생성기 (순수 로직 + 마크업, DOM 조작 없음)
  * 이모지 대신 품위 단계(outfit tier)별로 직접 그린 SVG 일러스트를 반환한다.
- * tier: 0=평범한 옷, 1=단정한 옷, 2=예쁜 드레스, 3=공주 드레스
+ * tier: 0=평범한 옷, 1=단정한 옷, 2=예쁜 드레스, 3=공주 드레스, 4=무도회 드레스, 5=대관식 드레스
  */
 (function (root) {
   'use strict';
@@ -45,6 +45,28 @@
       skin: ['#ffe9cf', '#ffdab2'],
       dress: ['#fff3d6', '#ffd873'],
       collar: '#fffaf0',
+      accessory: 'tiara',
+      accessoryColor: '#ffd873',
+      dressRuffle: true,
+      sparkle: true,
+    },
+    {
+      // 4: 무도회 드레스
+      hair: ['#a9773f', '#835a2c'],
+      skin: ['#ffe9cf', '#ffdab2'],
+      dress: ['#8fc9ff', '#5a9bdb'],
+      collar: '#f0f8ff',
+      accessory: 'tiara',
+      accessoryColor: '#8fd4ff',
+      dressRuffle: true,
+      sparkle: true,
+    },
+    {
+      // 5: 대관식 드레스
+      hair: ['#a9773f', '#835a2c'],
+      skin: ['#ffe9cf', '#ffdab2'],
+      dress: ['#c9a6ff', '#9a6fe0'],
+      collar: '#f7f0ff',
       accessory: 'tiara',
       accessoryColor: '#ffd873',
       dressRuffle: true,
@@ -103,7 +125,7 @@
   }
 
   function buildPortraitSVG(tier, options) {
-    const theme = TIER_THEMES[Math.max(0, Math.min(3, tier))];
+    const theme = TIER_THEMES[Math.max(0, Math.min(TIER_THEMES.length - 1, tier))];
     const uid = (options && options.uid) || `t${tier}`;
 
     return `

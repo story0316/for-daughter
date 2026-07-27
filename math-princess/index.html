@@ -18,7 +18,7 @@
         <div class="title-emoji">👑</div>
         <h1>프린세스 메이커</h1>
         <p class="subtitle">문제를 풀어 돈을 벌고 교양을 쌓으면<br/>평범한 옷이 예쁜 드레스로 바뀌어요!</p>
-        <p class="subtitle-sub">품위가 오를수록 만날 수 있는 사람도 늘어나요.<br/>한 턴은 한 달, 총 <span id="total-turns-label">24</span>개월(2년) 동안<br/>공주가 되는 그날까지 키워보세요.</p>
+        <p class="subtitle-sub">품위가 오를수록 만날 수 있는 사람도 늘어나요.<br/>한 턴은 한 달, 총 <span id="total-turns-label">48</span>개월(<span id="total-years-label">4</span>년) 동안<br/>공주가 되는 그날까지 키워보세요.</p>
 
         <div class="start-buttons">
           <button id="btn-new-game" class="btn btn-primary">새로 시작하기</button>
@@ -159,6 +159,8 @@
         <div id="status-npc-list" class="status-npc-list"></div>
         <div class="status-section-title">보유 장비</div>
         <div id="status-item-list" class="status-item-list"></div>
+        <div class="status-section-title">다가오는 이야기</div>
+        <div id="status-upcoming-list" class="status-upcoming-list"></div>
       </div>
     </section>
 
@@ -270,6 +272,15 @@
       </div>
     </section>
 
+    <!-- 선택형 이야기 이벤트 -->
+    <section id="screen-branching" class="screen overlay-screen">
+      <div class="card">
+        <div id="branching-emoji" class="title-emoji">📖</div>
+        <p id="branching-prompt" class="subtitle">이야기 내용</p>
+        <div id="branching-options" class="branching-options"></div>
+      </div>
+    </section>
+
     <!-- 엔딩 화면 -->
     <section id="screen-ending" class="screen overlay-screen">
       <div class="card">
@@ -300,6 +311,7 @@
   <script src="problems.js"></script>
   <script src="endings.js"></script>
   <script src="portrait.js"></script>
+  <script src="scenarios.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
