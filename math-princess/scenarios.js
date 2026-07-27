@@ -18,8 +18,11 @@
   // 마음대로 지어내지 않도록 검증에 사용한다)
   const VALID_STAT_KEYS = ['intelligence', 'focus', 'stamina', 'charm', 'creativity', 'stress', 'luck'];
   const VALID_NPC_IDS = ['friend', 'rival', 'teacher', 'noble', 'prince', 'sage'];
-  const VALID_TIERS = [0, 1, 2, 3]; // 품위(OUTFIT_TIERS) 단계와 같은 개념: 0=평범한 옷 ~ 3=공주 드레스
+  const VALID_TIERS = [0, 1, 2, 3, 4, 5]; // 품위(OUTFIT_TIERS) 단계: 0=평범한 옷 ~ 5=대관식 드레스(만점)
   const VALID_TYPES = ['quiz', 'narrative', 'branching'];
+  // ready: 실제 콘텐츠(문제/대사/결과)까지 다 채워져 게임에 반영할 준비가 된 시나리오
+  // coming-soon: 제목/테마/등장인물 정도만 정해진 예고편. 상태 화면에 "준비중" 잠금 카드로만 보여준다
+  const VALID_STATUSES = ['ready', 'coming-soon'];
 
   /*
    * 시나리오 한 편의 표준 형태 (JSDoc 대신 예시 겸 설명):
@@ -27,11 +30,15 @@
    * {
    *   id: 'kebab-case-id',        // 고유 id
    *   arc: '사교 예절',            // 테마 묶음 이름 (같은 arc끼리는 연작처럼 이어질 수 있음)
-   *   tier: 0,                    // 0~3, 품위 단계에 맞춰 언제 등장할지 (낮을수록 초반)
+   *   tier: 0,                    // 0~5, 품위 단계(OUTFIT_TIERS)에 맞춰 언제 등장할지 (낮을수록 초반)
    *   type: 'quiz' | 'narrative' | 'branching',
    *   npcId: 'prince' | null,     // 관련 NPC (없으면 null)
    *   title: '연회 참석',          // 화면에 보일 제목
    *   entryEmoji: '💃',           // 이모지 폴백(이미지 로드 실패 시 대체용)
+   *   status: 'ready' | 'coming-soon', // ready만 실제로 플레이 가능한 콘텐츠까지 채운다.
+   *                                    // coming-soon은 id/arc/tier/type/npcId/title/entryEmoji/unlock까지만
+   *                                    // 채우고 나머지(quiz/narrative/branching/outcomes/assets)는 생략해도 된다.
+   *                                    // 상태 화면에 "준비중" 잠금 카드로만 보여주는 예고편 용도.
    *   unlock: {                   // 등장 조건. 전부 선택적 필드이며, 비어 있으면 항상 등장
    *     minGrace: 0,                          // 품위 점수(charm*0.4+creativity*0.3+intelligence*0.3) 최소값
    *     minStat: { key: 'intelligence', value: 50 },
@@ -97,7 +104,13 @@
     req(s.npcId === null || VALID_NPC_IDS.includes(s.npcId), `npcId는 null이거나 ${VALID_NPC_IDS.join('/')} 중 하나여야 합니다.`);
     req(typeof s.title === 'string' && s.title.length > 0, 'title이 필요합니다.');
     req(typeof s.entryEmoji === 'string' && s.entryEmoji.length > 0, 'entryEmoji가 필요합니다.');
+    req(VALID_STATUSES.includes(s.status), `status는 ${VALID_STATUSES.join('/')} 중 하나여야 합니다.`);
     req(isPlainObject(s.unlock), 'unlock 객체가 필요합니다(빈 객체 {} 가능).');
+
+    // coming-soon은 예고편이라 위 기본 정보만 맞으면 되고, 실제 콘텐츠 필드는 검증하지 않는다.
+    if (s.status === 'coming-soon') {
+      return { ok: errors.length === 0, errors };
+    }
 
     if (s.type === 'quiz') {
       req(isPlainObject(s.quiz), 'type이 quiz면 quiz 필드가 필요합니다.');
@@ -164,6 +177,7 @@
       npcId: 'prince',
       title: '연회 참석',
       entryEmoji: '💃',
+      status: 'ready',
       unlock: {},
       quiz: {
         questionsPerSession: 3,
@@ -211,6 +225,77 @@
           },
         ],
       },
+    },
+
+    // 아래는 아직 내용이 채워지지 않은 "준비중" 시나리오 예고편이다. 상태 화면에
+    // 잠금 카드로만 노출되고 실제로 플레이되지는 않는다. 다른 AI가 이 목록의
+    // id를 그대로 이어받아 quiz/narrative/branching/outcomes/assets를 채우고
+    // status를 'ready'로 바꾸면 그대로 게임에 반영할 수 있다.
+    {
+      id: 'rival-study-duel',
+      arc: '라이벌',
+      tier: 0,
+      type: 'quiz',
+      npcId: 'rival',
+      title: '라이벌과의 특별 대결',
+      entryEmoji: '⚔️',
+      status: 'coming-soon',
+      unlock: {},
+    },
+    {
+      id: 'friend-birthday',
+      arc: '우정',
+      tier: 1,
+      type: 'narrative',
+      npcId: 'friend',
+      title: '친구의 생일 파티',
+      entryEmoji: '🎂',
+      status: 'coming-soon',
+      unlock: { minAffection: { npcId: 'friend', value: 40 } },
+    },
+    {
+      id: 'tea-party-manners',
+      arc: '사교 예절',
+      tier: 1,
+      type: 'quiz',
+      npcId: 'noble',
+      title: '다과회 초대',
+      entryEmoji: '🍵',
+      status: 'coming-soon',
+      unlock: { minGrace: 35 },
+    },
+    {
+      id: 'library-secret',
+      arc: '왕실 생활',
+      tier: 2,
+      type: 'branching',
+      npcId: 'sage',
+      title: '왕실 서고의 비밀',
+      entryEmoji: '📚',
+      status: 'coming-soon',
+      unlock: { minStat: { key: 'intelligence', value: 60 } },
+    },
+    {
+      id: 'garden-walk-prince',
+      arc: '왕실 생활',
+      tier: 3,
+      type: 'branching',
+      npcId: 'prince',
+      title: '정원 산책 초대',
+      entryEmoji: '🌹',
+      status: 'coming-soon',
+      unlock: { minAffection: { npcId: 'prince', value: 50 } },
+    },
+    {
+      id: 'coronation-ball',
+      arc: '왕실 생활',
+      tier: 5,
+      type: 'narrative',
+      npcId: 'prince',
+      title: '대관식 무도회',
+      entryEmoji: '👑',
+      status: 'coming-soon',
+      unlock: { minGrace: 100 },
     },
   ];
 

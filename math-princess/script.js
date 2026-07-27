@@ -3,6 +3,7 @@
 
   const P = window.MathPrincessProblems;
   const E = window.MathPrincessEndings;
+  const SC = window.MathPrincessScenarios;
 
   const STAT_KEYS = ['intelligence', 'focus', 'stamina', 'charm', 'creativity', 'stress', 'luck'];
   const STAT_LABELS = {
@@ -36,7 +37,7 @@
     return snap;
   }
 
-  const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 24;
+  const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 48;
   const QUESTIONS_PER_STUDY = 4;
   const QUESTIONS_PER_JOB = 3;
   const SAVE_KEY = 'math-princess-save-v1';
@@ -128,9 +129,13 @@
     { id: 'sharp', emoji: '✏️', name: '샤프', cost: 1500, desc: '문제 정답 시 골드 +10%', goldBonus: 0.1 },
     { id: 'tablet', emoji: '📱', name: '태블릿', cost: 5000, desc: '공부 정답 시 지능 +1 추가 획득', intBonus: 1 },
     { id: 'laptop', emoji: '💻', name: '노트북', cost: 12000, desc: '콤보 보상 배율 +0.2', comboBonus: 0.2 },
+    { id: 'tiara', emoji: '👑', name: '작은 티아라', cost: 18000, desc: '연회에서 정답 맞힐 때 매력 +1 추가 획득', charmBonus: 1 },
+    { id: 'invitation', emoji: '✉️', name: '왕실 초대장', cost: 22000, desc: '인물을 만날 때 호감도 +2 추가 획득', affectionBonus: 2 },
     { id: 'aiTutor', emoji: '🤖', name: 'AI 학습기', cost: 30000, desc: '문제 정답 시 골드 +25%, 지능 +2 추가', goldBonus: 0.25, intBonus: 2 },
+    { id: 'orchestra', emoji: '🎻', name: '개인 오케스트라 레슨', cost: 45000, desc: '공부 정답 시 지능 +2 추가 획득', intBonus: 2 },
     { id: 'apartment', emoji: '🏢', name: '아파트로 이사', cost: 8000, desc: '휴식 효과 +50%', restBonus: 0.5 },
     { id: 'house', emoji: '🏡', name: '단독주택으로 이사', cost: 25000, desc: '휴식 효과 추가 +50% (총 100%)', restBonus: 0.5 },
+    { id: 'palace', emoji: '🏰', name: '별궁으로 이사', cost: 60000, desc: '휴식 효과 추가 +50% (총 150%)', restBonus: 0.5 },
   ];
 
   // 품위(교양) 점수: 매력·창의력·지능을 섞어 계산한다. 이 점수가 오를수록
@@ -144,6 +149,8 @@
     { min: 25, emoji: '👚', name: '단정한 옷', wardrobeDesc: '품위 25 이상에서 해금' },
     { min: 50, emoji: '👗', name: '예쁜 드레스', wardrobeDesc: '품위 50 이상에서 해금' },
     { min: 75, emoji: '👑', name: '공주 드레스', wardrobeDesc: '품위 75 이상에서 해금' },
+    { min: 90, emoji: '💐', name: '무도회 드레스', wardrobeDesc: '품위 90 이상에서 해금' },
+    { min: 100, emoji: '✨', name: '대관식 드레스', wardrobeDesc: '품위 100(만점)에서만 해금되는 전설의 옷' },
   ];
 
   function currentOutfit(stats) {
@@ -234,6 +241,7 @@
       ending: document.getElementById('screen-ending'),
     },
     totalTurnsLabel: document.getElementById('total-turns-label'),
+    totalYearsLabel: document.getElementById('total-years-label'),
     btnNewGame: document.getElementById('btn-new-game'),
     btnContinue: document.getElementById('btn-continue'),
 
@@ -254,6 +262,7 @@
     statusStatPanel: document.getElementById('status-stat-panel'),
     statusNpcList: document.getElementById('status-npc-list'),
     statusItemList: document.getElementById('status-item-list'),
+    statusUpcomingList: document.getElementById('status-upcoming-list'),
 
     btnShopBack: document.getElementById('btn-shop-back'),
     shopList: document.getElementById('shop-list'),
@@ -309,6 +318,7 @@
   };
 
   el.totalTurnsLabel.textContent = TOTAL_TURNS;
+  el.totalYearsLabel.textContent = Math.round(TOTAL_TURNS / 12);
 
   function randInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -666,7 +676,7 @@
     session.sessionBestCombo = Math.max(session.sessionBestCombo, state.combo);
 
     if (session.type === 'banquet') {
-      state.stats.charm += 4;
+      state.stats.charm += 4 + itemBonusSum('charmBonus');
     } else {
       const multiplier = comboMultiplier(state.combo) + itemBonusSum('comboBonus');
       const jobBonus = session.type === 'job' ? 1.5 : 1;
@@ -722,7 +732,7 @@
     const beforeTiers = snapshotGrowthTiers(state.stats);
 
     if (success) {
-      princeState.affection += randInt(10, 16);
+      princeState.affection += randInt(10, 16) + itemBonusSum('affectionBonus');
       clampStats();
       announceStatLevelUps(beforeTiers);
       el.eventEmoji.innerHTML = npcAvatarHTML(prince, 'npc-avatar-lg');
@@ -824,7 +834,7 @@
     const npcState = state.npcs.find((n) => n.id === npcId);
     const beforeTiers = snapshotGrowthTiers(state.stats);
     def.apply(state);
-    npcState.affection += randInt(8, 14);
+    npcState.affection += randInt(8, 14) + itemBonusSum('affectionBonus');
     clampStats();
     announceStatLevelUps(beforeTiers);
     saveGame();
@@ -905,7 +915,10 @@
       card.className = `wardrobe-card${unlocked ? '' : ' locked'}${equipped ? ' equipped' : ''}`;
       card.innerHTML = `
         ${equipped ? '<span class="wardrobe-card-badge">착용 중</span>' : ''}
-        <img src="assets/wardrobe/tier${tierIndex}.png" alt="${tier.name}" />
+        <span class="wardrobe-card-img-wrap">
+          <img src="assets/wardrobe/tier${tierIndex}.png" alt="${tier.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+          <span class="wardrobe-card-emoji-fallback">${tier.emoji}</span>
+        </span>
         <span class="wardrobe-card-label">${tier.emoji} ${tier.name}</span>
       `;
       if (unlocked) {
@@ -1078,6 +1091,36 @@
         el.statusItemList.appendChild(row);
       });
     }
+
+    renderUpcomingScenarios();
+  }
+
+  // 아직 완성되지 않은(준비중) 시나리오를 잠금 카드로 미리 보여준다.
+  // 실제로 플레이할 수는 없고, 앞으로 어떤 이야기가 추가될지 살짝 엿보는 용도다.
+  function renderUpcomingScenarios() {
+    if (!el.statusUpcomingList) return;
+    el.statusUpcomingList.innerHTML = '';
+    const upcoming = (SC ? SC.SCENARIOS : []).filter((s) => s.status === 'coming-soon');
+    if (upcoming.length === 0) {
+      el.statusUpcomingList.innerHTML = '<div class="status-empty">곧 새로운 이야기가 추가될 예정이에요</div>';
+      return;
+    }
+    upcoming
+      .slice()
+      .sort((a, b) => a.tier - b.tier)
+      .forEach((s) => {
+        const row = document.createElement('div');
+        row.className = 'status-upcoming-row';
+        row.innerHTML = `
+          <span class="status-upcoming-emoji">${s.entryEmoji}</span>
+          <span class="status-upcoming-info">
+            <span class="status-upcoming-title">${s.title}</span>
+            <span class="status-upcoming-arc">${s.arc}</span>
+          </span>
+          <span class="status-upcoming-badge">준비중</span>
+        `;
+        el.statusUpcomingList.appendChild(row);
+      });
   }
 
   el.btnStatusBack.addEventListener('click', () => showScreen('main'));
