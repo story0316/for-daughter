@@ -163,8 +163,12 @@
 
   // 한동안 만나지 않고 방치한 인물은 호감도가 서서히 식는다.
   // (삼국지 시리즈처럼, 자주 만나야 친밀도를 유지·상승시킬 수 있다)
-  const AFFECTION_DECAY_GRACE_TURNS = 2;
-  const AFFECTION_DECAY_AMOUNT = 2;
+  // 유예 2턴/감쇠 2는 인물 6명을 고르게 순환 방문(6턴 주기)해도 호감도가
+  // 55점에서 멈춰 어떤 히든 엔딩(호감도 80 이상)도 열 수 없을 만큼 가혹했다.
+  // 유예 3턴/감쇠 1로 완화하면 같은 6턴 순환에서도 87점까지 오르면서,
+  // 오래 방치(10턴 이상)하면 여전히 뚜렷하게 식는 균형을 유지한다.
+  const AFFECTION_DECAY_GRACE_TURNS = 3;
+  const AFFECTION_DECAY_AMOUNT = 1;
 
   const OUTFIT_TIERS = [
     { min: 0, emoji: '👕', name: '평범한 옷', wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
@@ -734,6 +738,11 @@
 
       if (session.type === 'study') {
         state.stats.intelligence += problem.level + itemBonusSum('intBonus');
+        // 창의력은 이전까지 사교계 친구/왕실 스승을 만날 때만 소량 올랐는데,
+        // 그 두 인물을 자주 못 만나면 품위(=매력*0.4+창의력*0.3+지능*0.3)가
+        // 매력·지능만큼 오르지 못해 무도회/대관식 드레스 단계에 사실상
+        // 도달할 수 없었다. 공부에도 소폭의 창의력 트리클을 더해 균형을 맞춘다.
+        state.stats.creativity += problem.level * 0.2;
       } else {
         state.stats.stamina -= 2;
       }
