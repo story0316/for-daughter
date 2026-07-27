@@ -29,6 +29,7 @@
       title: '수학 프린세스 메이커',
       desc: '공부해서 교양을 쌓고 진짜 공주가 되어보세요',
       theme: 'gold',
+      image: 'math-princess/assets/hero.png',
     },
   ];
 
@@ -50,9 +51,12 @@
     track.innerHTML = '';
     slidesData.forEach((game) => {
       const slide = document.createElement('div');
-      slide.className = `slide theme-${game.theme}`;
+      slide.className = `slide theme-${game.theme}${game.image ? ' has-image' : ''}`;
+      if (game.image) {
+        slide.style.backgroundImage = `linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.72) 100%), url('${game.image}')`;
+      }
       slide.innerHTML = `
-        <div class="slide-emoji">${game.emoji}</div>
+        ${game.image ? '' : `<div class="slide-emoji">${game.emoji}</div>`}
         <h1 class="slide-title">${game.title}</h1>
         <p class="slide-desc">${game.desc}</p>
         <a class="slide-play" href="${game.href}">▶ 시작하기</a>
