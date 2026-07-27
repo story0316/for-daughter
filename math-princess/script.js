@@ -295,6 +295,7 @@
     mainMenuGrid: document.getElementById('main-menu-grid'),
     scheduleBanner: document.getElementById('schedule-banner'),
     scheduleBannerText: document.getElementById('schedule-banner-text'),
+    mainStatPanel: document.getElementById('main-stat-panel'),
 
     btnScheduleBack: document.getElementById('btn-schedule-back'),
     scheduleList: document.getElementById('schedule-list'),
@@ -528,6 +529,7 @@
     const equippedTier = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.characterPortrait, state.wardrobe.equipped, 'main');
     el.outfitBadge.textContent = `${equippedTier.emoji} ${equippedTier.name}`;
+    renderStatPanel(el.mainStatPanel, state.stats);
     updateScheduleBanner();
   }
 

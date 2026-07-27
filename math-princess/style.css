@@ -196,10 +196,15 @@ html, body {
 }
 
 /* ---------- 메인 허브 ---------- */
-#screen-main,
 #screen-level-select,
 #screen-quiz {
   background: linear-gradient(180deg, #2c2044 0%, #1c1428 55%);
+}
+
+#screen-main {
+  background:
+    linear-gradient(180deg, rgba(28, 20, 40, 0.42) 0%, rgba(20, 14, 30, 0.72) 65%, rgba(16, 11, 24, 0.88) 100%),
+    url("assets/backgrounds/main-room.png") center 30% / cover no-repeat;
 }
 
 .hud {
@@ -269,7 +274,7 @@ html, body {
 .character-wrap {
   flex: 0 0 auto;
   text-align: center;
-  padding: 14px 0 6px;
+  padding: 10px 0 4px;
 }
 
 .portrait-frame {
@@ -281,6 +286,11 @@ html, body {
   padding: 8px;
   background: linear-gradient(145deg, #fff3c4, #ffd873 45%, #d99a2b 75%, #ffe9a8 100%);
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+}
+
+.portrait-frame-main {
+  width: 148px;
+  height: 148px;
 }
 
 .portrait-frame-ring {
@@ -400,62 +410,96 @@ html, body {
   white-space: nowrap;
 }
 
+.main-stat-panel {
+  flex: 0 0 auto;
+  margin: 0 16px;
+  padding: 8px 12px;
+  gap: 4px;
+  border-radius: 14px;
+  background: rgba(16, 11, 24, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(2px);
+}
+
+.main-stat-panel .stat-row-label {
+  flex-basis: 44px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.main-stat-panel .stat-row-track {
+  height: 6px;
+}
+
+.main-stat-panel .stat-row-value {
+  flex-basis: 48px;
+  font-size: 10px;
+}
+
 .schedule-banner {
   flex: 0 0 auto;
-  margin: 4px 20px 0;
-  padding: 8px 12px;
+  margin: 4px 16px 0;
+  padding: 6px 12px;
   border-radius: 12px;
   background: rgba(255, 216, 115, 0.16);
   border: 1px solid rgba(255, 216, 115, 0.35);
   color: #ffe9b8;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   text-align: center;
 }
 
 .main-menu-grid {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 14px 20px 20px;
+  gap: 8px;
+  padding: 8px 14px 12px;
+  align-content: end;
 }
 
 .main-menu-btn {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 14px 8px;
-  border-radius: 18px;
-  border: none;
-  background: rgba(255, 255, 255, 0.92);
-  color: #4a3a5a;
-  font-size: 14px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06));
+  backdrop-filter: blur(2px);
+  color: #fff;
+  font-size: 13px;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 6px 0 rgba(0,0,0,0.15), 0 8px 16px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.25), 0 6px 12px rgba(0,0,0,0.25);
   transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .main-menu-btn:active {
   transform: translateY(3px);
-  box-shadow: 0 3px 0 rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.25), 0 2px 6px rgba(0,0,0,0.25);
 }
 
 .main-menu-btn[data-menu="execute"] {
   background: linear-gradient(180deg, #ffb0cf, #ff8fb3);
+  border-color: rgba(255, 255, 255, 0.4);
   color: #fff;
-  box-shadow: 0 6px 0 #d9527e, 0 8px 16px rgba(217, 82, 126, 0.35);
+  box-shadow: 0 4px 0 #d9527e, 0 6px 12px rgba(217, 82, 126, 0.35);
 }
 
 .main-menu-btn[data-menu="execute"]:active {
-  box-shadow: 0 3px 0 #d9527e, 0 4px 10px rgba(217, 82, 126, 0.35);
+  box-shadow: 0 1px 0 #d9527e, 0 2px 6px rgba(217, 82, 126, 0.35);
 }
 
 .main-menu-emoji {
-  font-size: 28px;
+  font-size: 20px;
+  flex: 0 0 auto;
+}
+
+.main-menu-name {
+  text-align: left;
 }
 
 /* ---------- 상태 화면 ---------- */
