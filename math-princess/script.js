@@ -18,7 +18,7 @@
   const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 24;
   const QUESTIONS_PER_STUDY = 4;
   const QUESTIONS_PER_JOB = 3;
-  const SAVE_SLOT_COUNT = 3;
+  const SAVE_SLOT_COUNT = 10;
   const SAVE_KEY_PREFIX = 'math-princess-slot-';
   const STAGE_EMOJIS = ['🌱', '🧒', '👧', '👩'];
 
@@ -295,11 +295,6 @@
   function saveGame() {
     if (activeSlot == null) return;
     writeSlot(activeSlot);
-  }
-
-  function clearSave() {
-    if (activeSlot == null) return;
-    deleteSlotSave(activeSlot);
   }
 
   function loadSlot(n) {
@@ -754,7 +749,8 @@
   }
 
   function showEnding() {
-    clearSave();
+    state.turn = Math.min(state.turn, TOTAL_TURNS);
+    saveGame();
     activeSlot = null;
     const ending = E.computeEnding(state.stats, state.npcs);
     el.endingEmoji.textContent = ending.emoji;
