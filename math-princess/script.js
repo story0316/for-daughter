@@ -302,11 +302,25 @@
     });
   }
 
+  // 단계별로 그려둔 일러스트(assets/portraits/tierN.png)가 있으면 그것을 쓰고,
+  // 아직 없는 단계는 자동 생성 SVG 초상화로 대신 보여준다.
+  function renderPortraitInto(container, tierIndex, uid) {
+    container.innerHTML = '';
+    const img = document.createElement('img');
+    img.className = 'portrait-img';
+    img.alt = '캐릭터 초상화';
+    img.src = `assets/portraits/tier${tierIndex}.png`;
+    img.onerror = () => {
+      container.innerHTML = MathPrincessPortrait.buildPortraitSVG(tierIndex, { uid });
+    };
+    container.appendChild(img);
+  }
+
   function renderMain() {
     el.turnLabel.textContent = yearMonthLabel(state.turn);
     el.goldLabel.textContent = `💰 ${state.gold}G`;
     const outfit = currentOutfit(state.stats);
-    el.characterPortrait.innerHTML = MathPrincessPortrait.buildPortraitSVG(outfit.tierIndex, { uid: 'main' });
+    renderPortraitInto(el.characterPortrait, outfit.tierIndex, 'main');
     el.outfitBadge.textContent = `${outfit.emoji} ${outfit.name}`;
     renderStatPanel(el.statPanel, state.stats);
   }
@@ -677,7 +691,7 @@
     }
 
     const finalOutfit = currentOutfit(state.stats);
-    el.endingCharacterPortrait.innerHTML = MathPrincessPortrait.buildPortraitSVG(finalOutfit.tierIndex, { uid: 'ending' });
+    renderPortraitInto(el.endingCharacterPortrait, finalOutfit.tierIndex, 'ending');
     el.endingOutfitBadge.textContent = `${finalOutfit.emoji} ${finalOutfit.name}`;
 
     renderStatPanel(el.endingStatPanel, state.stats);
