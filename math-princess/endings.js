@@ -11,7 +11,18 @@
     return npc ? npc.affection : 0;
   }
 
+  function graceScore(stats) {
+    return stats.charm * 0.4 + stats.creativity * 0.3 + stats.intelligence * 0.3;
+  }
+
   const ENDINGS = [
+    {
+      id: 'became-a-princess',
+      emoji: '👸',
+      title: '진짜 공주가 되다',
+      desc: '평범한 옷을 입던 아이는 꾸준히 공부하고 교양을 쌓아, 마침내 왕자님의 마음을 얻고 성 안의 진짜 공주가 되었다.',
+      requirement: (s, npcs) => affectionOf(npcs, 'prince') >= 80 && graceScore(s) >= 45,
+    },
     {
       id: 'best-friend-forever',
       emoji: '👭',

@@ -26,8 +26,8 @@
     {
       href: 'math-princess/index.html',
       emoji: '👑',
-      title: '수학 공주 키우기',
-      desc: '수학을 풀어 돈을 벌고 미래를 키워요',
+      title: '수학 프린세스 메이커',
+      desc: '공부해서 교양을 쌓고 진짜 공주가 되어보세요',
       theme: 'gold',
     },
   ];

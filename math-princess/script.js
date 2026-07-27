@@ -39,12 +39,35 @@
     { id: 'house', emoji: '🏡', name: '단독주택으로 이사', cost: 25000, desc: '휴식 효과 추가 +50% (총 100%)', restBonus: 0.5 },
   ];
 
+  // 품위(교양) 점수: 매력·창의력·지능을 섞어 계산한다. 이 점수가 오를수록
+  // 입는 옷이 화려해지고, 만날 수 있는 사람의 폭도 넓어진다.
+  function graceScore(stats) {
+    return stats.charm * 0.4 + stats.creativity * 0.3 + stats.intelligence * 0.3;
+  }
+
+  const OUTFIT_TIERS = [
+    { min: 0, emoji: '👕', name: '평범한 옷' },
+    { min: 25, emoji: '👚', name: '단정한 옷' },
+    { min: 50, emoji: '👗', name: '예쁜 드레스' },
+    { min: 75, emoji: '👑', name: '공주 드레스' },
+  ];
+
+  function currentOutfit(stats) {
+    const grace = graceScore(stats);
+    let tier = OUTFIT_TIERS[0];
+    OUTFIT_TIERS.forEach((t) => {
+      if (grace >= t.min) tier = t;
+    });
+    return tier;
+  }
+
   const NPC_DEFS = [
     {
       id: 'friend',
       emoji: '😊',
       name: '친구',
       desc: '함께 있으면 마음이 편안해지는 단짝',
+      unlock: () => true,
       apply: (s) => { s.stats.charm += 6; },
       lines: ['같이 떡볶이를 먹으며 수다를 떨었어요.', '친구가 요즘 고민을 털어놓았어요.', '같이 만화책을 보며 깔깔 웃었어요.'],
     },
@@ -53,6 +76,7 @@
       emoji: '😏',
       name: '라이벌',
       desc: '괜히 신경 쓰이지만 자꾸 실력이 느는 상대',
+      unlock: () => true,
       apply: (s) => { s.stats.intelligence += 3; s.stats.stress += 3; },
       lines: ['라이벌이 이번 시험 점수를 자랑했어요. 오기가 생겨요!', '라이벌과 문제풀이 대결을 했어요.', '라이벌이 은근히 신경 쓰이는 하루였어요.'],
     },
@@ -61,8 +85,39 @@
       emoji: '👩‍🏫',
       name: '선생님',
       desc: '어려운 문제도 척척 알려주는 든든한 선생님',
+      unlock: () => true,
       apply: (s) => { s.stats.intelligence += 2; s.stats.stress -= 5; },
       lines: ['선생님이 어려운 문제 풀이법을 알려주셨어요.', '선생님과 진로 상담을 했어요.', '선생님이 숙제를 칭찬해주셨어요.'],
+    },
+    {
+      id: 'noble',
+      emoji: '💃',
+      name: '사교계 친구',
+      desc: '무도회와 다과회에서 만난 사교계 친구',
+      unlock: (stats) => graceScore(stats) >= 35,
+      unlockHint: (stats) => `품위 35 필요 (현재 ${Math.round(graceScore(stats))})`,
+      apply: (s) => { s.stats.charm += 4; s.stats.creativity += 3; },
+      lines: ['함께 무도회 예절을 배웠어요.', '다과회에서 우아하게 차를 마셨어요.', '사교계 소문 이야기로 즐거운 시간을 보냈어요.'],
+    },
+    {
+      id: 'prince',
+      emoji: '🤴',
+      name: '왕자님',
+      desc: '무도회에서 우연히 마주친 왕자님',
+      unlock: (stats) => graceScore(stats) >= 45,
+      unlockHint: (stats) => `품위 45 필요 (현재 ${Math.round(graceScore(stats))})`,
+      apply: (s) => { s.stats.charm += 5; s.stats.luck += 2; },
+      lines: ['왕자님과 정원을 산책했어요.', '왕자님이 춤을 신청했어요.', '왕자님과 함께 별을 보며 이야기를 나눴어요.'],
+    },
+    {
+      id: 'sage',
+      emoji: '🧙',
+      name: '왕실 스승',
+      desc: '왕실 도서관을 관리하는 현자',
+      unlock: (stats) => stats.intelligence >= 55,
+      unlockHint: (stats) => `지능 55 필요 (현재 ${Math.round(stats.intelligence)})`,
+      apply: (s) => { s.stats.intelligence += 4; s.stats.creativity += 2; },
+      lines: ['왕실 서고에서 귀한 책을 함께 읽었어요.', '현자에게서 아무도 모르는 문제 풀이를 배웠어요.', '현자가 재능을 칭찬해주셨어요.'],
     },
   ];
 
@@ -85,6 +140,7 @@
     turnLabel: document.getElementById('turn-label'),
     goldLabel: document.getElementById('gold-label'),
     characterEmoji: document.getElementById('character-emoji'),
+    outfitBadge: document.getElementById('outfit-badge'),
     statPanel: document.getElementById('stat-panel'),
     activityGrid: document.getElementById('activity-grid'),
 
@@ -126,6 +182,7 @@
     endingTitle: document.getElementById('ending-title'),
     endingDesc: document.getElementById('ending-desc'),
     endingNpcLine: document.getElementById('ending-npc-line'),
+    endingOutfitBadge: document.getElementById('ending-outfit-badge'),
     endingStatPanel: document.getElementById('ending-stat-panel'),
     endingTotalCorrect: document.getElementById('ending-total-correct'),
     endingBestCombo: document.getElementById('ending-best-combo'),
@@ -244,7 +301,10 @@
     el.turnLabel.textContent = yearMonthLabel(state.turn);
     el.goldLabel.textContent = `💰 ${state.gold}G`;
     const stageIdx = Math.min(3, Math.floor(((state.turn - 1) / TOTAL_TURNS) * 4));
-    el.characterEmoji.textContent = STAGE_EMOJIS[stageIdx];
+    const outfit = currentOutfit(state.stats);
+    // 품위가 최고 단계(공주 드레스)에 닿으면, 나이와 상관없이 공주의 모습으로 보여준다.
+    el.characterEmoji.textContent = outfit.name === '공주 드레스' ? '👸' : STAGE_EMOJIS[stageIdx];
+    el.outfitBadge.textContent = `${outfit.emoji} ${outfit.name}`;
     renderStatPanel(el.statPanel, state.stats);
   }
 
@@ -482,19 +542,22 @@
   function openNpcSelect() {
     el.npcList.innerHTML = '';
     NPC_DEFS.forEach((def) => {
+      const unlocked = def.unlock(state.stats);
       const npcState = state.npcs.find((n) => n.id === def.id);
       const card = document.createElement('button');
-      card.className = 'level-card npc-card';
+      card.className = `level-card npc-card${unlocked ? '' : ' locked'}`;
       card.innerHTML = `
         <span class="level-badge-num">${def.emoji}</span>
         <span class="level-info">
           <span class="level-title">${def.name}</span>
-          <span class="level-desc">${def.desc}</span>
-          <span class="npc-affection-track"><span class="npc-affection-fill" style="width:${npcState.affection}%"></span></span>
+          <span class="level-desc">${unlocked ? def.desc : def.unlockHint(state.stats)}</span>
+          ${unlocked ? `<span class="npc-affection-track"><span class="npc-affection-fill" style="width:${npcState.affection}%"></span></span>` : ''}
         </span>
-        <span class="level-lock-icon">›</span>
+        <span class="level-lock-icon">${unlocked ? '›' : '🔒'}</span>
       `;
-      card.addEventListener('click', () => meetNpc(def.id));
+      if (unlocked) {
+        card.addEventListener('click', () => meetNpc(def.id));
+      }
       el.npcList.appendChild(card);
     });
     showScreen('npcSelect');
@@ -601,6 +664,9 @@
     } else {
       el.endingNpcLine.textContent = '';
     }
+
+    const finalOutfit = currentOutfit(state.stats);
+    el.endingOutfitBadge.textContent = `${finalOutfit.name === '공주 드레스' ? '👸' : finalOutfit.emoji} ${finalOutfit.name}`;
 
     renderStatPanel(el.endingStatPanel, state.stats);
     el.endingTotalCorrect.textContent = state.totalCorrect;
