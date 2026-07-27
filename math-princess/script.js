@@ -372,6 +372,16 @@
     container.appendChild(img);
   }
 
+  // 인물 그림(assets/npcs/{id}.png)이 있으면 그것을, 없으면 이모지를 보여준다.
+  function npcAvatarHTML(def, sizeClass) {
+    return `
+      <span class="npc-avatar ${sizeClass || ''}">
+        <img src="assets/npcs/${def.id}.png" alt="${def.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+        <span class="npc-avatar-fallback">${def.emoji}</span>
+      </span>
+    `;
+  }
+
   function renderMain() {
     el.turnLabel.textContent = yearMonthLabel(state.turn);
     el.goldLabel.textContent = `💰 ${state.gold}G`;
@@ -637,7 +647,7 @@
       const card = document.createElement('button');
       card.className = `level-card npc-card${unlocked ? '' : ' locked'}`;
       card.innerHTML = `
-        <span class="level-badge-num">${def.emoji}</span>
+        ${unlocked ? npcAvatarHTML(def, 'npc-avatar-md') : '<span class="level-badge-num">🔒</span>'}
         <span class="level-info">
           <span class="level-title">${def.name}</span>
           <span class="level-desc">${unlocked ? def.desc : def.unlockHint(state.stats)}</span>
@@ -664,7 +674,7 @@
     clampStats();
     announceStatLevelUps(beforeTiers);
 
-    el.eventEmoji.textContent = def.emoji;
+    el.eventEmoji.innerHTML = npcAvatarHTML(def, 'npc-avatar-lg');
     el.eventTitle.textContent = `${def.name}과(와)의 시간`;
     el.eventDesc.textContent = `${randChoice(def.lines)} (애정도 ${Math.round(npcState.affection)})`;
     showScreen('event');
@@ -882,7 +892,8 @@
       row.className = 'status-npc-row';
       if (unlocked) {
         row.innerHTML = `
-          <span class="status-npc-row-name">${def.emoji} ${def.name}</span>
+          ${npcAvatarHTML(def, 'npc-avatar-sm')}
+          <span class="status-npc-row-name">${def.name}</span>
           <span class="npc-affection-track"><span class="npc-affection-fill" style="width:${npcState.affection}%"></span></span>
           <span class="status-npc-row-value">${Math.round(npcState.affection)}</span>
         `;

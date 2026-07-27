@@ -54,6 +54,7 @@
 - `math-princess/portrait.js` — 품위 단계별 캐릭터 SVG 초상화 생성기(DOM 비의존, 실제 일러스트가 없을 때의 대체용)
 - `math-princess/assets/portraits/tier0~3.png` — 품위 단계별 실제 일러스트 초상화
 - `math-princess/assets/wardrobe/tier0~3.png` — 옷장 탭에 쓰이는 옷 썸네일 이미지
+- `math-princess/assets/npcs/{id}.png` — 인물별 초상화(친구/라이벌/선생님/사교계 친구/왕자님/왕실 스승). 없는 인물은 이모지로 자동 대체됨
 - `math-princess/script.js` — 스케줄/실행 메뉴, 활동별 능력치/골드 반영, 콤보, 랜덤 이벤트, 능력치 레벨업, 옷장/상점, 상태 화면, 로컬 저장/이어하기
 
 `problems.js`와 `endings.js`는 DOM에 의존하지 않는 순수 로직이라 Node.js에서 바로 불러와 유닛 테스트할 수 있습니다(레벨 1~10 문제 수백 개 자동 채점, 엔딩 판정 케이스 검증 완료).
