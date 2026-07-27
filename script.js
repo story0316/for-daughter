@@ -26,7 +26,7 @@
     {
       href: 'math-princess/index.html',
       emoji: '👑',
-      title: '수학 프린세스 메이커',
+      title: '프린세스 메이커',
       desc: '공부해서 교양을 쌓고 진짜 공주가 되어보세요',
       theme: 'gold',
       image: 'math-princess/assets/hero.png',
