@@ -197,13 +197,15 @@
   const AFFECTION_DECAY_GRACE_TURNS = 3;
   const AFFECTION_DECAY_AMOUNT = 1;
 
+  // min: 이 옷을 "살 수 있게" 되는 품위 점수 기준. 품위가 충분해도 옷은
+  // 자동으로 생기지 않고, 옷장에서 cost만큼 골드를 내고 직접 사야 입을 수 있다.
   const OUTFIT_TIERS = [
-    { min: 0, emoji: '👕', name: '평범한 옷', wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
-    { min: 25, emoji: '👚', name: '단정한 옷', wardrobeDesc: '품위 25 이상에서 해금' },
-    { min: 50, emoji: '👗', name: '예쁜 드레스', wardrobeDesc: '품위 50 이상에서 해금' },
-    { min: 75, emoji: '👑', name: '공주 드레스', wardrobeDesc: '품위 75 이상에서 해금' },
-    { min: 90, emoji: '💐', name: '무도회 드레스', wardrobeDesc: '품위 90 이상에서 해금' },
-    { min: 100, emoji: '✨', name: '대관식 드레스', wardrobeDesc: '품위 100(만점)에서만 해금되는 전설의 옷' },
+    { min: 0, cost: 0, emoji: '👕', name: '평범한 옷', wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
+    { min: 25, cost: 400, emoji: '👚', name: '단정한 옷', wardrobeDesc: '품위 25 이상에서 구매 가능' },
+    { min: 50, cost: 900, emoji: '👗', name: '예쁜 드레스', wardrobeDesc: '품위 50 이상에서 구매 가능' },
+    { min: 75, cost: 1800, emoji: '👑', name: '공주 드레스', wardrobeDesc: '품위 75 이상에서 구매 가능' },
+    { min: 90, cost: 3200, emoji: '💐', name: '무도회 드레스', wardrobeDesc: '품위 90 이상에서 구매 가능' },
+    { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', wardrobeDesc: '품위 100(만점)에서만 구매 가능한 전설의 옷' },
   ];
 
   function currentOutfit(stats) {
@@ -298,10 +300,12 @@
     totalYearsLabel: document.getElementById('total-years-label'),
     btnNewGame: document.getElementById('btn-new-game'),
     btnContinue: document.getElementById('btn-continue'),
+    characterNameInput: document.getElementById('character-name-input'),
 
     turnLabel: document.getElementById('turn-label'),
     goldLabel: document.getElementById('gold-label'),
     characterPortrait: document.getElementById('character-portrait'),
+    characterName: document.getElementById('character-name'),
     outfitBadge: document.getElementById('outfit-badge'),
     mainMenuGrid: document.getElementById('main-menu-grid'),
     scheduleBanner: document.getElementById('schedule-banner'),
@@ -389,10 +393,11 @@
     return arr[randInt(0, arr.length - 1)];
   }
 
-  function makeInitialState() {
+  function makeInitialState(characterName) {
     return {
       turn: 1,
       gold: 0,
+      characterName: (characterName && characterName.trim()) || '우리 딸',
       stats: {
         intelligence: 20,
         focus: 20,
@@ -407,7 +412,7 @@
       bestCombo: 0,
       items: {},
       npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 })),
-      wardrobe: { unlockedMax: 0, equipped: 0 },
+      wardrobe: { equipped: 0, owned: OUTFIT_TIERS.map((_, i) => i === 0), notifiedGraceTier: 0 },
       weekPlan: new Array(WEEKS_PER_MONTH).fill(null),
       weekIndex: 0,
       talkedThisTurn: false,
@@ -471,7 +476,16 @@
       loaded.npcs.forEach((n) => {
         if (typeof n.lastMetTurn !== 'number') n.lastMetTurn = 0;
       });
-      loaded.wardrobe = loaded.wardrobe || { unlockedMax: 0, equipped: 0 };
+      loaded.wardrobe = loaded.wardrobe || { equipped: 0 };
+      if (!Array.isArray(loaded.wardrobe.owned)) {
+        // 옛 저장 데이터(옷을 무료로 자동 해금하던 시절)의 unlockedMax까지는
+        // 이미 입고 있었던 것으로 쳐서 그대로 소유한 것으로 이관해준다.
+        const grandfatheredMax = typeof loaded.wardrobe.unlockedMax === 'number' ? loaded.wardrobe.unlockedMax : 0;
+        loaded.wardrobe.owned = OUTFIT_TIERS.map((_, i) => i <= grandfatheredMax);
+      }
+      delete loaded.wardrobe.unlockedMax;
+      if (typeof loaded.wardrobe.notifiedGraceTier !== 'number') loaded.wardrobe.notifiedGraceTier = 0;
+      if (typeof loaded.characterName !== 'string' || !loaded.characterName.trim()) loaded.characterName = '우리 딸';
       if (!Array.isArray(loaded.weekPlan) || loaded.weekPlan.length !== WEEKS_PER_MONTH) {
         loaded.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
         // 옛 저장 데이터(주간 계획표 이전)에 골라둔 활동이 있었다면 1주차로 옮겨준다.
@@ -548,6 +562,7 @@
   function renderMain() {
     el.turnLabel.textContent = yearMonthLabel(state.turn);
     el.goldLabel.textContent = `💰 ${state.gold}G`;
+    el.characterName.textContent = state.characterName;
     updateWardrobeUnlocks();
     const equippedTier = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.characterPortrait, state.wardrobe.equipped, 'main');
@@ -1336,11 +1351,14 @@
 
   function renderWardrobeList() {
     el.wardrobeList.innerHTML = '';
+    const graceTier = currentOutfit(state.stats).tierIndex;
     OUTFIT_TIERS.forEach((tier, tierIndex) => {
-      const unlocked = tierIndex <= state.wardrobe.unlockedMax;
+      const owned = state.wardrobe.owned[tierIndex];
+      const purchasable = !owned && tierIndex <= graceTier;
       const equipped = tierIndex === state.wardrobe.equipped;
-      const card = document.createElement('button');
-      card.className = `wardrobe-card${unlocked ? '' : ' locked'}${equipped ? ' equipped' : ''}`;
+      const canAfford = state.gold >= tier.cost;
+      const card = document.createElement('div');
+      card.className = `wardrobe-card${owned ? '' : purchasable ? ' purchasable' : ' locked'}${equipped ? ' equipped' : ''}`;
       card.innerHTML = `
         ${equipped ? '<span class="wardrobe-card-badge">착용 중</span>' : ''}
         <span class="wardrobe-card-img-wrap">
@@ -1348,9 +1366,15 @@
           <span class="wardrobe-card-emoji-fallback">${tier.emoji}</span>
         </span>
         <span class="wardrobe-card-label">${tier.emoji} ${tier.name}</span>
+        ${purchasable ? `<button class="wardrobe-buy-btn" ${canAfford ? '' : 'disabled'}>💰 ${tier.cost}G 구매</button>` : ''}
       `;
-      if (unlocked) {
+      if (owned) {
         card.addEventListener('click', () => equipOutfit(tierIndex));
+      } else if (purchasable) {
+        card.querySelector('.wardrobe-card-label').textContent = tier.name;
+        if (canAfford) {
+          card.querySelector('.wardrobe-buy-btn').addEventListener('click', () => buyOutfit(tierIndex));
+        }
       } else {
         card.querySelector('.wardrobe-card-label').textContent = tier.wardrobeDesc;
       }
@@ -1359,22 +1383,33 @@
   }
 
   function equipOutfit(tierIndex) {
-    if (tierIndex > state.wardrobe.unlockedMax) return;
+    if (!state.wardrobe.owned[tierIndex]) return;
     state.wardrobe.equipped = tierIndex;
     saveGame();
     renderWardrobeList();
     renderMain();
   }
 
-  // 품위가 새 단계에 닿으면 그 옷을 영구 해금하고 자동으로 갈아입힌다.
-  // (옷장에서는 이후 이미 해금한 옷들 중 원하는 것으로 자유롭게 갈아입을 수 있다)
+  function buyOutfit(tierIndex) {
+    const tier = OUTFIT_TIERS[tierIndex];
+    if (state.wardrobe.owned[tierIndex] || state.gold < tier.cost) return;
+    state.gold -= tier.cost;
+    state.wardrobe.owned[tierIndex] = true;
+    state.wardrobe.equipped = tierIndex;
+    showLevelToast(`✨ 새 옷을 샀어요: ${tier.name}!`);
+    saveGame();
+    renderWardrobeList();
+    renderMain();
+  }
+
+  // 품위가 새 단계에 닿으면 그 옷을 "구매할 수 있게" 알려준다(자동으로 사거나
+  // 입혀주지는 않으며, 옷장에서 직접 돈을 내고 사야 실제로 입을 수 있다).
   function updateWardrobeUnlocks() {
     const tierIndex = currentOutfit(state.stats).tierIndex;
-    if (tierIndex > state.wardrobe.unlockedMax) {
-      state.wardrobe.unlockedMax = tierIndex;
-      state.wardrobe.equipped = tierIndex;
+    if (tierIndex > state.wardrobe.notifiedGraceTier) {
+      state.wardrobe.notifiedGraceTier = tierIndex;
       const tier = OUTFIT_TIERS[tierIndex];
-      showLevelToast(`✨ 새 옷 해금: ${tier.name}!`);
+      showLevelToast(`👗 ${tier.name} 구매 가능! 옷장에서 ${tier.cost}G에 살 수 있어요`);
       saveGame();
     }
   }
@@ -1834,7 +1869,8 @@
   }
 
   el.btnEndingRestart.addEventListener('click', () => {
-    state = makeInitialState();
+    const prevName = state.characterName;
+    state = makeInitialState(prevName);
     clearSave();
     saveGame();
     gameStarted = true;
@@ -1845,7 +1881,7 @@
   /* ---------------- 시작 화면 ---------------- */
 
   el.btnNewGame.addEventListener('click', () => {
-    state = makeInitialState();
+    state = makeInitialState(el.characterNameInput.value);
     clearSave();
     saveGame();
     gameStarted = true;
