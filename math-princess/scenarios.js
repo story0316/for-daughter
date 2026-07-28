@@ -307,14 +307,14 @@
         options: [
           {
             label: '나무에 직접 올라가 아기 고양이를 구해준다',
-            statEffects: { stamina: 8, stress: 3, charm: 2 },
-            npcEffects: { friend: [5, 8] },
-            resultLine: '조심스럽게 나무를 타올라 아기 고양이를 품에 안고 내려왔습니다! 옷은 조금 더러워졌지만 마음은 따뜻해졌어요.',
+            statEffects: { stamina: -6, stress: 4, charm: 4 },
+            npcEffects: { friend: [8, 12] },
+            resultLine: '조심스럽게 나무를 타올라 아기 고양이를 품에 안고 내려왔습니다! 옷은 더러워지고 힘도 들었지만, 친구는 당신의 용기에 크게 감동했어요.',
           },
           {
             label: '친구와 함께 따뜻한 우유를 가져와 유인한다',
             statEffects: { creativity: 5, focus: 5 },
-            npcEffects: { friend: [10, 15] },
+            npcEffects: { friend: [4, 7] },
             resultLine: '친구와 아이디어를 모아 우유 그릇을 놓아주자 아기 고양이가 스스로 살금살금 내려왔습니다. 기발한 협동이었어요!',
           },
         ],
@@ -358,9 +358,9 @@
           },
           {
             label: '예쁜 꽃 모양 장식을 추가해 창의적으로 쿠키를 꾸민다',
-            statEffects: { creativity: 12, charm: 5 },
+            statEffects: { creativity: 12, charm: 5, stress: 3 },
             npcEffects: { rival: [5, 10] },
-            resultLine: '알록달록 예쁜 모양의 쿠키가 완성되었습니다. 라이벌도 내심 감탄한 표정이에요!',
+            resultLine: '알록달록 예쁜 모양의 쿠키가 완성되었습니다. 시간에 쫓겨 조금 진땀을 뺐지만, 라이벌도 내심 감탄한 표정이에요!',
           },
         ],
       },
@@ -432,9 +432,9 @@
         options: [
           {
             label: '손수건을 꺼내 강아지의 상처를 정성껏 감싸준다',
-            statEffects: { charm: 10, focus: 5, stress: -3 },
+            statEffects: { charm: 10, focus: 5, stamina: -4 },
             npcEffects: { prince: [12, 18] },
-            resultLine: '상처를 꼼꼼하게 치료해주자 왕자님이 감탄하며 고마운 미소를 보냈습니다.',
+            resultLine: '상처를 꼼꼼하게 치료해주느라 진땀을 뺐지만, 왕자님이 감탄하며 고마운 미소를 보냈습니다.',
           },
           {
             label: '왕자님에게 다정한 말로 위로와 용기를 북돋아 준다',
@@ -539,9 +539,9 @@
           },
           {
             label: '기분 좋은 미소와 함께 자연스럽고 즐겁게 춤을 춘다',
-            statEffects: { charm: 12, creativity: 10, stress: -10 },
-            npcEffects: { prince: [20, 25] },
-            resultLine: '당신의 밝고 진심 어린 미소가 연회장 전체를 따뜻하고 화기애애하게 만들었습니다!',
+            statEffects: { charm: 12, creativity: 10, stress: 2 },
+            npcEffects: { prince: [15, 22] },
+            resultLine: '당신의 밝고 진심 어린 미소가 연회장 전체를 따뜻하고 화기애애하게 만들었습니다! 격식 없이 신나게 추다 보니 살짝 숨이 찼어요.',
           },
         ],
       },
@@ -729,13 +729,13 @@
           {
             label: '도서관의 다른 고문헌들을 비교하여 비밀 기호를 스스로 해독한다',
             statEffects: { intelligence: 12, focus: 8, stress: 3 },
-            npcEffects: { sage: [10, 15] },
-            resultLine: '집중력을 발휘해 기호를 해독해내자, 고대 왕국의 평화로운 역사가 담긴 기록임이 밝혀졌습니다!',
+            npcEffects: { sage: [15, 20] },
+            resultLine: '집중력을 발휘해 밤늦게까지 매달린 끝에 기호를 해독해내자, 고대 왕국의 평화로운 역사가 담긴 기록임이 밝혀졌습니다! 스승님이 그 끈기에 크게 감탄하셨어요.',
           },
           {
             label: '스승님께 질문을 건네며 비밀에 대해 함께 탐구해본다',
             statEffects: { intelligence: 8, charm: 6, focus: 5 },
-            npcEffects: { sage: [15, 20] },
+            npcEffects: { sage: [8, 12] },
             resultLine: '스승님께서 기쁨을 금치 못하시며 고서적에 얽힌 흥미진진한 옛이야기를 들려주셨습니다.',
           },
         ],
@@ -779,9 +779,9 @@
           },
           {
             label: '정원에 피어난 꽃으로 작고 예쁜 꽃반지를 만들어 선물한다',
-            statEffects: { creativity: 12, charm: 8, stress: -5 },
-            npcEffects: { prince: [15, 20] },
-            resultLine: '뜻밖의 순수하고 다정한 선물에 왕자님이 소년처럼 크게 기뻐하며 소중히 간직하겠다고 했습니다.',
+            statEffects: { creativity: 12, charm: 8, stress: 2 },
+            npcEffects: { prince: [12, 17] },
+            resultLine: '뜻밖의 순수하고 다정한 선물에 왕자님이 소년처럼 크게 기뻐하며 소중히 간직하겠다고 했습니다. 손 떨림을 감추느라 살짝 긴장했지만요.',
           },
         ],
       },

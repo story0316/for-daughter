@@ -637,7 +637,8 @@
   /* ---------------- 시나리오 계층(scenarios.js) 실행 ---------------- */
 
   function startScenarioQuiz(scenario) {
-    session = Engine.startScenarioQuizSession(scenario);
+    session = Engine.startScenarioQuizSession(state, scenario);
+    if (session.hint) showLevelToast('💡 친한 사이라 문제가 살짝 쉬워졌어요!');
     showScreen('quiz');
     nextQuizQuestion();
   }
@@ -960,6 +961,16 @@
     const activity = currentWeekActivity();
     if (!activity) {
       openSchedule();
+      return;
+    }
+    // 스트레스가 너무 쌓이면 계획했던 활동 대신 몸살이 나 앓아누울 수 있다.
+    const overflow = Engine.checkStressOverflow(state);
+    if (overflow) {
+      saveGame();
+      el.eventEmoji.textContent = overflow.emoji;
+      el.eventTitle.textContent = overflow.title;
+      el.eventDesc.textContent = overflow.desc;
+      showScreen('event');
       return;
     }
     runActivity(activity);

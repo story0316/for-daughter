@@ -226,4 +226,70 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(state.stats.luck, beforeLuck + 1, '정원사를 고용해도 직접 텃밭을 가꾸는 것과 비슷하게 매턴 행운 +1을 줘야 함');
 }
 
+/* ---------------- 스트레스 오버플로우 ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  state.stats.stress = Engine.STRESS_OVERFLOW_THRESHOLD - 1;
+  eq(Engine.checkStressOverflow(state), null, '임계값 미만이면 절대 오버플로우가 발생하지 않아야 함');
+}
+{
+  let triggered = 0;
+  let sample = null;
+  for (let i = 0; i < 200; i++) {
+    const state = Engine.makeInitialState();
+    state.stats.stress = 100;
+    const beforeStamina = state.stats.stamina;
+    const result = Engine.checkStressOverflow(state);
+    if (result) {
+      triggered++;
+      sample = sample || result;
+      ok(state.stats.stamina < beforeStamina, '오버플로우가 발생하면 체력이 줄어야 함');
+      ok(state.stats.stress < 100, '오버플로우가 발생하면 스트레스가 다소 풀려야 함');
+    }
+  }
+  ok(triggered > 0, '스트레스가 최대치면 오버플로우가 발생할 수 있어야 함');
+  ok(triggered < 200, '스트레스가 최대치여도 매번 발생하지는 않아야 함(확률적, 최대 60%)');
+  ok(sample && sample.emoji && sample.title && sample.desc, '발생 시 emoji/title/desc를 담은 이벤트 정보를 돌려줘야 함');
+}
+
+/* ---------------- 시나리오 퀴즈: 호감도 기반 힌트/관대함 ---------------- */
+
+{
+  const scenario = {
+    npcId: 'friend',
+    quiz: { questionsPerSession: 3, passCount: 3, bank: [{ question: 'Q', choices: ['a', 'b'], answer: 'a', explanation: 'e' }] },
+  };
+  const state = Engine.makeInitialState();
+  const friendState = state.npcs.find((n) => n.id === 'friend');
+
+  friendState.affection = Engine.NPC_HINT_AFFECTION - 1;
+  let session = Engine.startScenarioQuizSession(state, scenario);
+  eq(session.hint, false, '호감도가 힌트 기준 미만이면 힌트가 없어야 함');
+  eq(session.passCount, 3, '호감도가 관대함 기준 미만이면 통과 기준이 그대로여야 함');
+
+  friendState.affection = Engine.NPC_HINT_AFFECTION;
+  session = Engine.startScenarioQuizSession(state, scenario);
+  eq(session.hint, true, '호감도가 힌트 기준 이상이면 힌트가 있어야 함');
+
+  friendState.affection = Engine.NPC_LENIENT_AFFECTION;
+  session = Engine.startScenarioQuizSession(state, scenario);
+  eq(session.passCount, 2, '호감도가 관대함 기준 이상이면 통과 기준이 1 낮아져야 함');
+}
+{
+  // finishScenarioQuizOutcome은 session.passCount(있으면)를 우선 써야 함
+  const scenario = {
+    id: 'test-scenario', npcId: 'friend',
+    quiz: { questionsPerSession: 3, passCount: 3, bank: [] },
+    outcomes: {
+      success: { narrative: { title: '성공', desc: 'ok' } },
+      fail: { narrative: { title: '실패', desc: 'fail' } },
+    },
+  };
+  const state = Engine.makeInitialState();
+  const session = { scenario, correctCount: 2, passCount: 2 };
+  const result = Engine.finishScenarioQuizOutcome(state, session);
+  eq(result.title, '성공', '완화된 통과 기준(passCount=2)을 만족하면 성공 처리되어야 함');
+}
+
 summary('game-engine.js');

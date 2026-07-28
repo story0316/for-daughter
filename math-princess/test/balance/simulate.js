@@ -132,7 +132,11 @@ function simulateBalanced(answerRate) {
       if (state.stats.stamina < 20) activity = 'rest';
       else if (state.stats.stress > 75) activity = 'rest';
 
-      if (activity === 'friend') {
+      // 스트레스가 너무 쌓이면 계획했던 활동 대신 몸살로 이번 주를 앓아누울 수 있다(실제 게임과 동일).
+      const overflow = Engine.checkStressOverflow(state);
+      if (overflow) {
+        log.stressOverflowCount = (log.stressOverflowCount || 0) + 1;
+      } else if (activity === 'friend') {
         for (let i = 0; i < NPC_DEFS.length; i++) {
           const idx = (rotationRef.i + i) % NPC_DEFS.length;
           const def = NPC_DEFS[idx];
@@ -172,7 +176,10 @@ function simulatePrinceRoute(answerRate) {
       else if (Math.random() < 0.7) activity = Math.random() < 0.5 ? 'banquet' : 'friend-prince';
       else activity = 'study';
 
-      if (activity === 'friend-prince') meetNpc(state, 'prince', answerRate, log);
+      const overflow = Engine.checkStressOverflow(state);
+      if (overflow) {
+        log.stressOverflowCount = (log.stressOverflowCount || 0) + 1;
+      } else if (activity === 'friend-prince') meetNpc(state, 'prince', answerRate, log);
       else runWeekActivity(state, activity, answerRate, log);
       maybeBuyOutfit(state);
       Engine.clampStats(state);

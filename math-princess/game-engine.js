@@ -94,6 +94,9 @@
     const BANQUET_ENTRY_FEE = 150;
     const BANQUET_MIN_TIER = 1;
     const PRINCE_MIN_TIER = 2;
+    const STRESS_OVERFLOW_THRESHOLD = 70;
+    const NPC_HINT_AFFECTION = 50;
+    const NPC_LENIENT_AFFECTION = 80;
 
     const AFFECTION_TIERS = [
       { min: 0, name: '낯선 사이' },
@@ -293,8 +296,14 @@
     function startRestSession() { return makeSession('rest-bonus', { count: 1 }); }
     function startLaundrySession() { return makeSession('laundry-bonus', { count: 1 }); }
     function startGardenSession() { return makeSession('garden-bonus', { count: 1 }); }
-    function startScenarioQuizSession(scenario) {
-      return makeSession('scenario-quiz', { scenario, count: scenario.quiz.questionsPerSession, askedQuestions: [] });
+    // 관련 인물과 친할수록(NPC_HINT_AFFECTION 이상) 문제에 힌트가 붙고,
+    // 아주 친하면(NPC_LENIENT_AFFECTION 이상) 통과 기준이 1개 낮아진다.
+    function startScenarioQuizSession(state, scenario) {
+      const npcState = state.npcs.find((n) => n.id === scenario.npcId);
+      const affection = npcState ? npcState.affection : 0;
+      const hint = affection >= NPC_HINT_AFFECTION;
+      const passCount = affection >= NPC_LENIENT_AFFECTION ? Math.max(1, scenario.quiz.passCount - 1) : scenario.quiz.passCount;
+      return makeSession('scenario-quiz', { scenario, count: scenario.quiz.questionsPerSession, askedQuestions: [], hint, passCount });
     }
 
     /* ---------------- 정답/오답 반영 (보상 엔진에 위임) ---------------- */
@@ -391,6 +400,20 @@
       return { emoji: event.emoji, title: event.title, desc: event.desc };
     }
 
+    // 스트레스가 STRESS_OVERFLOW_THRESHOLD를 넘으면, 넘은 정도에 비례해 최대
+    // 60% 확률로 몸살이 나 이번 주 계획했던 활동 대신 앓아눕는다(체력 소모,
+    // 스트레스는 다소 풀림). 이벤트가 안 뜨면 null(=UI는 원래 활동을 진행).
+    // 휴식 없이 스탯만 밀어붙이는 플레이에 실질적인 리스크를 부여하기 위함.
+    function checkStressOverflow(state) {
+      if (state.stats.stress < STRESS_OVERFLOW_THRESHOLD) return null;
+      const chance = Math.min(0.6, ((state.stats.stress - STRESS_OVERFLOW_THRESHOLD) / 30) * 0.6);
+      if (Math.random() > chance) return null;
+      state.stats.stamina = Math.max(0, state.stats.stamina - 15);
+      state.stats.stress = Math.max(0, state.stats.stress - 20);
+      clampStats(state);
+      return { emoji: '🤒', title: '몸살이 났어요', desc: '무리하다가 몸살이 나서 계획했던 활동 대신 하루 앓아누웠어요. 체력이 줄었지만 마음은 한결 가벼워졌어요.' };
+    }
+
     /* ---------------- 인물/시나리오 ---------------- */
 
     function scenarioUnlocked(scenario, state) {
@@ -469,7 +492,8 @@
 
     function finishScenarioQuizOutcome(state, session) {
       const scenario = session.scenario;
-      const pass = session.correctCount >= scenario.quiz.passCount;
+      const passCount = session.passCount || scenario.quiz.passCount;
+      const pass = session.correctCount >= passCount;
       const outcome = pass ? scenario.outcomes.success : scenario.outcomes.fail;
       return resolveScenarioOutcome(state, scenario, outcome);
     }
@@ -643,7 +667,7 @@
     /* ---------------- 엔딩 ---------------- */
 
     function computeEndingSummary(state) {
-      const ending = E.computeEnding(state.stats, state.npcs);
+      const ending = E.computeEnding(state.stats, state.npcs, { gold: state.gold });
       const closestNpc = state.npcs.reduce((best, n) => (n.affection > best.affection ? n : best), state.npcs[0]);
       const closestNpcDef = closestNpc && closestNpc.affection >= 30 ? NPC_DEFS.find((n) => n.id === closestNpc.id) : null;
       const finalOutfit = currentOutfit(state.stats);
@@ -661,6 +685,7 @@
       WEEKS_PER_MONTH, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT,
       SAVE_KEY, EVENTS, ETIQUETTE_QUESTIONS: Question.ETIQUETTE_QUESTIONS, TALK_LINES, ITEMS,
       BANQUET_ENTRY_FEE, BANQUET_MIN_TIER, PRINCE_MIN_TIER,
+      STRESS_OVERFLOW_THRESHOLD, NPC_HINT_AFFECTION, NPC_LENIENT_AFFECTION,
       AFFECTION_TIERS, AFFECTION_DECAY_GRACE_TURNS, AFFECTION_DECAY_AMOUNT, OUTFIT_TIERS, NPC_DEFS, ACTIVITY_DEFS,
       MULTI_SUBJECT_TYPES: Question.MULTI_SUBJECT_TYPES, BONUS_QUIZ_TYPES: Reward.DEFERRED_REWARD_TYPES,
       ASSUMED_CORRECT_RATE, EXPECTED_COMBO_MULTIPLIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS,
@@ -677,7 +702,7 @@
       startLaundrySession, startGardenSession, startScenarioQuizSession,
       applyCorrect, applyWrong,
       finishStudyOrJobOutcome, finishBanquetOutcome, finishExerciseBonusOutcome, finishRestBonusOutcome,
-      finishLaundryBonusOutcome, finishGardenBonusOutcome, rollRandomEvent,
+      finishLaundryBonusOutcome, finishGardenBonusOutcome, rollRandomEvent, checkStressOverflow,
       // 인물/시나리오
       scenarioUnlocked, findActiveScenario, applyStatNpcEffects, meetNpcAttempt,
       resolveScenarioOutcome, resolveBranchingOption, resolveNarrativeScenario, finishScenarioQuizOutcome,

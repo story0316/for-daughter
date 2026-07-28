@@ -66,6 +66,20 @@ eq(Question.subjectName('science'), '과학', '과학 과목 이름');
 }
 
 {
+  // session.hint가 true면 오답 보기 하나가 지워져야 함(호감도 기반 힌트)
+  const scenario = { quiz: { bank: [
+    { question: 'HQ', choices: ['a', 'b', 'c', 'd'], answer: 'a', explanation: 'e' },
+  ] } };
+  const noHintSession = { scenario, askedQuestions: [], hint: false };
+  const withHintSession = { scenario, askedQuestions: [], hint: true };
+  const noHintQ = Question.generateScenarioQuestion(noHintSession);
+  const withHintQ = Question.generateScenarioQuestion(withHintSession);
+  eq(noHintQ.choices.length, 4, '힌트가 없으면 보기 4개 그대로여야 함');
+  eq(withHintQ.choices.length, 3, '힌트가 있으면 오답 하나가 지워져 보기 3개여야 함');
+  ok(withHintQ.choices.includes(withHintQ.answer), '힌트로 보기를 지워도 정답은 항상 남아있어야 함');
+}
+
+{
   // generateNextProblem: 세션 유형에 따라 올바른 생성 경로로 분기해야 함
   const banquetSession = { type: 'banquet', askedQuestions: [] };
   const banquetQ = Question.generateNextProblem(50, banquetSession);

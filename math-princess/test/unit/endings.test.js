@@ -33,6 +33,7 @@ const CASES = [
   { id: 'olympiad', stats: stats({ intelligence: 85, luck: 55 }), npcs: npcs({}) },
   { id: 'data-scientist', stats: stats({ intelligence: 75, stress: 45 }), npcs: npcs({}) },
   { id: 'programmer', stats: stats({ intelligence: 65, focus: 60 }), npcs: npcs({}) },
+  { id: 'finance-minister', stats: stats({ intelligence: 65, stamina: 70 }), npcs: npcs({}) },
   { id: 'math-youtuber', stats: stats({ intelligence: 55, charm: 70 }), npcs: npcs({}) },
   { id: 'math-teacher', stats: stats({ intelligence: 50, charm: 50 }), npcs: npcs({}) },
   { id: 'novelist', stats: stats({ creativity: 80 }), npcs: npcs({}) },
@@ -70,6 +71,22 @@ CASES.forEach((c) => {
   const ids = E.ENDINGS.map((e) => e.id);
   const unique = new Set(ids);
   eq(unique.size, ids.length, 'ENDINGS에 중복된 id가 없어야 함');
+}
+
+// wealthy-merchant는 스탯이 아니라 골드(3번째 인자 ctx)로 판정되는 엔딩이다
+{
+  const s = stats({});
+  const n = npcs({});
+  eq(E.computeEnding(s, n).id, 'ordinary-happy', 'ctx 없이 호출하면(골드 정보 없음) 골드 엔딩이 나오면 안 됨');
+  eq(E.computeEnding(s, n, {}).id, 'ordinary-happy', '골드가 없는 ctx({})도 마찬가지');
+  eq(E.computeEnding(s, n, { gold: 3999 }).id, 'ordinary-happy', '골드가 임계값(4000) 미만이면 아직 아님');
+  eq(E.computeEnding(s, n, { gold: 4000 }).id, 'wealthy-merchant', '골드 4000 이상이면 재테크 엔딩');
+}
+// 골드가 많아도 더 우선순위 높은(스탯/인물 기반) 엔딩 조건을 충족하면 그쪽이 이겨야 함
+{
+  const s = stats({ stress: 90 });
+  const n = npcs({});
+  eq(E.computeEnding(s, n, { gold: 5000 }).id, 'burned-out', '스트레스로 인한 burned-out이 골드 엔딩보다 먼저 검사되어야 함');
 }
 
 summary('endings.js');

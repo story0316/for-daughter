@@ -86,13 +86,22 @@
       return { type: 'choice', question: picked.question, choices: shuffle(picked.choices), answer: picked.answer, explanation: picked.explanation, rewardGold: 0, level: 0 };
     }
 
+    // session.hint가 true면(인물과 충분히 친해졌을 때) 오답 보기 하나를 미리
+    // 지워줘서 문제를 살짝 쉽게 만든다 — 친밀한 사이일수록 상대가 은근히
+    // 힌트를 주는 느낌을 낸다.
     function generateScenarioQuestion(session) {
       const bank = session.scenario.quiz.bank;
       const remaining = bank.filter((q) => !session.askedQuestions.includes(q.question));
       const pool = remaining.length ? remaining : bank;
       const picked = randChoice(pool);
       session.askedQuestions.push(picked.question);
-      return { type: 'choice', question: picked.question, choices: shuffle(picked.choices), answer: picked.answer, explanation: picked.explanation, rewardGold: 0, level: 0 };
+      let choices = picked.choices;
+      if (session.hint && choices.length > 2) {
+        const wrongChoices = choices.filter((c) => c !== picked.answer);
+        const removed = randChoice(wrongChoices);
+        choices = choices.filter((c) => c !== removed);
+      }
+      return { type: 'choice', question: picked.question, choices: shuffle(choices), answer: picked.answer, explanation: picked.explanation, rewardGold: 0, level: 0 };
     }
 
     // 세션 유형에 맞는 다음 문제를 만든다(UI는 이 결과로 화면만 그리면 된다).
