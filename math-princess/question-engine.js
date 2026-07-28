@@ -127,7 +127,10 @@
       // 안에서는 반복되지 않는다(수학은 절차적으로 생성되어 이 인자를 쓰지
       // 않지만 넘겨도 무해하다).
       if (session.type === 'cert-exam') {
-        const problem = SUBJECTS[session.subject].generateProblem(session.tier.requiredLevel, session.askedQuestions);
+        // 영어 인증 시험만 문법이 아니라 "단어 - 뜻 짝지어 맞추기" 형식으로 낸다.
+        const problem = session.subject === 'english'
+          ? SUBJ.generateEnglishVocabMatchProblem(session.tier.requiredLevel, session.askedQuestions)
+          : SUBJECTS[session.subject].generateProblem(session.tier.requiredLevel, session.askedQuestions);
         session.askedQuestions.push(problem.question);
         return problem;
       }

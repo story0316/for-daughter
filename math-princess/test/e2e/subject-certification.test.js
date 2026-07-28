@@ -97,11 +97,59 @@ async function testScienceCannotReachGoldEvenAtHighIntelligence() {
   ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
 }
 
+// subjects.js의 ENGLISH_VOCAB_BANK[1](동메달 레벨) 정답 목록. 화면에 뜬 단어를
+// 보고 정답 뜻을 찾아 클릭하기 위한 것으로, 콘텐츠 자체는 subjects.js와 동일해야 한다.
+const ENGLISH_BRONZE_VOCAB = {
+  apple: '사과', dog: '개', happy: '행복한', book: '책', water: '물',
+  school: '학교', friend: '친구', big: '큰', small: '작은', run: '달리다',
+};
+
+async function answerEnglishCertQuestionCorrectly(page) {
+  await page.waitForTimeout(150);
+  const question = await page.textContent('#quiz-question');
+  const word = question.match(/^'(.+)'/)[1];
+  const meaning = ENGLISH_BRONZE_VOCAB[word];
+  ok(meaning, `테스트가 아는 단어여야 함(subjects.js와 동기화 필요): "${question}"`);
+  await page.click(`.choice-btn:text-is("${meaning}")`);
+}
+
+async function testEnglishCertExamUsesVocabMatchFormatAndAwardsMedal() {
+  const errors = await withPage(async (page) => {
+    await seedAndContinue(page, makeState({ weekIndex: 2, stats: { intelligence: 60, focus: 40, stamina: 60, charm: 60, creativity: 40, stress: 10, luck: 30 } }));
+    await openStatus(page);
+    await page.click('.status-cert-btn[data-subject="english"]');
+    await page.waitForSelector('#screen-quiz.active');
+    eq(await page.textContent('#quiz-session-label'), '📜 영어 동메달 인증 시험', '세션 라벨이 인증 시험을 보여줘야 함');
+
+    for (let i = 0; i < 5; i++) {
+      const active = await page.evaluate(() => document.querySelector('.screen.active').id);
+      if (active !== 'screen-quiz') break;
+      const question = await page.textContent('#quiz-question');
+      ok(/^'.+'의 뜻으로 알맞은 것은\?$/.test(question), `영어 인증 시험은 단어-뜻 짝짓기 형식이어야 함(문법 문제가 아님): "${question}"`);
+      await answerEnglishCertQuestionCorrectly(page);
+      await page.waitForSelector('#btn-quiz-next', { state: 'visible' });
+      await page.click('#btn-quiz-next');
+      await page.waitForTimeout(150);
+    }
+    await page.waitForSelector('#screen-session-summary.active');
+    ok(!(await page.textContent('#summary-title')).includes('아직이에요'), '전부 정답을 맞히면 통과해야 함');
+
+    await page.click('#btn-summary-confirm');
+    await page.waitForSelector('#screen-status.active', { timeout: 8000 });
+
+    const saved = await getSavedState(page);
+    eq(saved.certifications.english, 'bronze', '통과하면 동메달이 인증되어야 함');
+    eq(saved.weekIndex, 2, '인증 시험은 주/달을 소모하면 안 됨(weekIndex가 그대로여야 함)');
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(영어 인증 단어-뜻 짝짓기): ${errors.join('\n')}`);
+}
+
 (async () => {
   console.log('subject-certification e2e tests');
   await testShowsUncertifiedWithButtonByDefault();
   await testFailingExamKeepsNullAndReturnsToStatusWithoutConsumingWeek();
   await testDisplaysExistingMedalsAndNextTierCorrectly();
   await testScienceCannotReachGoldEvenAtHighIntelligence();
+  await testEnglishCertExamUsesVocabMatchFormatAndAwardsMedal();
   summary('subject-certification.test.js');
 })();
