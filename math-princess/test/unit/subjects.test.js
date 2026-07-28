@@ -51,4 +51,38 @@ SUBJECTS.forEach(({ name, levels, isUnlocked, generate, expectedThresholds }) =>
   });
 });
 
+// 영어 인증(동/은/금메달) 시험 전용 "단어 - 뜻 짝지어 맞추기" 문제.
+// MEDAL_TIERS의 requiredLevel(1/4/7)에 대해서만 존재한다.
+{
+  const CERT_LEVELS = [1, 4, 7];
+  CERT_LEVELS.forEach((level) => {
+    const SAMPLES = 30;
+    const seenWords = new Set();
+    for (let i = 0; i < SAMPLES; i++) {
+      const problem = SUBJ.generateEnglishVocabMatchProblem(level);
+      eq(problem.level, level, `영어 인증 레벨 ${level} 문제의 level 필드`);
+      eq(problem.type, 'choice', `영어 인증 문제는 선택형(단어-뜻 짝짓기)이어야 함`);
+      ok(/의 뜻으로 알맞은 것은\?$/.test(problem.question), `영어 인증 레벨 ${level} 문제는 단어-뜻 짝짓기 형식이어야 함: "${problem.question}"`);
+      ok(Array.isArray(problem.choices) && problem.choices.length === 4, `영어 인증 레벨 ${level} 선택지는 4개여야 함`);
+      ok(problem.choices.includes(problem.answer), `영어 인증 레벨 ${level} choices 안에 answer 포함`);
+      ok(new Set(problem.choices).size === 4, `영어 인증 레벨 ${level} 선택지에 중복된 뜻이 없어야 함`);
+      ok(P.checkAnswer(problem, problem.answer), `영어 인증 레벨 ${level} 문제는 problems.js checkAnswer로도 정답 처리되어야 함`);
+      const word = problem.question.match(/^'(.+)'/)[1];
+      seenWords.add(word);
+    }
+    ok(seenWords.size > 1, `영어 인증 레벨 ${level}은 여러 단어 중에서 무작위로 뽑혀야 함`);
+  });
+
+  // askedQuestions를 주면 이미 나온 단어는 한 회차 안에서 반복되지 않아야 한다
+  // (은행 크기가 문제 수보다 크므로 항상 피할 수 있음).
+  for (let trial = 0; trial < 20; trial++) {
+    const asked = [];
+    for (let i = 0; i < 5; i++) {
+      const problem = SUBJ.generateEnglishVocabMatchProblem(1, asked);
+      ok(!asked.includes(problem.question), '영어 인증 시험 한 회차 안에서는 같은 단어가 반복되면 안 됨');
+      asked.push(problem.question);
+    }
+  }
+}
+
 summary('subjects.js');

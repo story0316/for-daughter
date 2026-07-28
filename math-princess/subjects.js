@@ -140,6 +140,79 @@
   }
 
   /* ---------------------------------------------------------------- */
+  /* 영어 인증 시험 전용: 단어-뜻 짝짓기                                    */
+  /* ---------------------------------------------------------------- */
+
+  // 기초 과목 인증(동/은/금메달) 시험은 문법이 아니라 "영어 단어 - 뜻
+  // 짝지어 맞추기" 형식으로 낸다. MEDAL_TIERS의 requiredLevel(1/4/7)에 맞춰
+  // 동메달은 초4, 은메달은 초5~중1, 금메달은 중2~고1 수준 어휘로 구성했다.
+  const ENGLISH_VOCAB_BANK = {
+    1: [
+      { word: 'apple', meaning: '사과' },
+      { word: 'dog', meaning: '개' },
+      { word: 'happy', meaning: '행복한' },
+      { word: 'book', meaning: '책' },
+      { word: 'water', meaning: '물' },
+      { word: 'school', meaning: '학교' },
+      { word: 'friend', meaning: '친구' },
+      { word: 'big', meaning: '큰' },
+      { word: 'small', meaning: '작은' },
+      { word: 'run', meaning: '달리다' },
+    ],
+    4: [
+      { word: 'important', meaning: '중요한' },
+      { word: 'difficult', meaning: '어려운' },
+      { word: 'environment', meaning: '환경' },
+      { word: 'decide', meaning: '결정하다' },
+      { word: 'improve', meaning: '향상시키다' },
+      { word: 'opportunity', meaning: '기회' },
+      { word: 'compare', meaning: '비교하다' },
+      { word: 'explain', meaning: '설명하다' },
+      { word: 'discover', meaning: '발견하다' },
+      { word: 'increase', meaning: '증가하다' },
+    ],
+    7: [
+      { word: 'inevitable', meaning: '피할 수 없는' },
+      { word: 'significant', meaning: '중요한, 의미심장한' },
+      { word: 'controversial', meaning: '논란이 많은' },
+      { word: 'accomplish', meaning: '성취하다' },
+      { word: 'persuade', meaning: '설득하다' },
+      { word: 'tremendous', meaning: '엄청난' },
+      { word: 'genuine', meaning: '진실한' },
+      { word: 'reluctant', meaning: '꺼리는, 마지못한' },
+      { word: 'contradict', meaning: '모순되다' },
+      { word: 'sustain', meaning: '지속하다' },
+    ],
+  };
+
+  function vocabQuestionText(item) {
+    return `'${item.word}'의 뜻으로 알맞은 것은?`;
+  }
+
+  // askedQuestions(선택)를 주면 이미 나온 단어는 걸러내고 뽑는다(한 시험
+  // 회차 안에서 같은 단어가 반복되지 않도록). 오답 보기는 같은 등급의
+  // 다른 단어 뜻 3개를 무작위로 섞어 만든다.
+  function generateEnglishVocabMatchProblem(level, askedQuestions) {
+    const bank = ENGLISH_VOCAB_BANK[level] || ENGLISH_VOCAB_BANK[1];
+    const pool = askedQuestions && askedQuestions.length
+      ? bank.filter((item) => !askedQuestions.includes(vocabQuestionText(item)))
+      : bank;
+    const picked = randChoice(pool.length ? pool : bank);
+    const distractors = shuffle(bank.filter((item) => item.word !== picked.word)).slice(0, 3).map((item) => item.meaning);
+    return {
+      id: `en-vocab-${level}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
+      level,
+      type: 'choice',
+      rewardGold: 8 + level * 4,
+      question: vocabQuestionText(picked),
+      choices: shuffle([picked.meaning, ...distractors]),
+      answer: picked.meaning,
+      explanation: `${picked.word} = ${picked.meaning}`,
+      hint: `'${picked.word}'는 그 뜻을 아는 다른 문장이나 상황을 떠올리면 기억하기 쉬워요.`,
+    };
+  }
+
+  /* ---------------------------------------------------------------- */
   /* 과학                                                                */
   /* ---------------------------------------------------------------- */
 
@@ -205,6 +278,7 @@
     isScienceLevelUnlocked,
     generateEnglishProblem,
     generateScienceProblem,
+    generateEnglishVocabMatchProblem,
   };
 
   if (typeof module !== 'undefined' && module.exports) {
