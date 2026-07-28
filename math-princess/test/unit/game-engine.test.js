@@ -678,4 +678,75 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(outcome.goldEarned, state.gold - beforeGold, 'outcome.goldEarned이 세션 전체(문제별 상금+만점 보너스)로 늘어난 골드와 일치해야 함');
 }
 
+/* ---------------- 창의력 올림피아드 ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  state.stats.creativity = Engine.CREATIVITY_MIN_CREATIVITY - 1;
+  ok(!Engine.creativityOlympiadUnlocked(state), '창의력 요건 미달이면 창의력 올림피아드에 도전할 수 없어야 함');
+  state.stats.creativity = Engine.CREATIVITY_MIN_CREATIVITY;
+  ok(Engine.creativityOlympiadUnlocked(state), '창의력 요건을 만족하면 도전 가능해야 함');
+}
+{
+  const state = Engine.makeInitialState();
+  state.stats.creativity = 50;
+  const session = Engine.startCreativitySession();
+  eq(session.type, 'creativity', '창의력 올림피아드 세션 타입');
+  eq(session.count, Engine.QUESTIONS_PER_CREATIVITY, '창의력 올림피아드 기본 문제 수');
+
+  const beforeGold = state.gold;
+  const beforeCreativity = state.stats.creativity;
+  for (let i = 0; i < session.count; i++) {
+    session.index = i;
+    const problem = Engine.generateNextProblem(state, session);
+    const beforeThisGold = state.gold;
+    Engine.applyCorrect(state, session, problem);
+    ok(state.gold > beforeThisGold, '창의력 올림피아드는 정답을 맞힐 때마다 바로 상금이 들어와야 함');
+  }
+  ok(state.stats.creativity > beforeCreativity, '창의력 올림피아드 정답은 창의력을 올려야 함');
+  const goldAfterAllQuestions = state.gold;
+  const outcome = Engine.finishCreativityOutcome(state, session);
+  ok(outcome.perfect, '전부 맞혔으면 만점 처리되어야 함');
+  ok(state.gold > goldAfterAllQuestions, '만점이면 세션 종료 시 추가 보너스가 한 번 더 붙어야 함');
+  eq(outcome.goldEarned, state.gold - beforeGold, 'outcome.goldEarned이 세션 전체(문제별 상금+만점 보너스)로 늘어난 골드와 일치해야 함');
+}
+{
+  // 문제 수를 직접 고를 수 있어야 함(공부/알바/경시대회와 동일한 방식)
+  const session = Engine.startCreativitySession(10);
+  eq(session.count, 10, '문제 수를 직접 지정하면 그 값을 따라야 함');
+}
+
+/* ---------------- 기도와 선행 ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  const session = Engine.startFaithSession();
+  eq(session.type, 'faith', '기도와 선행 세션 타입');
+  eq(session.count, Engine.QUESTIONS_PER_FAITH, '기도와 선행 문제 수는 항상 고정');
+
+  const beforeLuck = state.stats.luck;
+  const beforeStress = state.stats.stress;
+  for (let i = 0; i < session.count; i++) {
+    session.index = i;
+    const problem = Engine.generateNextProblem(state, session);
+    Engine.applyCorrect(state, session, problem);
+  }
+  ok(state.stats.luck > beforeLuck, '기도와 선행 정답은 행운을 올려야 함');
+  ok(state.stats.stress < beforeStress, '기도와 선행 정답은 스트레스를 내려야 함(차분해지는 시간)');
+  eq(state.gold, Engine.makeInitialState().gold, '기도와 선행은 골드를 주지 않는 활동이어야 함');
+
+  const outcome = Engine.finishFaithOutcome(session);
+  eq(outcome.correctCount, session.count, '전부 맞혔으면 correctCount가 count와 같아야 함');
+  ok(outcome.perfect, '전부 맞혔으면 만점 처리되어야 함');
+}
+{
+  // 틀려도 벌점이 없어야 한다(지식을 겨루는 활동이 아니라 마음가짐을 돌아보는 시간)
+  const state = Engine.makeInitialState();
+  const session = Engine.startFaithSession();
+  const beforeStats = JSON.parse(JSON.stringify(state.stats));
+  Engine.applyWrong(state, session);
+  eq(state.stats.stamina, beforeStats.stamina, '기도와 선행은 오답이어도 체력이 깎이면 안 됨');
+  eq(state.stats.stress, beforeStats.stress, '기도와 선행은 오답이어도 스트레스가 오르면 안 됨');
+}
+
 summary('game-engine.js');

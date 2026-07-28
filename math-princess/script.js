@@ -566,6 +566,18 @@
     nextQuizQuestion();
   }
 
+  function startCreativitySession(count) {
+    session = Engine.startCreativitySession(count);
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
+  function startFaithSession() {
+    session = Engine.startFaithSession();
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
   // 세션 내내 같은 선생님/왕실 학자가 도움을 주는 느낌을 주기 위해, 도움 캐릭터를
   // 세션 시작 시(첫 문제에서) 한 번만 무작위로 고르고 계속 재사용한다.
   const HINT_HELPER_NPC_IDS = ['teacher', 'sage'];
@@ -602,12 +614,24 @@
                     ? `🌾 텃밭 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
                     : session.type === 'competition'
                       ? '🏆 왕국 수학경시대회'
-                      : session.type === 'cert-exam'
-                        ? `📜 ${Engine.subjectName(session.subject)} ${session.tier.name} 인증 시험`
-                        : `${session.scenario.entryEmoji} ${session.scenario.title}`;
+                      : session.type === 'creativity'
+                        ? '🎨 창의력 올림피아드'
+                        : session.type === 'faith'
+                          ? '🙏 기도와 선행'
+                          : session.type === 'cert-exam'
+                            ? `📜 ${Engine.subjectName(session.subject)} ${session.tier.name} 인증 시험`
+                            : `${session.scenario.entryEmoji} ${session.scenario.title}`;
     el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
-    el.quizLevelBadge.textContent = session.type === 'banquet' ? '예절' : session.type === 'scenario-quiz' ? session.scenario.arc : `Lv.${problem.level}`;
+    el.quizLevelBadge.textContent = session.type === 'banquet'
+      ? '예절'
+      : session.type === 'creativity'
+        ? '창의력'
+        : session.type === 'faith'
+          ? '선행'
+          : session.type === 'scenario-quiz'
+            ? session.scenario.arc
+            : `Lv.${problem.level}`;
     el.quizQuestion.textContent = problem.question;
     el.quizFeedback.textContent = '';
 
@@ -718,6 +742,8 @@
     if (session.type === 'laundry-bonus') { finishLaundryBonusSession(); return; }
     if (session.type === 'garden-bonus') { finishGardenBonusSession(); return; }
     if (session.type === 'competition') { finishCompetitionSession(); return; }
+    if (session.type === 'creativity') { finishCreativitySession(); return; }
+    if (session.type === 'faith') { finishFaithSession(); return; }
     if (session.type === 'cert-exam') { finishCertExamSession(); return; }
 
     const outcome = Engine.finishStudyOrJobOutcome(session);
@@ -766,6 +792,34 @@
     el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
     el.summaryGold.textContent = outcome.goldEarned;
     el.summaryCombo.textContent = session.sessionBestCombo;
+    updateSummaryConfirmLabel();
+    saveGame();
+    showScreen('sessionSummary');
+  }
+
+  function finishCreativitySession() {
+    const beforeTiers = Engine.snapshotGrowthTiers(state.stats);
+    const outcome = Engine.finishCreativityOutcome(state, session);
+    announceStatLevelUps(beforeTiers);
+    el.summaryEmoji.textContent = outcome.perfect ? '🎨' : '✅';
+    el.summaryTitle.textContent = outcome.perfect ? '창의력 올림피아드에서 만점을 받았어요!' : '창의력 올림피아드를 마쳤어요';
+    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
+    el.summaryGold.textContent = outcome.goldEarned;
+    el.summaryCombo.textContent = session.sessionBestCombo;
+    updateSummaryConfirmLabel();
+    saveGame();
+    showScreen('sessionSummary');
+  }
+
+  function finishFaithSession() {
+    const beforeTiers = Engine.snapshotGrowthTiers(state.stats);
+    const outcome = Engine.finishFaithOutcome(session);
+    announceStatLevelUps(beforeTiers);
+    el.summaryEmoji.textContent = outcome.perfect ? '🙏' : '✅';
+    el.summaryTitle.textContent = outcome.perfect ? '기도와 선행으로 마음이 가득 채워졌어요!' : '기도와 선행 시간을 마쳤어요';
+    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
+    el.summaryGold.textContent = session.goldEarned;
+    el.summaryCombo.textContent = outcome.bestCombo;
     updateSummaryConfirmLabel();
     saveGame();
     showScreen('sessionSummary');
@@ -1169,6 +1223,15 @@
         return;
       }
       startCompetitionSession(chosenCount);
+    } else if (activity === 'creativity') {
+      if (!Engine.creativityOlympiadUnlocked(state)) {
+        showLevelToast(`🎨 창의력 ${Engine.CREATIVITY_MIN_CREATIVITY} 이상이어야 창의력 올림피아드에 도전할 수 있어요`);
+        advanceWeekOrTurn();
+        return;
+      }
+      startCreativitySession(chosenCount);
+    } else if (activity === 'faith') {
+      startFaithSession();
     }
   }
 
@@ -1234,6 +1297,14 @@
         ? '덧셈뺄셈부터 시작해 점점 어려워지는 문제에 도전해요(문제 수는 직접 선택). 어려워질수록 상금도 커져요'
         : `🔒 지능 ${Engine.COMPETITION_MIN_INTELLIGENCE} 이상 필요 (현재 ${Math.round(state.stats.intelligence)})`;
     }
+    const creativityBtn = el.weekPickList.querySelector('[data-activity="creativity"]');
+    if (creativityBtn) {
+      const unlocked = Engine.creativityOlympiadUnlocked(state);
+      creativityBtn.classList.toggle('locked', !unlocked);
+      creativityBtn.querySelector('.level-desc').textContent = unlocked
+        ? '패턴 찾기, 유추, 공간지각, 창의적 사고 퀴즈에 도전해요(문제 수는 직접 선택). 창의력이 올라요'
+        : `🔒 창의력 ${Engine.CREATIVITY_MIN_CREATIVITY} 이상 필요 (현재 ${Math.round(state.stats.creativity)})`;
+    }
   }
 
   /* ---------------- 이번 달 생활 계획표 ---------------- */
@@ -1258,12 +1329,13 @@
   }
 
   // 공부/알바/왕국 수학경시대회는 문제 수를 도전자가 직접 고를 수 있다.
-  const COUNTABLE_ACTIVITIES = ['study', 'job', 'competition'];
+  const COUNTABLE_ACTIVITIES = ['study', 'job', 'competition', 'creativity'];
 
   function activityDefaultCount(activityId) {
     if (activityId === 'study') return Engine.QUESTIONS_PER_STUDY;
     if (activityId === 'job') return Engine.QUESTIONS_PER_JOB;
     if (activityId === 'competition') return Engine.QUESTIONS_PER_COMPETITION;
+    if (activityId === 'creativity') return Engine.QUESTIONS_PER_CREATIVITY;
     return null;
   }
 

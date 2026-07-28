@@ -52,6 +52,35 @@ questionEngine.ETIQUETTE_QUESTIONS.forEach((q) => {
   ok(questionEngine.ETIQUETTE_QUESTIONS.some((q) => q.category === cat), `연회 예절 문제 중 "${cat}" 범주가 최소 하나 이상 있어야 함(예절을 넘어선 상황판단 커버리지)`);
 });
 
+// 기도와 선행 문제(FAITH_QUESTIONS)도 category가 전부 JUDGMENT_CATEGORIES에
+// 등록되어 있어야 하고, 성경퀴즈/어른공경/친구배려/기도 네 범주를 모두 다뤄야 한다.
+ok(questionEngine.FAITH_QUESTIONS.length >= 15, `기도와 선행 문제는 네 범주를 고루 다루도록 15개 이상이어야 함(현재 ${questionEngine.FAITH_QUESTIONS.length}개)`);
+questionEngine.FAITH_QUESTIONS.forEach((q) => {
+  ok(q.id, `기도와 선행 문제에는 고유 id가 있어야 함: "${q.question}"`);
+  ok(q.category && judgmentIds.has(q.category), `기도와 선행 문제 "${q.id}"의 category("${q.category}")는 JUDGMENT_CATEGORIES에 등록되어 있어야 함`);
+});
+{
+  const ids = questionEngine.FAITH_QUESTIONS.map((q) => q.id);
+  eq(new Set(ids).size, ids.length, '기도와 선행 문제 id는 중복이 없어야 함');
+}
+['성경퀴즈', '어른공경', '친구배려', '기도'].forEach((cat) => {
+  ok(questionEngine.FAITH_QUESTIONS.some((q) => q.category === cat), `기도와 선행 문제 중 "${cat}" 범주가 최소 하나 이상 있어야 함`);
+});
+
+// 창의력 올림피아드 문제(CREATIVITY_PUZZLE_BANK)도 id 중복이 없어야 하고
+// 패턴찾기/유추/공간지각/창의적사고 네 유형을 고루 다뤄야 한다.
+ok(questionEngine.CREATIVITY_PUZZLE_BANK.length >= 12, `창의력 올림피아드 문제는 네 유형을 고루 다루도록 12개 이상이어야 함(현재 ${questionEngine.CREATIVITY_PUZZLE_BANK.length}개)`);
+questionEngine.CREATIVITY_PUZZLE_BANK.forEach((q) => {
+  ok(q.id, `창의력 문제에는 고유 id가 있어야 함: "${q.question}"`);
+});
+{
+  const ids = questionEngine.CREATIVITY_PUZZLE_BANK.map((q) => q.id);
+  eq(new Set(ids).size, ids.length, '창의력 문제 id는 중복이 없어야 함');
+}
+['패턴찾기', '유추', '공간지각', '창의적사고'].forEach((cat) => {
+  ok(questionEngine.CREATIVITY_PUZZLE_BANK.some((q) => q.category === cat), `창의력 문제 중 "${cat}" 유형이 최소 하나 이상 있어야 함`);
+});
+
 // SUBJECT_COMPETENCY_TAGS는 실제 3과목(math/english/science)을 전부 담아야 한다.
 Object.keys(engine.SUBJECTS).forEach((key) => {
   ok(CM.SUBJECT_COMPETENCY_TAGS[key], `과목 "${key}"에 대한 역량 태그가 있어야 함`);

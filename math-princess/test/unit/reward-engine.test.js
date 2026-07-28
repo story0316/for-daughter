@@ -109,7 +109,7 @@ eq(Reward.wrongAnswerPenalty('banquet').stress, 2, '연회 오답은 스트레�
   const withBonus = Reward.gardenBonusReward(true);
   eq(withoutBonus.gold, 25, '텃밭 기본 골드 +25');
   ok(withBonus.gold > withoutBonus.gold, '보너스 문제까지 맞히면 골드가 더 많아야 함');
-  eq(withoutBonus.luck, 1, '텃밭은 기본으로도 행운 +1을 줘야 함(행운을 키울 수 있는 유일한 활동)');
+  eq(withoutBonus.luck, 1, '텃밭은 기본으로도 행운 +1을 줘야 함(노동을 통해 행운을 키우는 대표 활동)');
   ok(withBonus.luck > withoutBonus.luck, '보너스 문제까지 맞히면 행운도 더 많아야 함');
 }
 
@@ -127,6 +127,37 @@ eq(Reward.wrongAnswerPenalty('banquet').stress, 2, '연회 오답은 스트레�
   ok(highBonus.gold > lowBonus.gold, '만점 보너스도 가장 어려웠던 문제의 레벨이 높을수록 커져야 함');
 
   ok(Reward.wrongAnswerPenalty('competition').stress > 0, '경시대회 오답은 스트레스가 쌓여야 함');
+}
+
+/* ---------------- 창의력 올림피아드 상금 ---------------- */
+
+{
+  const perQuestion = Reward.creativityQuestionReward();
+  ok(perQuestion.gold > 0, '창의력 문제 정답은 골드를 줘야 함');
+  ok(perQuestion.creativity > 0, '창의력 문제 정답은 창의력도 올라야 함');
+
+  const bonus = Reward.creativityPerfectBonus();
+  ok(bonus.gold > 0, '만점 보너스는 골드를 줘야 함');
+  ok(bonus.creativity > 0, '만점 보너스는 창의력도 추가로 올라야 함');
+  const bonusWithLm = Reward.creativityPerfectBonus(1.5);
+  ok(bonusWithLm.gold > bonus.gold, '문제 수를 많이 고를수록(lengthMultiplier) 만점 보너스 골드도 커져야 함');
+
+  const correct = Reward.correctAnswerReward('creativity', {}, 1, {});
+  eq(correct.gold, perQuestion.gold, '창의력 올림피아드는 콤보 배율 없이 문제당 고정 보상을 줘야 함');
+  eq(correct.creativity, perQuestion.creativity, '창의력 올림피아드 정답 보상에 창의력 증가량이 포함되어야 함');
+  ok(Reward.wrongAnswerPenalty('creativity').stress > 0, '창의력 올림피아드 오답은 스트레스가 쌓여야 함');
+}
+
+/* ---------------- 기도와 선행 ---------------- */
+
+{
+  const correct = Reward.correctAnswerReward('faith', {}, 1, {});
+  ok(correct.luck > 0, '기도와 선행 정답은 행운을 올려야 함');
+  ok(correct.stress < 0, '기도와 선행 정답은 스트레스를 내려야 함(차분해지는 시간)');
+  eq(correct.gold, undefined, '기도와 선행은 골드를 주지 않는 활동이어야 함');
+
+  const wrong = Reward.wrongAnswerPenalty('faith');
+  eq(Object.keys(wrong).length, 0, '기도와 선행은 오답이어도 벌점이 없어야 함(마음가짐을 돌아보는 시간)');
 }
 
 /* ---------------- 호감도 증가량 ---------------- */

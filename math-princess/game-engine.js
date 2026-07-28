@@ -63,8 +63,11 @@
     const QUESTIONS_PER_JOB = 3;
     const QUESTIONS_PER_BANQUET = 3;
     const QUESTIONS_PER_COMPETITION = 5;
+    const QUESTIONS_PER_CREATIVITY = 5;
+    const QUESTIONS_PER_FAITH = 3;
     const BANQUET_PASS_COUNT = 3;
     const COMPETITION_MIN_INTELLIGENCE = 50;
+    const CREATIVITY_MIN_CREATIVITY = 20;
     const SAVE_KEY = 'math-princess-save-v1';
 
     // 공부/알바/경시대회는 문제 수를 도전자가 직접 고를 수 있다(SESSION_LENGTH_MIN
@@ -229,6 +232,8 @@
       friend: { emoji: '🎡', name: '친구 만나기' },
       banquet: { emoji: '💃', name: '연회 참석' },
       competition: { emoji: '🏆', name: '왕국 수학경시대회' },
+      creativity: { emoji: '🎨', name: '창의력 올림피아드' },
+      faith: { emoji: '🙏', name: '기도와 선행' },
     };
 
     const ASSUMED_CORRECT_RATE = 0.75;
@@ -459,6 +464,17 @@
       const levels = competitionLevelRamp(typicalStudyLevel(state), n);
       return makeSession('competition', { levels, count: n, rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_COMPETITION) });
     }
+    // 창의력 올림피아드: 레벨이 없는 고정 문제 은행(패턴/유추/공간지각/
+    // 창의적 사고)에서 뽑는다. 공부/알바/경시대회처럼 문제 수를 직접 고를 수 있다.
+    function startCreativitySession(count) {
+      const n = clampSessionLength(count != null ? count : QUESTIONS_PER_CREATIVITY);
+      return makeSession('creativity', { count: n, askedQuestions: [], rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_CREATIVITY) });
+    }
+    // 기도와 선행: 성경 퀴즈/어른 공경/친구 배려/기도 문제로 행운을 올린다.
+    // 문제 수를 고르는 활동이 아니라(연회처럼) 항상 고정된 수만큼 진행한다.
+    function startFaithSession() {
+      return makeSession('faith', { count: QUESTIONS_PER_FAITH, askedQuestions: [] });
+    }
     // 관련 인물과 친할수록(NPC_HINT_AFFECTION 이상) 문제에 힌트가 붙고,
     // 아주 친하면(NPC_LENIENT_AFFECTION 이상) 통과 기준이 1개 낮아진다.
     function startScenarioQuizSession(state, scenario) {
@@ -572,6 +588,31 @@
       }
       clampStats(state);
       return { correctCount: session.correctCount, count: session.count, goldEarned: session.goldEarned + bonusGold, perfect };
+    }
+
+    // 창의력 올림피아드도 왕국 수학경시대회와 같은 방식으로, 문제당 보상은
+    // applyCorrect가 이미 반영했으므로 만점 보너스만 여기서 얹는다.
+    function finishCreativityOutcome(state, session) {
+      const perfect = session.correctCount === session.count;
+      let bonusGold = 0;
+      if (perfect) {
+        const bonus = Reward.creativityPerfectBonus(session.rewardMultiplier);
+        bonusGold = bonus.gold;
+        applyDelta(state, bonus);
+      }
+      clampStats(state);
+      return { correctCount: session.correctCount, count: session.count, goldEarned: session.goldEarned + bonusGold, perfect };
+    }
+
+    // 기도와 선행은 만점 보너스 없이(공부/알바처럼) 문제마다 이미 반영된
+    // 행운/스트레스 변화를 그대로 요약해 보여준다.
+    function finishFaithOutcome(session) {
+      return {
+        perfect: session.correctCount === session.count,
+        correctCount: session.correctCount,
+        count: session.count,
+        bestCombo: session.sessionBestCombo,
+      };
     }
 
     // chance 확률로 무작위 이벤트를 골라 효과를 적용하고 이벤트 정보를 돌려준다.
@@ -841,6 +882,10 @@
       return state.stats.intelligence >= COMPETITION_MIN_INTELLIGENCE;
     }
 
+    function creativityOlympiadUnlocked(state) {
+      return state.stats.creativity >= CREATIVITY_MIN_CREATIVITY;
+    }
+
     function talkToDaughter(state) {
       if (state.talkedThisTurn) return { alreadyTalked: true };
       state.talkedThisTurn = true;
@@ -910,6 +955,16 @@
         d.gold += Math.round(expectedGold);
         d.intelligence += n * r * 1.5;
         d.stress += n * (1 - r) * 3;
+      } else if (activityId === 'creativity') {
+        const n = clampSessionLength(count != null ? count : QUESTIONS_PER_CREATIVITY);
+        const lm = sessionLengthMultiplier(n, QUESTIONS_PER_CREATIVITY);
+        const perfectChance = Math.pow(r, n);
+        d.gold += Math.round(n * r * 12 * lm + perfectChance * 30 * lm);
+        d.creativity += n * r * 2 + perfectChance * 3;
+        d.stress += n * (1 - r) * 3;
+      } else if (activityId === 'faith') {
+        d.luck += QUESTIONS_PER_FAITH * r;
+        d.stress += -QUESTIONS_PER_FAITH * r;
       }
       return d;
     }
@@ -1008,8 +1063,10 @@
       STAT_KEYS, STAT_LABELS, GROWTH_STAT_KEYS, STAT_TIER_THRESHOLDS, STAT_TIER_COLORS,
       WEEKS_PER_MONTH, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT,
       QUESTIONS_PER_COMPETITION, COMPETITION_MIN_INTELLIGENCE,
+      QUESTIONS_PER_CREATIVITY, CREATIVITY_MIN_CREATIVITY, QUESTIONS_PER_FAITH,
       SESSION_LENGTH_MIN, SESSION_LENGTH_MAX, sessionLengthMultiplier,
       SAVE_KEY, EVENTS, ETIQUETTE_QUESTIONS: Question.ETIQUETTE_QUESTIONS, TALK_LINES, ITEMS,
+      CREATIVITY_PUZZLE_BANK: Question.CREATIVITY_PUZZLE_BANK, FAITH_QUESTIONS: Question.FAITH_QUESTIONS,
       BANQUET_TIERS, PRINCE_MIN_TIER,
       STRESS_OVERFLOW_THRESHOLD, NPC_HINT_AFFECTION, NPC_LENIENT_AFFECTION, CAREER_DEFS,
       MEDAL_TIERS, CERT_SUBJECT_KEYS,
@@ -1028,9 +1085,11 @@
       // 세션
       startStudySession, startJobSession, startBanquetSession, startExerciseSession, startRestSession,
       startLaundrySession, startGardenSession, startScenarioQuizSession, startCompetitionSession,
+      startCreativitySession, startFaithSession,
       applyCorrect, applyWrong,
       finishStudyOrJobOutcome, finishBanquetOutcome, finishExerciseBonusOutcome, finishRestBonusOutcome,
       finishLaundryBonusOutcome, finishGardenBonusOutcome, finishCompetitionOutcome, rollRandomEvent, checkStressOverflow,
+      finishCreativityOutcome, finishFaithOutcome,
       // 인물/시나리오
       scenarioUnlocked, findActiveScenario, applyStatNpcEffects, meetNpcAttempt,
       resolveScenarioOutcome, resolveBranchingOption, resolveNarrativeScenario, finishScenarioQuizOutcome,
@@ -1042,6 +1101,7 @@
       nextMedalTier, certExamEligible, certTierContentExists, startCertExamSession, finishCertExamOutcome,
       // 스케줄/활동
       currentWeekActivity, tryStartBanquet, banquetTierRequirementMet, competitionUnlocked, talkToDaughter,
+      creativityOlympiadUnlocked,
       // 계획 미리보기
       typicalStudyLevel, estimateActivityDelta, estimateRemainingWeeksDelta,
       // 턴 진행

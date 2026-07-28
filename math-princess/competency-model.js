@@ -43,14 +43,17 @@
     { id: 'community', name: '공동체 역량', emoji: '🤝', color: '#5fd6a8', desc: '공동체의 일원으로서 개방적·포용적 태도로 책임감 있게 참여하는 힘' },
   ];
 
-  // 연회 예절 문제(question-engine.js의 ETIQUETTE_QUESTIONS)의 category
-  // 값과 1:1로 대응한다. 상황판단 축은 "정답이 하나뿐인 지식 문제"가 아니라
-  // "이 상황에서 어떤 행동이 바람직한가"를 묻는 문제들의 전용 태그다.
+  // 레벨이 없는 고정 문제 은행(연회 예절 ETIQUETTE_QUESTIONS, 기도와 선행
+  // FAITH_QUESTIONS, 창의력 올림피아드 CREATIVITY_PUZZLE_BANK)의 category
+  // 값과 1:1로 대응하는 통합 분류 체계다. 대부분은 "이 상황에서 어떤 행동이
+  // 바람직한가"를 묻는 상황판단형이지만(예절/기도와 선행), 창의력 올림피아드의
+  // 패턴찾기/유추/공간지각/창의적사고처럼 순수 사고력 유형도 같은 구조로
+  // 태깅해 관리자 페이지에서 하나의 필터/매트릭스로 함께 볼 수 있게 한다.
   const JUDGMENT_CATEGORIES = [
     { id: '인사예절', emoji: '🙇', desc: '만남과 헤어짐에서 지켜야 할 예절', competencies: ['communication', 'aesthetic-emotional'] },
     { id: '식사예절', emoji: '🍽️', desc: '함께 먹는 자리에서 지켜야 할 예절', competencies: ['self-management', 'aesthetic-emotional'] },
     { id: '경청예절', emoji: '👂', desc: '다른 사람의 말을 존중하며 듣는 태도', competencies: ['communication'] },
-    { id: '감사와배려', emoji: '🙏', desc: '고마움과 배려를 표현하는 태도', competencies: ['communication', 'community'] },
+    { id: '감사와배려', emoji: '🙌', desc: '고마움과 배려를 표현하는 태도', competencies: ['communication', 'community'] },
     { id: '사과와배려', emoji: '💧', desc: '실수했을 때 책임지는 태도', competencies: ['self-management', 'communication'] },
     { id: '시간약속', emoji: '⏰', desc: '시간을 지켜 신뢰를 쌓는 태도', competencies: ['self-management', 'community'] },
     { id: '디지털시민의식', emoji: '💻', desc: '온라인에서 안전하고 바르게 행동하는 태도', competencies: ['community', 'self-management'] },
@@ -61,6 +64,14 @@
     { id: '다양성존중', emoji: '🌍', desc: '서로 다름을 이해하고 존중하는 태도', competencies: ['community', 'aesthetic-emotional'] },
     { id: '환경과공공질서', emoji: '🌱', desc: '공동체의 규칙과 환경을 지키는 태도', competencies: ['community', 'self-management'] },
     { id: '정직과책임감', emoji: '🧾', desc: '정직하게 행동하고 책임지는 태도', competencies: ['self-management', 'community'] },
+    { id: '성경퀴즈', emoji: '📖', desc: '쉬운 성경 이야기를 아는지 묻는 퀴즈', competencies: ['knowledge-processing', 'aesthetic-emotional'] },
+    { id: '어른공경', emoji: '🧓', desc: '어른을 말과 행동으로 공경하는 태도', competencies: ['community', 'communication'] },
+    { id: '친구배려', emoji: '🤗', desc: '친구에게 양보하고 칭찬하는 태도', competencies: ['communication', 'community'] },
+    { id: '기도', emoji: '🙏', desc: '진실한 마음으로 기도하며 돌아보는 태도', competencies: ['aesthetic-emotional', 'self-management'] },
+    { id: '패턴찾기', emoji: '🔢', desc: '숫자·글자의 규칙을 찾아내는 사고력', competencies: ['knowledge-processing', 'creative-thinking'] },
+    { id: '유추', emoji: '🔗', desc: '두 관계의 공통점을 찾아 적용하는 사고력', competencies: ['creative-thinking', 'knowledge-processing'] },
+    { id: '공간지각', emoji: '📐', desc: '도형과 공간을 머릿속으로 그려보는 사고력', competencies: ['knowledge-processing', 'creative-thinking'] },
+    { id: '창의적사고', emoji: '💭', desc: '고정관념을 벗어나 답을 찾는 사고력', competencies: ['creative-thinking'] },
   ];
 
   // 지식 축: 과목별로 어떤 역량과 주로 연결되는지(문항 하나하나가 아니라
@@ -83,6 +94,8 @@
     friend: { name: '친구 만나기', competencies: ['communication', 'community'] },
     banquet: { name: '연회 참석', competencies: ['aesthetic-emotional', 'communication'] },
     competition: { name: '왕국 수학경시대회', competencies: ['knowledge-processing', 'creative-thinking', 'self-management'] },
+    creativity: { name: '창의력 올림피아드', competencies: ['creative-thinking', 'knowledge-processing'] },
+    faith: { name: '기도와 선행', competencies: ['aesthetic-emotional', 'community', 'self-management'] },
     career: { name: '직업', competencies: ['community', 'self-management'] },
   };
 

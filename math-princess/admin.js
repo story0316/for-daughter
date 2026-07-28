@@ -33,6 +33,10 @@
     activityList: document.getElementById('activity-list'),
     etiquetteFilter: document.getElementById('etiquette-filter'),
     etiquetteList: document.getElementById('etiquette-list'),
+    creativityFilter: document.getElementById('creativity-filter'),
+    creativityList: document.getElementById('creativity-list'),
+    faithFilter: document.getElementById('faith-filter'),
+    faithList: document.getElementById('faith-list'),
     scenarioList: document.getElementById('scenario-list'),
   };
 
@@ -117,6 +121,8 @@
     const scienceBankTotal = sumBank(SUBJ.SCIENCE_BANK);
     const vocabBankTotal = sumBank(SUBJ.ENGLISH_VOCAB_BANK);
     const etiquetteTotal = Engine.ETIQUETTE_QUESTIONS.length;
+    const creativityTotal = Engine.CREATIVITY_PUZZLE_BANK.length;
+    const faithTotal = Engine.FAITH_QUESTIONS.length;
     const scenarioTotal = SC.SCENARIOS.length;
     const scenarioQuizTotal = SC.SCENARIOS.reduce((sum, s) => sum + (s.quiz ? s.quiz.bank.length : 0), 0);
     const cards = [
@@ -125,9 +131,11 @@
       { value: `${scienceBankTotal}개`, label: `과학 학습 문제 은행 (${SUBJ.SCIENCE_LEVELS.length}레벨)` },
       { value: `${vocabBankTotal}개`, label: '영어 인증 전용 단어-뜻 은행' },
       { value: `${etiquetteTotal}개`, label: '연회 예절 · 상황판단 문제' },
+      { value: `${creativityTotal}개`, label: '창의력 올림피아드 문제' },
+      { value: `${faithTotal}개`, label: '기도와 선행 문제' },
       { value: `${scenarioTotal}편`, label: `시나리오 (문제 ${scenarioQuizTotal}개 포함)` },
       { value: `${CM.CORE_COMPETENCIES.length}개`, label: '핵심역량 축' },
-      { value: `${CM.JUDGMENT_CATEGORIES.length}개`, label: '상황판단 유형' },
+      { value: `${CM.JUDGMENT_CATEGORIES.length}개`, label: '상황판단·사고력 유형' },
     ];
     el.overviewCards.innerHTML = cards.map((c) => `
       <div class="overview-card">
@@ -252,43 +260,50 @@
     }).join('');
   }
 
-  /* ---------------- 연회 예절 · 상황판단 문제 ---------------- */
+  /* ---------------- 고정 문제 은행 브라우저(연회 예절/창의력/기도와 선행 공용) ---------------- */
 
-  let etiquetteFilter = '';
-
-  function renderEtiquetteFilter() {
-    const categories = CM.JUDGMENT_CATEGORIES.filter((j) => Engine.ETIQUETTE_QUESTIONS.some((q) => q.category === j.id));
-    const allBtn = `<button class="filter-chip${etiquetteFilter === '' ? ' active' : ''}" data-cat="">전체(${Engine.ETIQUETTE_QUESTIONS.length})</button>`;
-    const catBtns = categories.map((j) => {
-      const count = Engine.ETIQUETTE_QUESTIONS.filter((q) => q.category === j.id).length;
-      return `<button class="filter-chip${etiquetteFilter === j.id ? ' active' : ''}" data-cat="${j.id}">${j.emoji} ${j.id}(${count})</button>`;
-    }).join('');
-    el.etiquetteFilter.innerHTML = allBtn + catBtns;
+  // 세 문제 은행(연회 예절, 창의력 올림피아드, 기도와 선행) 모두 "category
+  // 필드로 태깅된 flat 배열"이라는 같은 모양이라, 필터 칩 + 카드 목록
+  // 렌더링 로직을 한 번만 만들어 재사용한다.
+  function createBankBrowser(bank, filterEl, listEl) {
+    let filter = '';
+    function renderFilter() {
+      const categories = CM.JUDGMENT_CATEGORIES.filter((j) => bank.some((q) => q.category === j.id));
+      const allBtn = `<button class="filter-chip${filter === '' ? ' active' : ''}" data-cat="">전체(${bank.length})</button>`;
+      const catBtns = categories.map((j) => {
+        const count = bank.filter((q) => q.category === j.id).length;
+        return `<button class="filter-chip${filter === j.id ? ' active' : ''}" data-cat="${j.id}">${j.emoji} ${j.id}(${count})</button>`;
+      }).join('');
+      filterEl.innerHTML = allBtn + catBtns;
+    }
+    function renderList() {
+      const items = bank.filter((q) => !filter || q.category === filter);
+      listEl.innerHTML = items.map((q) => {
+        const cat = CM.judgmentCategoryById(q.category);
+        return `
+          <div class="admin-card" data-question-id="${q.id}">
+            <div class="admin-card-title">${cat ? cat.emoji : ''} ${q.question}</div>
+            <div class="admin-card-desc">정답: ${q.answer} · ${q.explanation}</div>
+            <div class="admin-card-meta">
+              <span class="tag-chip">${q.category}</span>
+            </div>
+            ${competencyChips(cat ? cat.competencies : [])}
+          </div>`;
+      }).join('');
+    }
+    filterEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-cat]');
+      if (!btn) return;
+      filter = btn.dataset.cat || '';
+      renderFilter();
+      renderList();
+    });
+    return { render: () => { renderFilter(); renderList(); } };
   }
 
-  function renderEtiquetteList() {
-    const items = Engine.ETIQUETTE_QUESTIONS.filter((q) => !etiquetteFilter || q.category === etiquetteFilter);
-    el.etiquetteList.innerHTML = items.map((q) => {
-      const cat = CM.judgmentCategoryById(q.category);
-      return `
-        <div class="admin-card" data-etiquette-id="${q.id}">
-          <div class="admin-card-title">${cat ? cat.emoji : ''} ${q.question}</div>
-          <div class="admin-card-desc">정답: ${q.answer} · ${q.explanation}</div>
-          <div class="admin-card-meta">
-            <span class="tag-chip">${q.category}</span>
-          </div>
-          ${competencyChips(cat ? cat.competencies : [])}
-        </div>`;
-    }).join('');
-  }
-
-  el.etiquetteFilter.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-cat]');
-    if (!btn) return;
-    etiquetteFilter = btn.dataset.cat || '';
-    renderEtiquetteFilter();
-    renderEtiquetteList();
-  });
+  const etiquetteBrowser = createBankBrowser(Engine.ETIQUETTE_QUESTIONS, el.etiquetteFilter, el.etiquetteList);
+  const creativityBrowser = createBankBrowser(Engine.CREATIVITY_PUZZLE_BANK, el.creativityFilter, el.creativityList);
+  const faithBrowser = createBankBrowser(Engine.FAITH_QUESTIONS, el.faithFilter, el.faithList);
 
   /* ---------------- 시나리오 ---------------- */
 
@@ -314,8 +329,9 @@
     renderSubjects();
     renderCert();
     renderActivities();
-    renderEtiquetteFilter();
-    renderEtiquetteList();
+    etiquetteBrowser.render();
+    creativityBrowser.render();
+    faithBrowser.render();
     renderScenarios();
   }
 
