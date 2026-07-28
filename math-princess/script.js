@@ -51,6 +51,8 @@
   }
 
   const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 48;
+  // 한 달(턴)은 생활 계획표처럼 4주로 나뉘어, 매주 서로 다른 활동을 배치할 수 있다.
+  const WEEKS_PER_MONTH = 4;
   const QUESTIONS_PER_STUDY = 4;
   const QUESTIONS_PER_JOB = 3;
   const SAVE_KEY = 'math-princess-save-v1';
@@ -282,6 +284,7 @@
       start: document.getElementById('screen-start'),
       main: document.getElementById('screen-main'),
       schedule: document.getElementById('screen-schedule'),
+      weekPick: document.getElementById('screen-week-pick'),
       status: document.getElementById('screen-status'),
       shop: document.getElementById('screen-shop'),
       npcSelect: document.getElementById('screen-npc-select'),
@@ -306,7 +309,12 @@
     mainStatPanel: document.getElementById('main-stat-panel'),
 
     btnScheduleBack: document.getElementById('btn-schedule-back'),
-    scheduleList: document.getElementById('schedule-list'),
+    weekPlanList: document.getElementById('week-plan-list'),
+    weekPlanPreview: document.getElementById('week-plan-preview'),
+
+    btnWeekPickBack: document.getElementById('btn-week-pick-back'),
+    weekPickTitle: document.getElementById('week-pick-title'),
+    weekPickList: document.getElementById('week-pick-list'),
 
     btnStatusBack: document.getElementById('btn-status-back'),
     statusPortrait: document.getElementById('status-portrait'),
@@ -400,7 +408,8 @@
       items: {},
       npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 })),
       wardrobe: { unlockedMax: 0, equipped: 0 },
-      scheduledActivity: null,
+      weekPlan: new Array(WEEKS_PER_MONTH).fill(null),
+      weekIndex: 0,
       talkedThisTurn: false,
       completedScenarios: [],
     };
@@ -463,7 +472,13 @@
         if (typeof n.lastMetTurn !== 'number') n.lastMetTurn = 0;
       });
       loaded.wardrobe = loaded.wardrobe || { unlockedMax: 0, equipped: 0 };
-      if (typeof loaded.scheduledActivity === 'undefined') loaded.scheduledActivity = null;
+      if (!Array.isArray(loaded.weekPlan) || loaded.weekPlan.length !== WEEKS_PER_MONTH) {
+        loaded.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
+        // 옛 저장 데이터(주간 계획표 이전)에 골라둔 활동이 있었다면 1주차로 옮겨준다.
+        if (loaded.scheduledActivity) loaded.weekPlan[0] = loaded.scheduledActivity;
+      }
+      if (typeof loaded.weekIndex !== 'number' || loaded.weekIndex < 0 || loaded.weekIndex >= WEEKS_PER_MONTH) loaded.weekIndex = 0;
+      delete loaded.scheduledActivity;
       if (typeof loaded.talkedThisTurn === 'undefined') loaded.talkedThisTurn = false;
       if (!Array.isArray(loaded.completedScenarios)) loaded.completedScenarios = [];
       state = loaded;
@@ -890,7 +905,7 @@
 
   el.btnSummaryConfirm.addEventListener('click', () => {
     session = null;
-    advanceTurn();
+    advanceWeekOrTurn();
   });
 
   /* ---------------- 활동: 운동 / 휴식 / 친구 만나기 ---------------- */
@@ -994,7 +1009,7 @@
     announceStatLevelUps(beforeTiers);
     saveGame();
     if (bonus) showLevelToast('🧺 빨래하다 주머니에서 동전을 발견했어요!');
-    advanceTurn();
+    advanceWeekOrTurn();
   }
 
   // 텃밭 가꾸기: 정원사를 고용하면 매턴 자동으로 처리되어 더 이상 스케줄할 필요가 없다.
@@ -1026,12 +1041,12 @@
     announceStatLevelUps(beforeTiers);
     saveGame();
     if (bonus) showLevelToast('🌾 튼실한 작물을 더 수확했어요!');
-    advanceTurn();
+    advanceWeekOrTurn();
   }
 
   function maybeTriggerEvent(chance) {
     if (Math.random() > chance) {
-      advanceTurn();
+      advanceWeekOrTurn();
       return;
     }
     const pool = EVENTS.filter((ev) => !ev.requirement || ev.requirement(state));
@@ -1049,7 +1064,7 @@
   }
 
   el.btnEventConfirm.addEventListener('click', () => {
-    advanceTurn();
+    advanceWeekOrTurn();
   });
 
   /* ---------------- 친구 만나기: 상대 선택 ---------------- */
@@ -1411,18 +1426,14 @@
     else if (activity === 'laundry') {
       if (state.items.maid) {
         showLevelToast('🧹 하녀가 이미 빨래를 도맡아 하고 있어요');
-        state.scheduledActivity = null;
-        showScreen('main');
-        renderMain();
+        advanceWeekOrTurn();
         return;
       }
       doLaundry();
     } else if (activity === 'garden') {
       if (state.items.gardener) {
         showLevelToast('🌾 정원사가 이미 텃밭을 돌보고 있어요');
-        state.scheduledActivity = null;
-        showScreen('main');
-        renderMain();
+        advanceWeekOrTurn();
         return;
       }
       doGarden();
@@ -1434,10 +1445,12 @@
   function tryStartBanquet() {
     if (state.wardrobe.equipped < BANQUET_MIN_TIER) {
       showLevelToast(`💃 ${OUTFIT_TIERS[BANQUET_MIN_TIER].name} 이상을 입어야 연회에 입장할 수 있어요`);
+      advanceWeekOrTurn();
       return;
     }
     if (state.gold < BANQUET_ENTRY_FEE) {
       showLevelToast(`💰 연회 입장료 ${BANQUET_ENTRY_FEE}G가 부족해요`);
+      advanceWeekOrTurn();
       return;
     }
     state.gold -= BANQUET_ENTRY_FEE;
@@ -1445,21 +1458,29 @@
     startBanquetSession();
   }
 
+  function currentWeekActivity() {
+    return state.weekPlan[state.weekIndex] || null;
+  }
+
+  // 메인 화면 배너: 이번 달 몇 주째인지, 이번 주에 무엇을 하기로 했는지 보여준다.
   function updateScheduleBanner() {
-    if (state.scheduledActivity && ACTIVITY_DEFS[state.scheduledActivity]) {
-      const def = ACTIVITY_DEFS[state.scheduledActivity];
-      el.scheduleBannerText.textContent = `${def.emoji} ${def.name}`;
+    const activity = currentWeekActivity();
+    const weekLabel = `${state.weekIndex + 1}/${WEEKS_PER_MONTH}주`;
+    if (activity && ACTIVITY_DEFS[activity]) {
+      const def = ACTIVITY_DEFS[activity];
+      el.scheduleBannerText.textContent = `🗓️ ${weekLabel} · 다음: ${def.emoji} ${def.name}`;
       el.scheduleBanner.style.display = 'block';
     } else {
-      el.scheduleBanner.style.display = 'none';
+      el.scheduleBannerText.textContent = `🗓️ ${weekLabel} · 이번 주 계획을 세워보세요`;
+      el.scheduleBanner.style.display = 'block';
     }
   }
 
   // 하녀/정원사를 고용한 뒤에는 그 집안일을 더 이상 직접 스케줄할 필요가
   // 없다는 것을 잠금 카드 스타일로 보여준다(자동으로 처리되는 중).
-  function updateScheduleListLocks() {
-    const laundryBtn = el.scheduleList.querySelector('[data-activity="laundry"]');
-    const gardenBtn = el.scheduleList.querySelector('[data-activity="garden"]');
+  function updateWeekPickListLocks() {
+    const laundryBtn = el.weekPickList.querySelector('[data-activity="laundry"]');
+    const gardenBtn = el.weekPickList.querySelector('[data-activity="garden"]');
     if (laundryBtn) {
       laundryBtn.classList.toggle('locked', !!state.items.maid);
       laundryBtn.querySelector('.level-desc').textContent = state.items.maid
@@ -1474,28 +1495,154 @@
     }
   }
 
+  /* ---------------- 이번 달 생활 계획표 ---------------- */
+
+  const ASSUMED_CORRECT_RATE = 0.75;
+  const EXPECTED_COMBO_MULTIPLIER = 1.3;
+  const DELTA_STAT_KEYS = ['gold', 'intelligence', 'focus', 'stamina', 'charm', 'creativity', 'stress', 'luck'];
+  const DELTA_STAT_LABELS = { gold: '골드', intelligence: '지능', focus: '집중력', stamina: '체력', charm: '매력', creativity: '창의력', stress: '스트레스', luck: '행운' };
+
+  // 지금 지능으로 도달한 가장 높은 수학 레벨을 "평균적으로 나올 문제 난이도"로 삼아
+  // 보상을 어림잡는다(실제로는 매 문제 과목·레벨이 무작위라 정확한 값은 아니다).
+  function typicalStudyLevel() {
+    const unlocked = unlockedLevelsFor('math');
+    return unlocked.length ? unlocked[unlocked.length - 1] : 1;
+  }
+
+  // 활동 하나를 한 주 동안 했을 때 예상되는 스탯/골드 변화를 어림잡아 계산한다.
+  // 정답률 75%를 가정한 대략적인 예상치이며, 실제 결과는 문제 운·콤보에 따라 달라진다.
+  function estimateActivityDelta(activityId) {
+    const d = { gold: 0, intelligence: 0, focus: 0, stamina: 0, charm: 0, creativity: 0, stress: 0, luck: 0 };
+    const level = typicalStudyLevel();
+    const rewardGold = 8 + level * 4;
+    const r = ASSUMED_CORRECT_RATE;
+    if (activityId === 'study') {
+      d.gold += Math.round(QUESTIONS_PER_STUDY * r * rewardGold * EXPECTED_COMBO_MULTIPLIER * (1 + itemBonusSum('goldBonus')));
+      d.intelligence += QUESTIONS_PER_STUDY * r * (level + itemBonusSum('intBonus'));
+      d.creativity += QUESTIONS_PER_STUDY * r * level * 0.2;
+      d.stress += QUESTIONS_PER_STUDY * (1 - r) * 6;
+      d.stamina += -QUESTIONS_PER_STUDY * (1 - r) * 4 - QUESTIONS_PER_STUDY * r * 2;
+    } else if (activityId === 'job') {
+      const level1Reward = 8 + 1 * 4;
+      d.gold += Math.round(QUESTIONS_PER_JOB * r * level1Reward * EXPECTED_COMBO_MULTIPLIER * 1.5 * (1 + itemBonusSum('goldBonus')));
+      d.stamina += -QUESTIONS_PER_JOB * r * 2 - QUESTIONS_PER_JOB * (1 - r) * 3;
+    } else if (activityId === 'exercise') {
+      d.stamina += 8 + 2 * r;
+      d.focus += 4 + 3 * r;
+      d.stress += 3;
+    } else if (activityId === 'rest') {
+      const rm = 1 + itemBonusSum('restBonus');
+      d.stress += -12 * rm - 5 * r;
+      d.stamina += 10 * rm + 3 * r;
+    } else if (activityId === 'laundry') {
+      d.stress += -6 - 3 * r;
+      d.stamina += -2;
+      d.gold += 10 + 5 * r;
+    } else if (activityId === 'garden') {
+      d.stamina += -4;
+      d.gold += 25 + 15 * r;
+    } else if (activityId === 'friend') {
+      d.charm += 3; // 실제로는 만나는 인물마다 다르며, 만날 때 정해진다
+    } else if (activityId === 'banquet') {
+      d.gold += -BANQUET_ENTRY_FEE;
+      d.charm += QUESTIONS_PER_BANQUET * r * (4 + itemBonusSum('charmBonus'));
+      d.stress += QUESTIONS_PER_BANQUET * (1 - r) * 2;
+    }
+    return d;
+  }
+
+  function renderWeekPlanPreview() {
+    const total = { gold: 0, intelligence: 0, focus: 0, stamina: 0, charm: 0, creativity: 0, stress: 0, luck: 0 };
+    let planned = 0;
+    for (let i = state.weekIndex; i < WEEKS_PER_MONTH; i++) {
+      const activity = state.weekPlan[i];
+      if (!activity) continue;
+      planned++;
+      const d = estimateActivityDelta(activity);
+      DELTA_STAT_KEYS.forEach((k) => { total[k] += d[k]; });
+    }
+    el.weekPlanPreview.innerHTML = '';
+    if (planned === 0) {
+      el.weekPlanPreview.innerHTML = '<div class="status-empty">남은 주에 활동을 배치하면 예상 변화가 보여요</div>';
+      return;
+    }
+    DELTA_STAT_KEYS.forEach((k) => {
+      const v = total[k];
+      if (Math.abs(v) < 0.05) return;
+      const rounded = k === 'gold' ? Math.round(v) : Math.round(v * 10) / 10;
+      const row = document.createElement('div');
+      row.className = 'delta-row';
+      const sign = rounded > 0 ? '+' : '';
+      row.innerHTML = `<span class="delta-row-label">${DELTA_STAT_LABELS[k]}</span><span class="delta-row-value ${rounded >= 0 ? 'positive' : 'negative'}">${sign}${rounded}</span>`;
+      el.weekPlanPreview.appendChild(row);
+    });
+  }
+
+  function renderWeekPlanScreen() {
+    el.weekPlanList.innerHTML = '';
+    for (let i = 0; i < WEEKS_PER_MONTH; i++) {
+      const activityId = state.weekPlan[i];
+      const def = activityId ? ACTIVITY_DEFS[activityId] : null;
+      const done = i < state.weekIndex;
+      const isCurrent = i === state.weekIndex;
+      const card = document.createElement('button');
+      card.className = `level-card week-plan-card${done ? ' locked' : ''}${isCurrent ? ' current' : ''}`;
+      card.innerHTML = `
+        <span class="level-badge-num">${i + 1}주</span>
+        <span class="level-info">
+          <span class="level-title">${def ? `${def.emoji} ${def.name}` : '무엇을 할까요?'}</span>
+          <span class="level-desc">${done ? '이미 지나간 주예요' : isCurrent ? '이번 주 (다음 실행)' : '탭해서 계획하기'}</span>
+        </span>
+        <span class="level-lock-icon">${done ? '✔️' : '›'}</span>
+      `;
+      if (!done) {
+        card.addEventListener('click', () => openWeekActivityPicker(i));
+      }
+      el.weekPlanList.appendChild(card);
+    }
+    renderWeekPlanPreview();
+  }
+
   function openSchedule() {
-    updateScheduleListLocks();
+    renderWeekPlanScreen();
     showScreen('schedule');
   }
 
-  el.scheduleList.addEventListener('click', (e) => {
+  let editingWeekIndex = 0;
+
+  function openWeekActivityPicker(weekIdx) {
+    editingWeekIndex = weekIdx;
+    el.weekPickTitle.textContent = `${weekIdx + 1}주차에 할 일을 골라주세요`;
+    updateWeekPickListLocks();
+    showScreen('weekPick');
+  }
+
+  el.weekPickList.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-activity]');
     if (!btn || btn.classList.contains('locked')) return;
-    state.scheduledActivity = btn.dataset.activity;
+    state.weekPlan[editingWeekIndex] = btn.dataset.activity;
     saveGame();
+    showScreen('schedule');
+    renderWeekPlanScreen();
+  });
+
+  el.btnWeekPickBack.addEventListener('click', () => {
+    showScreen('schedule');
+    renderWeekPlanScreen();
+  });
+
+  el.btnScheduleBack.addEventListener('click', () => {
     updateScheduleBanner();
     showScreen('main');
   });
 
-  el.btnScheduleBack.addEventListener('click', () => showScreen('main'));
-
   function executeSchedule() {
-    if (!state.scheduledActivity) {
+    const activity = currentWeekActivity();
+    if (!activity) {
       openSchedule();
       return;
     }
-    runActivity(state.scheduledActivity);
+    runActivity(activity);
   }
 
   function talkToDaughter() {
@@ -1630,7 +1777,8 @@
 
   function advanceTurn() {
     state.turn++;
-    state.scheduledActivity = null;
+    state.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
+    state.weekIndex = 0;
     state.talkedThisTurn = false;
     applyServantEffects();
     applyAffectionDecay();
@@ -1641,6 +1789,20 @@
     saveGame();
     showScreen('main');
     renderMain();
+  }
+
+  // 한 주(週)의 활동을 마쳤을 때 호출한다. 이번 달(턴) 안에 남은 주가 있으면
+  // 다음 주로 넘어가 메인 화면으로 돌아가고(다시 "실행"을 눌러 이어감),
+  // 이번 달의 마지막 주였다면 실제로 달(턴)을 넘긴다.
+  function advanceWeekOrTurn() {
+    if (state.weekIndex < WEEKS_PER_MONTH - 1) {
+      state.weekIndex++;
+      saveGame();
+      showScreen('main');
+      renderMain();
+    } else {
+      advanceTurn();
+    }
   }
 
   function showEnding() {

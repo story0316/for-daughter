@@ -48,7 +48,7 @@
       <div id="main-stat-panel" class="stat-panel main-stat-panel"></div>
 
       <div id="schedule-banner" class="schedule-banner" style="display:none">
-        이번 달 예정: <span id="schedule-banner-text">-</span>
+        <span id="schedule-banner-text">-</span>
       </div>
 
       <div class="main-menu-grid" id="main-menu-grid">
@@ -79,15 +79,32 @@
       </div>
     </section>
 
-    <!-- 스케줄 선택 화면 -->
+    <!-- 이번 달 계획표 화면 -->
     <section id="screen-schedule" class="screen">
       <header class="hud">
         <div class="hud-row">
           <button id="btn-schedule-back" class="btn-back">‹ 뒤로</button>
-          <div class="turn-label">이번 달 예정을 골라주세요</div>
+          <div class="turn-label">이번 달 생활 계획표</div>
         </div>
       </header>
-      <div class="level-list" id="schedule-list">
+      <div class="week-plan-scroll">
+        <div class="level-list" id="week-plan-list"></div>
+        <div class="week-plan-preview-wrap">
+          <div class="week-plan-preview-title">📈 남은 주 예상 변화 <span class="week-plan-preview-sub">(정답률 75% 가정, 대략적인 예상치)</span></div>
+          <div id="week-plan-preview" class="stat-panel week-plan-preview"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 주간 활동 선택 화면 -->
+    <section id="screen-week-pick" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-week-pick-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label" id="week-pick-title">몇 주차에 할 일을 골라주세요</div>
+        </div>
+      </header>
+      <div class="level-list" id="week-pick-list">
         <button class="level-card" data-activity="study">
           <span class="level-badge-num">📖</span>
           <span class="level-info">

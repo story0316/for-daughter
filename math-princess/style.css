@@ -706,6 +706,76 @@ html, body {
   font-size: 16px;
 }
 
+/* ---------- 이번 달 생활 계획표 ---------- */
+.week-plan-scroll {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.week-plan-scroll .level-list {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.week-plan-card.current {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 0 0 2px #b48fff, 0 4px 12px rgba(0,0,0,0.18);
+}
+
+.week-plan-preview-wrap {
+  flex: 0 0 auto;
+  padding: 4px 16px 24px;
+}
+
+.week-plan-preview-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #d8c8ff;
+  margin: 10px 0 8px;
+}
+
+.week-plan-preview-sub {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(216, 200, 255, 0.7);
+}
+
+.week-plan-preview {
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  gap: 6px;
+}
+
+.delta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.delta-row-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #d8c8ff;
+}
+
+.delta-row-value {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.delta-row-value.positive {
+  color: #8fffb0;
+}
+
+.delta-row-value.negative {
+  color: #ff8f9e;
+}
+
 /* ---------- 상점 ---------- */
 .shop-item .level-badge-num {
   background: linear-gradient(180deg, #ffd873, #ffb84d);
