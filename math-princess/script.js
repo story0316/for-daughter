@@ -235,7 +235,11 @@
   // 얼마나 좋아졌는지(스트레스는 줄어드는 게 좋은 변화) 눈에 띄게 보여준다.
   const statPanelPrevValues = new WeakMap();
 
-  function renderStatPanel(container, stats) {
+  // projectedDeltas를 주면(메인 화면에서 이번 달 남은 계획을 다 실행했을 때
+  // 예상되는 변화, Engine.estimateRemainingWeeksDelta 결과) 게이지바 위에
+  // "여기까지 오를 수 있어요"를 보여주는 반투명 예상 바를 함께 그린다.
+  // 실제로 어디까지 갈지 미리 보여줘서 스케줄을 짤 동기부여가 되도록 하는 용도다.
+  function renderStatPanel(container, stats, projectedDeltas) {
     const prev = statPanelPrevValues.get(container);
     const isFirstRender = !prev || container.children.length === 0;
     if (isFirstRender) container.innerHTML = '';
@@ -246,6 +250,9 @@
       const tier = isGrowth ? Engine.statTierIndex(value) : 0;
       const fillColor = isGrowth ? Engine.STAT_TIER_COLORS[tier] : '';
       const tierLabel = isGrowth ? ` <span class="stat-row-tier">Lv${tier + 1}</span>` : '';
+      const projectedValue = projectedDeltas
+        ? Math.max(value, Math.min(100, Math.round(value + (projectedDeltas[key] || 0))))
+        : value;
 
       if (isFirstRender) {
         const row = document.createElement('div');
@@ -254,7 +261,10 @@
         const fillStyle = `width:${value}%${fillColor ? `;background:${fillColor}` : ''}`;
         row.innerHTML = `
           <span class="stat-row-label">${STAT_LABELS[key]}</span>
-          <span class="stat-row-track"><span class="stat-row-fill${key === 'stress' ? ' stress-fill' : ''}" style="${fillStyle}"></span></span>
+          <span class="stat-row-track">
+            <span class="stat-row-projected" style="width:${projectedValue}%"></span>
+            <span class="stat-row-fill${key === 'stress' ? ' stress-fill' : ''}" style="${fillStyle}"></span>
+          </span>
           <span class="stat-row-value">${value}${tierLabel}<span class="stat-row-delta"></span></span>
         `;
         container.appendChild(row);
@@ -266,6 +276,7 @@
       const fillEl = row.querySelector('.stat-row-fill');
       fillEl.style.width = `${value}%`;
       if (fillColor) fillEl.style.background = fillColor;
+      row.querySelector('.stat-row-projected').style.width = `${projectedValue}%`;
       row.querySelector('.stat-row-value').innerHTML = `${value}${tierLabel}<span class="stat-row-delta"></span>`;
 
       const delta = value - Math.round(prev[key]);
@@ -334,7 +345,8 @@
     const equippedTier = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.characterPortrait, state.wardrobe.equipped, 'main');
     el.outfitBadge.textContent = `${equippedTier.emoji} ${equippedTier.name}`;
-    renderStatPanel(el.mainStatPanel, state.stats);
+    const { total: projectedDeltas } = Engine.estimateRemainingWeeksDelta(state);
+    renderStatPanel(el.mainStatPanel, state.stats, projectedDeltas);
     updateScheduleBanner();
   }
 
@@ -988,7 +1000,7 @@
   });
 
   el.btnScheduleBack.addEventListener('click', () => {
-    updateScheduleBanner();
+    renderMain(); // 계획을 바꿨을 수 있으니 게이지바의 예상치(반투명 바)도 다시 계산해서 보여준다
     showScreen('main');
   });
 

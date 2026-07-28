@@ -401,6 +401,7 @@ html, body {
 }
 
 .stat-row-track {
+  position: relative;
   flex: 1 1 auto;
   height: 8px;
   border-radius: 999px;
@@ -408,7 +409,23 @@ html, body {
   overflow: hidden;
 }
 
+/* 이번 달 남은 계획을 다 실행하면 어디까지 오를지 미리 보여주는 반투명 예상 바.
+   실제 게이지(.stat-row-fill) 뒤에 깔려서, 그보다 넓을 때만 "여기까지 갈 수
+   있어요"하는 여유분처럼 삐져나와 보인다. */
+.stat-row-projected {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.3);
+  transition: width 0.4s ease;
+}
+
 .stat-row-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
   height: 100%;
   border-radius: 999px;
