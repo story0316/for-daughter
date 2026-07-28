@@ -78,9 +78,34 @@ async function testApplyAndMonthlyIncome() {
   ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
 }
 
+async function testResignCareer() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({ gold: 500, career: 'tutor', stats: { intelligence: 30, focus: 10, stamina: 50, charm: 10, creativity: 10, stress: 10, luck: 10 } });
+    await seedAndContinue(page, state);
+    await page.click('[data-menu="shop"]');
+    await page.waitForSelector('#screen-shop.active');
+    await page.click('.shop-tab-btn[data-tab="career"]');
+    await page.waitForTimeout(150);
+
+    const employedCard = await page.$('.career-card.employed');
+    ok(employedCard, '재직 중인 직업 카드가 있어야 함');
+    const btn = await employedCard.$('.shop-buy-btn');
+    eq((await btn.textContent()).trim(), '그만두기', '재직 중인 카드의 버튼은 "그만두기"여야 함');
+    await btn.click();
+    await page.waitForTimeout(150);
+
+    const saved = await getSavedState(page);
+    eq(saved.career, null, '그만두기를 누르면 무직(null)이 되어야 함');
+    const employedAfter = await page.$('.career-card.employed');
+    ok(!employedAfter, '그만둔 뒤에는 "재직 중" 카드가 없어야 함');
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
+}
+
 (async () => {
   console.log('career e2e tests');
   await testLockedWithoutRequirement();
   await testApplyAndMonthlyIncome();
+  await testResignCareer();
   summary('career.test.js');
 })();

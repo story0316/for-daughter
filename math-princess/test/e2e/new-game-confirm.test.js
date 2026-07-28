@@ -2,7 +2,7 @@
 // 실수로 지우지 않도록 먼저 확인을 받는지 검증한다(취소하면 기존 진행 보존,
 // 확인하면 실제로 새 게임 시작). 저장 데이터가 없을 때는 확인 없이 바로 시작한다.
 const { ok, eq, summary } = require('../helpers/assert');
-const { withPage, seedAndContinue, makeState, getSavedState, activeScreenId, BASE_URL } = require('./helpers');
+const { withPage, seedAndContinue, makeState, getSavedState, activeScreenId, drainQuizSession, BASE_URL } = require('./helpers');
 
 async function testNoExistingSaveStartsImmediately() {
   const errors = await withPage(async (page) => {
@@ -72,11 +72,55 @@ async function testConfirmOverwritesExistingSave() {
   ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
 }
 
+async function testCorruptSaveSkipsConfirmAndHidesContinue() {
+  const errors = await withPage(async (page) => {
+    await page.goto(`${BASE_URL}/math-princess/index.html?turns=48`);
+    // turn 필드가 없는(손상되었거나 예전 형식이 아닌) 저장 데이터는 이어할 수
+    // 없으므로, 이어하기 버튼도 숨겨져야 하고 "새로 시작하기"도 확인 없이
+    // 바로 시작되어야 한다(잃을 진행 상황이 실제로는 없으므로).
+    await page.evaluate(() => localStorage.setItem('math-princess-save-v1', JSON.stringify({ notAValidSave: true })));
+    await page.reload();
+    await page.waitForSelector('#screen-start.active');
+    const continueVisible = await page.evaluate(() => document.getElementById('btn-continue').style.display !== 'none');
+    ok(!continueVisible, '유효하지 않은 저장 데이터면 이어하기 버튼이 보이면 안 됨');
+
+    await page.click('#btn-new-game');
+    await page.waitForSelector('#screen-main.active');
+    const active = await activeScreenId(page);
+    eq(active, 'screen-main', '유효하지 않은 저장 데이터는 확인 없이 바로 새 게임이 시작되어야 함');
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
+}
+
+async function testContinueButtonHidesAfterEnding() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({
+      turn: 48, gold: 500,
+      stats: { intelligence: 90, focus: 80, stamina: 80, charm: 90, creativity: 80, stress: 10, luck: 40 },
+      weekPlan: ['rest', 'rest', 'rest', 'rest'], weekIndex: 3,
+    });
+    await seedAndContinue(page, state);
+    await page.click('[data-menu="execute"]');
+    await page.waitForSelector('#screen-quiz.active');
+    await drainQuizSession(page);
+    if ((await activeScreenId(page)) === 'screen-event') await page.click('#btn-event-confirm');
+    await page.waitForSelector('#screen-ending.active', { timeout: 12000 });
+    await page.click('#btn-ending-home');
+    await page.waitForSelector('#screen-start.active');
+
+    const continueVisible = await page.evaluate(() => document.getElementById('btn-continue').style.display !== 'none');
+    ok(!continueVisible, '엔딩을 본 뒤에는 저장 데이터가 삭제되므로 이어하기 버튼도 숨겨져야 함');
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
+}
+
 (async () => {
   console.log('new-game-confirm e2e tests');
   await testNoExistingSaveStartsImmediately();
   await testExistingSaveShowsConfirmDialog();
   await testCancelPreservesExistingSave();
   await testConfirmOverwritesExistingSave();
+  await testCorruptSaveSkipsConfirmAndHidesContinue();
+  await testContinueButtonHidesAfterEnding();
   summary('new-game-confirm.test.js');
 })();

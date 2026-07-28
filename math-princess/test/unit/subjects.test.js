@@ -27,6 +27,8 @@ SUBJECTS.forEach(({ name, levels, isUnlocked, generate }) => {
       // 채점은 problems.js의 checkAnswer를 그대로 재사용한다고 문서화되어 있으므로 그대로 검증
       ok(P.checkAnswer(problem, problem.answer), `${name} 레벨 ${level.id} 문제는 problems.js checkAnswer로도 정답 처리되어야 함`);
       ok(!P.checkAnswer(problem, '__definitely_wrong__'), `${name} 레벨 ${level.id} 무의미한 입력은 오답 처리`);
+      ok(typeof problem.hint === 'string' && problem.hint.length > 5, `${name} 레벨 ${level.id} 문제에는 풀이 힌트(hint)가 있어야 함: "${problem.question}"`);
+      ok(!problem.hint.includes(problem.answer), `${name} 레벨 ${level.id} 힌트는 정답(${problem.answer})을 그대로 담고 있으면 안 됨(스포일러 방지): "${problem.hint}"`);
     }
   });
 

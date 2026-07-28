@@ -100,12 +100,15 @@
     quizCombo: document.getElementById('quiz-combo'),
     quizLevelBadge: document.getElementById('quiz-level-badge'),
     quizQuestion: document.getElementById('quiz-question'),
+    btnQuizHint: document.getElementById('btn-quiz-hint'),
+    quizHint: document.getElementById('quiz-hint'),
     quizChoices: document.getElementById('quiz-choices'),
     quizInputWrap: document.getElementById('quiz-input-wrap'),
     quizInput: document.getElementById('quiz-input'),
     btnQuizSubmit: document.getElementById('btn-quiz-submit'),
     quizKeypad: document.getElementById('quiz-keypad'),
     quizFeedback: document.getElementById('quiz-feedback'),
+    btnQuizNext: document.getElementById('btn-quiz-next'),
 
     summaryEmoji: document.getElementById('summary-emoji'),
     summaryTitle: document.getElementById('summary-title'),
@@ -229,7 +232,12 @@
   }
 
   function loadGame() {
-    const raw = localStorage.getItem(SAVE_KEY);
+    let raw;
+    try {
+      raw = localStorage.getItem(SAVE_KEY);
+    } catch (e) {
+      return false;
+    }
     if (!raw) return false;
     try {
       const loaded = Engine.migrateLoadedState(JSON.parse(raw));
@@ -239,6 +247,28 @@
     } catch (e) {
       return false;
     }
+  }
+
+  // 현재 state를 건드리지 않고, 이어할 수 있는 "유효한" 저장 데이터가 있는지만
+  // 확인한다(이어하기 버튼 표시 여부, 새로 시작 시 확인창 표시 여부에 사용).
+  // localStorage에 값이 있어도 손상된 JSON이거나 필수 필드가 없으면 false.
+  function hasValidSave() {
+    let raw;
+    try {
+      raw = localStorage.getItem(SAVE_KEY);
+    } catch (e) {
+      return false;
+    }
+    if (!raw) return false;
+    try {
+      return !!Engine.migrateLoadedState(JSON.parse(raw));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function updateContinueButtonVisibility() {
+    el.btnContinue.style.display = hasValidSave() ? 'block' : 'none';
   }
 
   /* ---------------- 엔딩 도감(여러 판에 걸쳐 누적되는 별도 저장) ---------------- */
@@ -465,11 +495,21 @@
     nextQuizQuestion();
   }
 
+  // 세션 내내 같은 선생님/왕실 학자가 도움을 주는 느낌을 주기 위해, 도움 캐릭터를
+  // 세션 시작 시(첫 문제에서) 한 번만 무작위로 고르고 계속 재사용한다.
+  const HINT_HELPER_NPC_IDS = ['teacher', 'sage'];
+
   function nextQuizQuestion() {
     if (session.index >= session.count) {
       finishSession();
       return;
     }
+    if (!session.helperNpc) {
+      session.helperNpc = HINT_HELPER_NPC_IDS[Math.floor(Math.random() * HINT_HELPER_NPC_IDS.length)];
+    }
+    el.quizHint.style.display = 'none';
+    el.quizHint.textContent = '';
+    el.btnQuizNext.style.display = 'none';
     session.answered = false;
     const problem = Engine.generateNextProblem(state, session);
     session.currentProblem = problem;
@@ -573,11 +613,29 @@
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
     saveGame();
 
-    setTimeout(() => {
-      session.index++;
-      nextQuizQuestion();
-    }, 1100);
+    el.btnQuizNext.style.display = 'block';
   }
+
+  el.btnQuizNext.addEventListener('click', () => {
+    if (!session || !session.answered) return;
+    session.index++;
+    nextQuizQuestion();
+  });
+
+  // 문제 유형별로 미리 준비해둔 힌트(problem.hint)가 있으면 그걸 보여주고,
+  // 없으면(영어/과학/예절/시나리오처럼 아직 힌트를 안 써둔 문제) 정답을
+  // 직접 알려주지 않으면서도 도움이 되는 일반적인 풀이 전략을 보여준다.
+  const GENERIC_HINT_CHOICE = '확실히 답이 아닌 것 같은 보기부터 하나씩 지워보렴. 그리고 문제를 다시 한 번 천천히 읽어보면 힌트가 보일 거야!';
+  const GENERIC_HINT_INPUT = '문제를 다시 한 번 천천히 읽고, 무엇을 구해야 하는지부터 확인해보렴. 아는 것부터 하나씩 정리해서 계산해보면 실마리가 보일 거야!';
+
+  el.btnQuizHint.addEventListener('click', () => {
+    if (!session || !session.currentProblem) return;
+    const helper = NPC_DEFS.find((n) => n.id === session.helperNpc) || NPC_DEFS.find((n) => n.id === 'teacher');
+    const problem = session.currentProblem;
+    const hintText = problem.hint || (problem.type === 'choice' ? GENERIC_HINT_CHOICE : GENERIC_HINT_INPUT);
+    el.quizHint.textContent = `${helper.emoji} ${helper.name}: "${hintText}"`;
+    el.quizHint.style.display = 'block';
+  });
 
   function finishSession() {
     if (session.type === 'banquet') { finishBanquetSession(); return; }
@@ -959,9 +1017,11 @@
           <span class="level-desc">${career.desc}</span>
           <span class="shop-cost">요건: ${reqText} · 매달 💰${career.monthlyGold}G</span>
         </span>
-        <button class="shop-buy-btn" ${employed || !met ? 'disabled' : ''}>${employed ? '재직 중' : met ? '지원하기' : '요건 미달'}</button>
+        <button class="shop-buy-btn" ${!employed && !met ? 'disabled' : ''}>${employed ? '그만두기' : met ? '지원하기' : '요건 미달'}</button>
       `;
-      if (!employed && met) {
+      if (employed) {
+        card.querySelector('.shop-buy-btn').addEventListener('click', () => resignCareerUI(career.id));
+      } else if (met) {
         card.querySelector('.shop-buy-btn').addEventListener('click', () => applyForCareerUI(career.id));
       }
       el.careerList.appendChild(card);
@@ -972,6 +1032,14 @@
     if (!Engine.applyForCareer(state, careerId)) return;
     const career = CAREER_DEFS.find((c) => c.id === careerId);
     showLevelToast(`💼 ${career.name}(으)로 취업했어요! 매달 ${career.monthlyGold}G가 들어와요`);
+    saveGame();
+    renderCareerList();
+  }
+
+  function resignCareerUI(careerId) {
+    const career = CAREER_DEFS.find((c) => c.id === careerId);
+    Engine.resignCareer(state);
+    showLevelToast(`💼 ${career.name}을(를) 그만뒀어요`);
     saveGame();
     renderCareerList();
   }
@@ -1065,7 +1133,7 @@
       const unlocked = Engine.competitionUnlocked(state);
       competitionBtn.classList.toggle('locked', !unlocked);
       competitionBtn.querySelector('.level-desc').textContent = unlocked
-        ? '덧셈뺄셈부터 시작해 점점 어려워지는 문제 5개에 도전해요. 어려워질수록 상금도 커져요'
+        ? '덧셈뺄셈부터 시작해 점점 어려워지는 문제에 도전해요(문제 수는 직접 선택). 어려워질수록 상금도 커져요'
         : `🔒 지능 ${Engine.COMPETITION_MIN_INTELLIGENCE} 이상 필요 (현재 ${Math.round(state.stats.intelligence)})`;
     }
   }
@@ -1374,6 +1442,7 @@
   function showEnding() {
     gameStarted = false;
     clearSave();
+    updateContinueButtonVisibility();
     const summary = Engine.computeEndingSummary(state);
     el.endingEmoji.textContent = summary.ending.emoji;
     el.endingTitle.textContent = summary.ending.title;
@@ -1423,8 +1492,8 @@
   }
 
   el.btnNewGame.addEventListener('click', () => {
-    // 진행 중이던 저장 데이터가 있으면 실수로 지우지 않도록 먼저 확인을 받는다.
-    if (localStorage.getItem(SAVE_KEY)) {
+    // 진행 중이던 (유효한) 저장 데이터가 있으면 실수로 지우지 않도록 먼저 확인을 받는다.
+    if (hasValidSave()) {
       showScreen('confirmNewGame');
       return;
     }
@@ -1447,9 +1516,7 @@
     }
   });
 
-  if (loadGame()) {
-    el.btnContinue.style.display = 'block';
-  }
+  updateContinueButtonVisibility();
 
   // 안전망: 앱이 백그라운드로 가거나 탭/창이 닫히는 순간에도 현재 진행 상태를
   // 즉시 저장해서, 명시적으로 "확인" 버튼을 누르기 전에 앱이 종료되어도

@@ -122,6 +122,12 @@
     );
   }
 
+  const ARITHMETIC_HINTS = {
+    '+': '예를 들어 23 + 15를 더할 땐 일의 자리(3+5=8)부터 더하고, 그 다음 십의 자리(2+1=3)를 더해서 38이 돼요. 지금 문제도 똑같이 일의 자리부터 차근차근 더해보세요!',
+    '-': '예를 들어 42 - 17을 뺄 땐 일의 자리 2에서 7을 뺄 수 없으니 십의 자리에서 10을 빌려와 12-7=5, 남은 십의 자리끼리 3-1=2를 계산해서 25가 돼요. 지금 문제도 받아내림을 해보세요!',
+    '*': '예를 들어 6 × 7을 구할 땐 구구단 7단을 떠올리거나, 6을 7번 더해보면(6+6+6+6+6+6+6) 42가 나와요. 지금 문제도 구구단을 떠올리며 풀어보세요!',
+    '/': "예를 들어 24 ÷ 6을 구할 땐 '6에 얼마를 곱해야 24가 될까?'를 생각하면 돼요(6×4=24이니 답은 4). 지금 문제도 나누는 수에 곱셈을 해보며 답을 찾아보세요!",
+  };
   // ---- Level 1: 사칙연산 ----
   register(1, () => {
     const op = randChoice(['+', '-', '*', '/']);
@@ -151,6 +157,7 @@
       question: text,
       answer: String(answer),
       explanation: `${text.replace(' = ?', '')} = ${answer}`,
+      hint: ARITHMETIC_HINTS[op],
     });
   });
 
@@ -167,6 +174,7 @@
       question: `${n1}/${d1} + ${n2}/${d2} = ? (기약분수로)`,
       answer,
       explanation: `${n1}/${d1} + ${n2}/${d2} = ${num}/${den} = ${answer}`,
+      hint: '예를 들어 1/3 + 1/4를 더할 땐 분모를 같게 만들어야 해요. 분모의 최소공배수인 12로 통분하면 1/3=4/12, 1/4=3/12가 되고, 더하면 7/12예요. 지금 문제도 두 분모를 통분한 다음 분자끼리 더해보세요!',
     });
   });
 
@@ -179,6 +187,7 @@
       answer,
       tolerance: 0.05,
       explanation: `${a} + ${b} = ${answer}`,
+      hint: '예를 들어 2.3 + 1.5를 더할 땐 소수점 자리를 맞춰서 세로로 쓰고 각 자리를 더하면 3.8이 돼요. 지금 문제도 소수점 자리를 맞춰서 더해보세요!',
     });
   });
 
@@ -190,6 +199,7 @@
       question: `${a}와 ${b}의 최대공약수는?`,
       answer: String(answer),
       explanation: `${a} = ${answer} × ${a / answer}, ${b} = ${answer} × ${b / answer}`,
+      hint: '예를 들어 12와 18의 최대공약수를 구할 땐, 두 수를 모두 나눌 수 있는 가장 큰 수를 찾아요. 12=2×2×3, 18=2×3×3이니 공통인 2×3=6이 최대공약수예요. 지금 문제도 두 수를 나눠보며 공통된 약수를 찾아보세요!',
     });
   });
 
@@ -204,6 +214,7 @@
       question: `${a}x ${bTerm} = ${c}, x = ?`,
       answer: String(x),
       explanation: `${a}x = ${c - b} → x = ${x}`,
+      hint: '예를 들어 3x + 2 = 11을 풀 땐 먼저 양쪽에서 2를 빼서 3x = 9로 만들고, 그다음 양쪽을 3으로 나누면 x = 3이 나와요. 지금 문제도 숫자를 옮긴 다음 x 앞의 수로 나눠보세요!',
     });
   });
 
@@ -217,6 +228,7 @@
       question: `${a} : ${b} = ${c} : x, x = ?`,
       answer: String(x),
       explanation: `비율 ${c}/${a} = ${k} 이므로 x = ${b} × ${k} = ${x}`,
+      hint: '예를 들어 2 : 3 = 6 : x를 풀 땐, 앞의 2가 6이 되려면 몇 배가 됐는지부터 찾아요(6÷2=3배). 뒤의 3도 똑같이 3배 해주면 x = 9예요. 지금 문제도 앞의 비율이 몇 배가 됐는지 찾아서 뒤에도 똑같이 곱해보세요!',
     });
   });
 
@@ -231,6 +243,7 @@
       question: `y = ${a}x ${bTerm} 일 때, x = ${x}이면 y = ?`,
       answer: String(y),
       explanation: `y = ${a}×${x} ${bTerm} = ${y}`,
+      hint: '예를 들어 y = 2x + 1에서 x = 3일 때 y를 구하려면, x 자리에 3을 그대로 넣어서 y = 2×3 + 1 = 7을 계산하면 돼요. 지금 문제도 주어진 x값을 식에 그대로 대입해서 계산해보세요!',
     });
   });
 
@@ -246,6 +259,7 @@
       answer: fractionToString(y2 - y1, x2 - x1),
       tolerance: 0.01,
       explanation: `기울기 = (${y2} - ${y1}) / (${x2} - ${x1}) = ${fractionToString(y2 - y1, x2 - x1)}`,
+      hint: '예를 들어 두 점 (1, 2)와 (3, 6)을 지나는 직선의 기울기는 (y가 변한 양)÷(x가 변한 양) = (6-2)/(3-1) = 4/2 = 2예요. 지금 문제도 두 점의 y좌표 차이를 x좌표 차이로 나눠보세요!',
     });
   });
 
@@ -257,12 +271,14 @@
       question: `가로 ${w}, 세로 ${h}인 직사각형의 넓이는?`,
       answer: String(w * h),
       explanation: `${w} × ${h} = ${w * h}`,
+      hint: '예를 들어 가로 4, 세로 5인 직사각형의 넓이는 4×5=20이에요. 지금 문제도 가로와 세로를 그대로 곱해보세요!',
     });
   });
 
   const PYTHAGOREAN_TRIPLES = [
     [3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17], [9, 12, 15], [7, 24, 25],
   ];
+  const PYTHAGOREAN_HINT = '예를 들어 직각삼각형의 두 변이 3과 4일 때 빗변은 3²+4²=9+16=25, 즉 √25=5가 돼요. 지금 문제도 두 변을 각각 제곱해서 더한 다음 제곱근을 구해보세요(반대로 빗변이 주어졌다면, 빗변을 제곱한 값에서 다른 한 변의 제곱을 빼면 나머지 변의 제곱이 나와요)!';
   register(5, () => {
     const [a, b, c] = randChoice(PYTHAGOREAN_TRIPLES);
     const askHyp = Math.random() < 0.5;
@@ -271,12 +287,14 @@
         question: `직각삼각형의 두 변이 ${a}, ${b}일 때 빗변의 길이는?`,
         answer: String(c),
         explanation: `${a}² + ${b}² = ${c}² → 빗변 = ${c}`,
+        hint: PYTHAGOREAN_HINT,
       });
     }
     return makeProblem(5, {
       question: `직각삼각형의 빗변이 ${c}, 한 변이 ${a}일 때 나머지 한 변은?`,
       answer: String(b),
       explanation: `${c}² - ${a}² = ${b}²`,
+      hint: PYTHAGOREAN_HINT,
     });
   });
 
@@ -288,6 +306,7 @@
       question: `주머니에 공이 ${total}개 있고 그중 ${favorable}개가 빨간공이다. 하나를 꺼낼 때 빨간공일 확률은? (기약분수)`,
       answer: fractionToString(favorable, total),
       explanation: `${favorable}/${total} = ${fractionToString(favorable, total)}`,
+      hint: '예를 들어 공 5개 중 2개가 빨간공이면, 빨간공을 뽑을 확률은 2/5예요(원하는 경우의 수 ÷ 전체 경우의 수). 지금 문제도 원하는 개수를 전체 개수로 나눠서 기약분수로 나타내보세요!',
     });
   });
 
@@ -300,6 +319,7 @@
       answer: String(avg),
       tolerance: 0.05,
       explanation: `합 ${sum} ÷ ${nums.length}개 = ${avg}`,
+      hint: '예를 들어 3, 5, 7의 평균을 구하려면 먼저 다 더해서(3+5+7=15) 개수인 3으로 나누면 평균은 5예요. 지금 문제도 모든 수를 더한 다음 개수로 나눠보세요!',
     });
   });
 
@@ -313,6 +333,7 @@
       question: `첫째항 ${first}, 공차 ${diff}인 등차수열의 제${n}항은?`,
       answer: String(answer),
       explanation: `${first} + ${diff} × (${n} - 1) = ${answer}`,
+      hint: '예를 들어 첫째항이 2이고 공차가 3인 등차수열의 제5항을 구하려면, 2 + 3×(5-1) = 2+12 = 14가 돼요(첫째항에 공차를 (항의 번호-1)번만큼 더해요). 지금 문제도 같은 방법으로 계산해보세요!',
     });
   });
 
@@ -324,6 +345,7 @@
       question: `log₍${base}₎ ${value} = ?`,
       answer: String(exp),
       explanation: `${base}^${exp} = ${value} 이므로 log₍${base}₎ ${value} = ${exp}`,
+      hint: "예를 들어 log₂ 8을 구하려면 '2를 몇 번 곱해야 8이 될까?'를 생각해요(2×2×2=8이니 답은 3). 지금 문제도 밑을 몇 번 곱해야 그 값이 나오는지 찾아보세요!",
     });
   });
 
@@ -349,6 +371,7 @@
       answer,
       choices: shuffle([...pool]),
       explanation: `${func}(${row.angle}°) = ${answer}`,
+      hint: '30°, 45°, 60°는 시험에 자주 나오는 대표 각도예요. 예를 들어 sin(30°)=1/2, cos(45°)=√2/2, tan(60°)=√3처럼 세 각도의 sin·cos·tan 값을 표로 외워두면 편해요. 지금 문제도 각도와 삼각함수 이름을 잘 보고 떠올려보세요!',
     });
   });
 
@@ -357,17 +380,20 @@
     const y = randInt(1, 9);
     const answer = Math.sqrt(x * x + y * y);
     const isPerfect = Number.isInteger(answer);
+    const vectorHint = '예를 들어 벡터 (3, 4)의 크기를 구하려면 각 성분을 제곱해서 더한 다음(3²+4²=25) 제곱근을 구해요(√25=5). 제곱근이 딱 떨어지지 않으면 x²+y² 값 그대로가 답이 되기도 해요. 지금 문제도 같은 방법으로 계산해보세요!';
     if (!isPerfect) {
       return makeProblem(8, {
         question: `벡터 (${x}, ${y})의 내적을 자기 자신과 계산하면? (x²+y²)`,
         answer: String(x * x + y * y),
         explanation: `${x}² + ${y}² = ${x * x + y * y}`,
+        hint: vectorHint,
       });
     }
     return makeProblem(8, {
       question: `벡터 (${x}, ${y})의 크기는?`,
       answer: String(answer),
       explanation: `√(${x}² + ${y}²) = ${answer}`,
+      hint: vectorHint,
     });
   });
 
@@ -382,6 +408,7 @@
       question: `f(x) = ${a}x^${n} 일 때 f'(${x})의 값은?`,
       answer: String(value),
       explanation: `f'(x) = ${derivCoef}x^${n - 1} → f'(${x}) = ${value}`,
+      hint: '예를 들어 f(x) = 2x³에서 f\'(x)를 구하려면, 지수를 앞으로 내려 곱하고 지수는 1을 빼서 f\'(x) = 6x²이 돼요(2×3=6, 지수 3-1=2). 그 다음 원하는 x값을 대입하면 돼요. 지금 문제도 같은 규칙으로 미분한 다음 값을 대입해보세요!',
     });
   });
 
@@ -394,6 +421,7 @@
       answer: String(value),
       tolerance: 0.05,
       explanation: `[${a}x²/2]₀^${upper} = ${value}`,
+      hint: '예를 들어 ∫₀² 3x dx를 구하려면 먼저 부정적분 (3/2)x²을 만들고, 위끝(2)을 대입한 값에서 아래끝(0)을 대입한 값을 빼면 (3/2)×4 - 0 = 6이 돼요. 지금 문제도 같은 방법으로 계산해보세요!',
     });
   });
 
@@ -411,6 +439,7 @@
       question: `${n}명 중 ${r}명을 순서를 고려해 뽑는 경우의 수(순열)는?`,
       answer: String(nPr),
       explanation: `${n}P${r} = ${n}! / (${n}-${r})! = ${nPr}`,
+      hint: '예를 들어 5명 중 2명을 순서를 고려해 뽑는 경우의 수는 5×4=20이에요(첫 번째 자리에 5명 중 아무나, 두 번째 자리엔 남은 4명 중 아무나 올 수 있어요). 지금 문제도 첫 자리부터 하나씩 줄여가며 곱해보세요!',
     });
   });
 
@@ -422,6 +451,7 @@
       question: `${n}명 중 ${r}명을 순서 상관없이 뽑는 경우의 수(조합)는?`,
       answer: String(nCr),
       explanation: `${n}C${r} = ${n}! / (${r}! × (${n}-${r})!) = ${nCr}`,
+      hint: '예를 들어 5명 중 2명을 순서 상관없이 뽑는 경우의 수는, 순서를 고려한 5×4=20에서 2명을 줄 세우는 방법(2가지)만큼 나누면 20÷2=10이에요. 지금 문제도 순서를 고려해 곱한 다음, 뽑은 인원수를 줄 세우는 경우의 수로 나눠보세요!',
     });
   });
 

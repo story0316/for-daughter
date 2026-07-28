@@ -16,6 +16,8 @@ for (const level of P.LEVELS.map((l) => l.id)) {
     ok(typeof problem.question === 'string' && problem.question.length > 0, `레벨 ${level} 문제에 question이 있어야 함`);
     ok(problem.answer !== undefined && problem.answer !== null, `레벨 ${level} 문제에 answer가 있어야 함`);
     eq(problem.rewardGold, 8 + level * 4, `레벨 ${level} rewardGold 공식(8+level*4)`);
+    // "도움 받기" 버튼이 보여줄 풀이 힌트(예시 포함)가 모든 문제에 있어야 함
+    ok(typeof problem.hint === 'string' && problem.hint.length > 10, `레벨 ${level} 문제에는 풀이 힌트(hint)가 있어야 함: "${problem.question}"`);
     // 정답을 그대로 넣으면 항상 정답 처리되어야 한다(채점 로직 자기일관성)
     ok(P.checkAnswer(problem, problem.answer), `레벨 ${level} 문제는 자신의 answer로 채점하면 정답이어야 함: "${problem.question}" -> "${problem.answer}"`);
     // 명백히 틀린 입력은 항상 오답 처리되어야 한다
