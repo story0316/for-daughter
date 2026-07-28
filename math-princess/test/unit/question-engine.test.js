@@ -95,4 +95,24 @@ eq(Question.subjectName('science'), '과학', '과학 과목 이름');
   ok(Question.SUBJECT_KEYS.includes(jobSession.currentSubject), '알바 세션도 currentSubject를 채워야 함');
 }
 
+{
+  // session.fixedSubject가 있으면(공부 세션) 여러 문제를 내도 과목이 바뀌지 않아야 함(연계성)
+  const session = { type: 'study', fixedSubject: 'science' };
+  for (let i = 0; i < 10; i++) {
+    Question.generateNextProblem(80, session);
+    eq(session.currentSubject, 'science', '고정 과목 세션은 매 문제마다 같은 과목이어야 함');
+  }
+}
+{
+  // fixedSubject가 없으면(예: 보너스 미니게임) 기존처럼 매번 무작위 과목이어야 함 —
+  // 여러 번 뽑았을 때 과목이 최소 한 번은 바뀌는지로 "고정되지 않았다"를 확인한다.
+  const seen = new Set();
+  for (let i = 0; i < 30; i++) {
+    const session = { type: 'exercise-bonus' };
+    Question.generateNextProblem(80, session);
+    seen.add(session.currentSubject);
+  }
+  ok(seen.size > 1, 'fixedSubject가 없는 세션은 여러 번 시도하면 과목이 섞여 나와야 함');
+}
+
 summary('question-engine.js');

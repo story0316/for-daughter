@@ -527,7 +527,11 @@
       title: '왕실 무도회의 주인공',
       entryEmoji: '💃',
       status: 'ready',
-      unlock: { minGrace: 100, minStat: { key: 'charm', value: 80 } },
+      // 대관식(coronation-ball, minGrace 100)과 임계값이 겹치면 두 이야기가
+      // 동시에 열려버려 "무도회 데뷔 -> 대관식"이라는 단계적 절정이 흐려진다.
+      // 무도회 드레스(품위 90 이상에서 구매 가능) 단계와 맞춰, 그 옷을 갖춰
+      // 입을 즈음 자연스럽게 열리도록 90으로 낮췄다.
+      unlock: { minGrace: 90, minStat: { key: 'charm', value: 80 } },
       branching: {
         prompt: '화려한 왕실 대무도회가 열렸습니다. 눈부신 드레스를 입은 당신에게 왕자님이 손을 내밀며 댄스를 청합니다.',
         options: [

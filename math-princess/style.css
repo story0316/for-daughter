@@ -966,6 +966,22 @@ html, body {
   background: rgba(95, 200, 115, 0.85);
 }
 
+.career-card.employed .shop-buy-btn {
+  background: rgba(95, 200, 115, 0.85);
+}
+
+.career-employed-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #245a34;
+  background: #7effb0;
+  vertical-align: middle;
+}
+
 .shop-tabs {
   gap: 8px;
 }

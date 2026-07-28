@@ -17,7 +17,7 @@
     // 세션 도중에는 콤보만 쌓고, 정답/오답 보상은 세션이 끝날 때 한 번에
     // 반영하는 유형(보너스 미니게임들). 연회/공부/알바처럼 문제마다 바로
     // 보상을 주는 유형과 구분하기 위한 목록이다.
-    const DEFERRED_REWARD_TYPES = ['scenario-quiz', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
+    const DEFERRED_REWARD_TYPES = ['scenario-quiz', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus', 'competition'];
 
     function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
@@ -76,8 +76,12 @@
       return d;
     }
 
+    // 직접 빨래하면 골드는 들이지 않지만 몸이 힘들다(체력/스트레스 비용).
+    // 하녀를 고용해 이 수고를 자동화하면 골드가 들지만 그만큼 아낀 시간을
+    // 공부·알바에 써서 오히려 더 많은 골드를 벌 수도 있다는 트레이드오프를
+    // 주기 위해, 자기 부담 빨래는 순수 이득이 아니라 진짜 "비용"이 되도록 했다.
     function laundryBonusReward(bonus) {
-      const d = { stress: -6, stamina: -2, gold: 10 };
+      const d = { stress: 5, stamina: -3, gold: 10 };
       if (bonus) { d.stress -= 3; d.gold += 5; }
       return d;
     }
@@ -89,6 +93,17 @@
       const d = { stamina: -4, gold: 25, luck: 1 };
       if (bonus) { d.gold += 15; d.luck += 1; }
       return d;
+    }
+
+    // 수학 경시대회 상금. 맞힌 문제 수에 비례해 커지고(레벨이 높을수록
+    // 문제당 상금도 커짐), 만점이면 보너스가 붙는다. 일반 알바보다 훨씬
+    // 큰 목돈을 한 번에 벌 수 있어(대신 스트레스가 꽤 쌓임) 옷을 사기 위한
+    // 지름길이 되지만, 전체 경제를 무너뜨리지 않도록 알바 대비 3~5배 수준으로만 크게 잡았다.
+    function competitionReward(correctCount, count, level) {
+      const perCorrect = 10 + level * 3;
+      let gold = correctCount * perCorrect;
+      if (correctCount === count) gold += 40;
+      return { gold, intelligence: correctCount * 1.5, stress: 8 };
     }
 
     // 인물 호감도 증가량. rangeOrValue는 [최소,최대] 배열이거나 고정값.
@@ -103,7 +118,7 @@
       itemBonusSum, comboMultiplier,
       correctAnswerReward, wrongAnswerPenalty,
       exerciseBonusReward, restBonusReward, laundryBonusReward, gardenBonusReward,
-      affectionGain,
+      competitionReward, affectionGain,
     };
   }
 

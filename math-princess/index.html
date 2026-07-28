@@ -189,6 +189,14 @@
           </span>
           <span class="level-lock-icon">›</span>
         </button>
+        <button class="level-card" data-activity="competition">
+          <span class="level-badge-num">🏆</span>
+          <span class="level-info">
+            <span class="level-title">수학 경시대회</span>
+            <span class="level-desc">어려운 수학 문제 5개에 도전해요. 성적에 따라 큰 상금을 받아요</span>
+          </span>
+          <span class="level-lock-icon">›</span>
+        </button>
       </div>
     </section>
 
@@ -207,6 +215,7 @@
             <div id="status-portrait" class="character-portrait"></div>
           </div>
           <div id="status-outfit-badge" class="outfit-badge">👕 평범한 옷</div>
+          <div id="status-career-badge" class="outfit-badge" style="display:none"></div>
         </div>
         <div class="status-section-title">능력치</div>
         <div id="status-stat-panel" class="stat-panel status-stat-panel"></div>
@@ -230,10 +239,12 @@
         <div class="hud-row shop-tabs">
           <button class="shop-tab-btn active" data-tab="items">🛠️ 장비</button>
           <button class="shop-tab-btn" data-tab="wardrobe">👗 옷장</button>
+          <button class="shop-tab-btn" data-tab="career">💼 직업</button>
         </div>
       </header>
       <div id="shop-list" class="level-list shop-tab-panel"></div>
       <div id="wardrobe-list" class="wardrobe-list shop-tab-panel" style="display:none"></div>
+      <div id="career-list" class="level-list shop-tab-panel" style="display:none"></div>
     </section>
 
     <!-- 친구 만나기: 상대 선택 -->

@@ -9,7 +9,7 @@
 
   const {
     STAT_KEYS, STAT_LABELS, OUTFIT_TIERS, NPC_DEFS, ITEMS, ACTIVITY_DEFS,
-    WEEKS_PER_MONTH, PRINCE_MIN_TIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS,
+    WEEKS_PER_MONTH, PRINCE_MIN_TIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS, CAREER_DEFS,
   } = Engine;
 
   const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 48;
@@ -64,6 +64,7 @@
     btnStatusBack: document.getElementById('btn-status-back'),
     statusPortrait: document.getElementById('status-portrait'),
     statusOutfitBadge: document.getElementById('status-outfit-badge'),
+    statusCareerBadge: document.getElementById('status-career-badge'),
     statusStatPanel: document.getElementById('status-stat-panel'),
     statusNpcList: document.getElementById('status-npc-list'),
     statusItemList: document.getElementById('status-item-list'),
@@ -74,6 +75,7 @@
     shopGoldLabel: document.getElementById('shop-gold-label'),
     shopTabBtns: document.querySelectorAll('.shop-tab-btn'),
     wardrobeList: document.getElementById('wardrobe-list'),
+    careerList: document.getElementById('career-list'),
 
     levelToast: document.getElementById('level-toast'),
     bgmPlayer: document.getElementById('bgm-player'),
@@ -446,6 +448,12 @@
     nextQuizQuestion();
   }
 
+  function startCompetitionSession() {
+    session = Engine.startCompetitionSession(state);
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
   function nextQuizQuestion() {
     if (session.index >= session.count) {
       finishSession();
@@ -470,7 +478,9 @@
                   ? `🧺 빨래 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
                   : session.type === 'garden-bonus'
                     ? `🌾 텃밭 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
-                    : `${session.scenario.entryEmoji} ${session.scenario.title}`;
+                    : session.type === 'competition'
+                      ? '🏆 수학 경시대회'
+                      : `${session.scenario.entryEmoji} ${session.scenario.title}`;
     el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
     el.quizLevelBadge.textContent = session.type === 'banquet' ? '예절' : session.type === 'scenario-quiz' ? session.scenario.arc : `Lv.${problem.level}`;
@@ -565,6 +575,7 @@
     if (session.type === 'rest-bonus') { finishRestBonusSession(); return; }
     if (session.type === 'laundry-bonus') { finishLaundryBonusSession(); return; }
     if (session.type === 'garden-bonus') { finishGardenBonusSession(); return; }
+    if (session.type === 'competition') { finishCompetitionSession(); return; }
 
     const outcome = Engine.finishStudyOrJobOutcome(session);
     el.summaryEmoji.textContent = outcome.perfect ? '🌟' : '✅';
@@ -596,6 +607,19 @@
     }
     saveGame();
     showScreen('event');
+  }
+
+  function finishCompetitionSession() {
+    const beforeTiers = Engine.snapshotGrowthTiers(state.stats);
+    const outcome = Engine.finishCompetitionOutcome(state, session);
+    announceStatLevelUps(beforeTiers);
+    el.summaryEmoji.textContent = outcome.perfect ? '🏆' : '🥈';
+    el.summaryTitle.textContent = outcome.perfect ? '경시대회에서 만점을 받았어요!' : '경시대회를 마쳤어요';
+    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
+    el.summaryGold.textContent = outcome.goldEarned;
+    el.summaryCombo.textContent = session.sessionBestCombo;
+    saveGame();
+    showScreen('sessionSummary');
   }
 
   el.btnSummaryConfirm.addEventListener('click', () => {
@@ -802,10 +826,11 @@
 
   function switchShopTab(tab) {
     el.shopTabBtns.forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
-    const isWardrobe = tab === 'wardrobe';
-    el.shopList.style.display = isWardrobe ? 'none' : 'flex';
-    el.wardrobeList.style.display = isWardrobe ? 'grid' : 'none';
-    if (isWardrobe) renderWardrobeList();
+    el.shopList.style.display = tab === 'items' ? 'flex' : 'none';
+    el.wardrobeList.style.display = tab === 'wardrobe' ? 'grid' : 'none';
+    el.careerList.style.display = tab === 'career' ? 'flex' : 'none';
+    if (tab === 'wardrobe') renderWardrobeList();
+    else if (tab === 'career') renderCareerList();
     else renderShopList();
   }
 
@@ -904,6 +929,42 @@
     renderMain();
   }
 
+  /* ---------------- 직업(정식 취업) ---------------- */
+
+  function renderCareerList() {
+    el.careerList.innerHTML = '';
+    CAREER_DEFS.forEach((career) => {
+      const met = Engine.careerRequirementMet(state.stats, career);
+      const employed = state.career === career.id;
+      const reqText = Object.keys(career.requirement)
+        .map((key) => `${STAT_LABELS[key]} ${career.requirement[key]} 이상(현재 ${Math.round(state.stats[key])})`)
+        .join(' · ');
+      const card = document.createElement('div');
+      card.className = `level-card career-card${met ? '' : ' locked'}${employed ? ' employed' : ''}`;
+      card.innerHTML = `
+        <span class="level-badge-num">${career.emoji}</span>
+        <span class="level-info">
+          <span class="level-title">${career.name}${employed ? ' <span class="career-employed-badge">재직 중</span>' : ''}</span>
+          <span class="level-desc">${career.desc}</span>
+          <span class="shop-cost">요건: ${reqText} · 매달 💰${career.monthlyGold}G</span>
+        </span>
+        <button class="shop-buy-btn" ${employed || !met ? 'disabled' : ''}>${employed ? '재직 중' : met ? '지원하기' : '요건 미달'}</button>
+      `;
+      if (!employed && met) {
+        card.querySelector('.shop-buy-btn').addEventListener('click', () => applyForCareerUI(career.id));
+      }
+      el.careerList.appendChild(card);
+    });
+  }
+
+  function applyForCareerUI(careerId) {
+    if (!Engine.applyForCareer(state, careerId)) return;
+    const career = CAREER_DEFS.find((c) => c.id === careerId);
+    showLevelToast(`💼 ${career.name}(으)로 취업했어요! 매달 ${career.monthlyGold}G가 들어와요`);
+    saveGame();
+    renderCareerList();
+  }
+
   /* ---------------- 메인 메뉴 (스케줄 / 실행 / 쇼핑 / 옷갈아입기 / 대화 / 상태) ---------------- */
 
   function runActivity(activity) {
@@ -927,6 +988,14 @@
       doGarden();
     } else if (activity === 'friend') openNpcSelect();
     else if (activity === 'banquet') tryStartBanquet();
+    else if (activity === 'competition') {
+      if (!Engine.competitionUnlocked(state)) {
+        showLevelToast(`🏆 지능 ${Engine.COMPETITION_MIN_INTELLIGENCE} 이상이어야 경시대회에 도전할 수 있어요`);
+        advanceWeekOrTurn();
+        return;
+      }
+      startCompetitionSession();
+    }
   }
 
   // 사교모임(연회)은 입장료를 내야 하고, 일정 옷 단계 이상을 입고 있어야 들어갈 수 있다.
@@ -978,6 +1047,14 @@
       gardenBtn.querySelector('.level-desc').textContent = state.items.gardener
         ? '🌾 정원사가 대신 돌보고 있어요'
         : '문제를 풀며 텃밭을 가꿔 골드를 벌어요. 정원사를 고용하면 자동화돼요';
+    }
+    const competitionBtn = el.weekPickList.querySelector('[data-activity="competition"]');
+    if (competitionBtn) {
+      const unlocked = Engine.competitionUnlocked(state);
+      competitionBtn.classList.toggle('locked', !unlocked);
+      competitionBtn.querySelector('.level-desc').textContent = unlocked
+        ? '어려운 수학 문제 5개에 도전해요. 성적에 따라 큰 상금을 받아요'
+        : `🔒 지능 ${Engine.COMPETITION_MIN_INTELLIGENCE} 이상 필요 (현재 ${Math.round(state.stats.intelligence)})`;
     }
   }
 
@@ -1098,6 +1175,13 @@
     const outfit = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.statusPortrait, state.wardrobe.equipped, 'status');
     el.statusOutfitBadge.textContent = `${outfit.emoji} ${outfit.name}`;
+    const career = CAREER_DEFS.find((c) => c.id === state.career);
+    if (career) {
+      el.statusCareerBadge.textContent = `${career.emoji} ${career.name}`;
+      el.statusCareerBadge.style.display = 'inline-block';
+    } else {
+      el.statusCareerBadge.style.display = 'none';
+    }
     renderStatPanel(el.statusStatPanel, state.stats);
 
     el.statusNpcList.innerHTML = '';
@@ -1186,7 +1270,7 @@
   /* ---------------- 턴 진행 / 엔딩 ---------------- */
 
   function advanceTurn() {
-    const { ended } = Engine.advanceTurn(state, TOTAL_TURNS);
+    const { ended, princeEncounter } = Engine.advanceTurn(state, TOTAL_TURNS);
     if (ended) {
       showEnding();
       return;
@@ -1194,13 +1278,14 @@
     saveGame();
     showScreen('main');
     renderMain();
+    if (princeEncounter) showLevelToast('🤴 궁에서 우연히 왕자님과 마주쳤어요! (호감도 상승)');
   }
 
   // 한 주(週)의 활동을 마쳤을 때 호출한다. 이번 달(턴) 안에 남은 주가 있으면
   // 다음 주로 넘어가 메인 화면으로 돌아가고(다시 "실행"을 눌러 이어감),
   // 이번 달의 마지막 주였다면 실제로 달(턴)을 넘긴다.
   function advanceWeekOrTurn() {
-    const { monthAdvanced, ended } = Engine.advanceWeekOrTurn(state, TOTAL_TURNS);
+    const { monthAdvanced, ended, princeEncounter } = Engine.advanceWeekOrTurn(state, TOTAL_TURNS);
     if (!monthAdvanced) {
       saveGame();
       showScreen('main');
@@ -1214,6 +1299,7 @@
     saveGame();
     showScreen('main');
     renderMain();
+    if (princeEncounter) showLevelToast('🤴 궁에서 우연히 왕자님과 마주쳤어요! (호감도 상승)');
   }
 
   function showEnding() {
