@@ -2,8 +2,9 @@
  * 영어/과학 문제 생성 엔진 (순수 로직, DOM 의존 없음)
  * problems.js(수학)와 같은 모양의 문제 객체를 돌려주도록 만들어서,
  * script.js의 퀴즈 화면이 과목과 무관하게 그대로 재사용할 수 있게 했다.
- * 초등학교 4학년 ~ 중학교 1학년 교과 범위에 맞춰 4단계로 구성했으며,
- * 수학의 앞 4단계(unlockIntelligence 0/8/18/28)와 같은 지능 기준으로
+ * 과학은 초등학교 4학년 ~ 중학교 1학년 교과 범위에 맞춰 4단계로, 영어는
+ * 그보다 더 나아가 고등학교 2학년 수준까지 8단계로 구성했다. 둘 다
+ * 수학과 같은 지능 기준(unlockIntelligence 0/8/18/28/38/48/58/68)으로
  * 해금되어 "공부"를 고를 때 세 과목 중 무엇이 나올지 무작위로 섞인다.
  */
 (function (root) {
@@ -50,6 +51,10 @@
     { id: 2, name: '초5 영어', desc: '품사 · 기본 문법', unlockIntelligence: 8 },
     { id: 3, name: '초6 영어', desc: '시제 · 비교급 · 짧은 독해', unlockIntelligence: 18 },
     { id: 4, name: '중1 영어', desc: '관계대명사 기초 · 문맥 어휘 · 숙어', unlockIntelligence: 28 },
+    { id: 5, name: '중2 영어', desc: '현재완료 · 5형식 문장 · to부정사', unlockIntelligence: 38 },
+    { id: 6, name: '중3 영어', desc: '관계부사 · 가정법 과거 · 화법전환', unlockIntelligence: 48 },
+    { id: 7, name: '고1 영어', desc: '강조구문 · 도치 · 분사구문', unlockIntelligence: 58 },
+    { id: 8, name: '고2 영어', desc: '수능형 어휘 · 논리 추론 · 복잡한 관계절', unlockIntelligence: 68 },
   ];
 
   const ENGLISH_BANK = {
@@ -84,6 +89,38 @@
       { question: "'The book ___ I bought yesterday is interesting.' 빈칸에 알맞은 것은?", choices: ['that', 'who', 'whose', 'what'], answer: 'that', explanation: "사물을 꾸며주는 목적격 관계대명사로 that을 쓸 수 있습니다.", hint: 'the book 뒤에 이어지는 절이 사물을 꾸며주고 있어요. 사물을 꾸며줄 때 쓸 수 있는 관계대명사를 떠올려보세요(who는 사람에게만 써요).' },
       { question: "'The cake was eaten by the dog.'는 어떤 문장을 수동태로 바꾼 것일까요?", choices: ['The dog ate the cake.', 'The dog eats the cake.', 'The cake ate the dog.', 'The dog is eating the cake.'], answer: 'The dog ate the cake.', explanation: "수동태 'was eaten by'는 능동태 과거형 'ate'에서 왔습니다.", hint: "수동태 'was eaten by the dog'를 능동태로 바꾸려면, 'by' 뒤의 대상(the dog)을 주어로 앞에 내세우고 동사를 원래 시제의 능동형으로 바꿔요." },
       { question: "'in spite of'와 의미가 가장 비슷한 것은?", choices: ['despite', 'because of', 'thanks to', 'instead of'], answer: 'despite', explanation: "in spite of와 despite 모두 '~에도 불구하고'라는 뜻입니다.", hint: "in spite of는 '~에도 불구하고'라는 뜻이에요. 보기 중에서 같은 뜻을 가진 한 단어짜리 표현을 찾아보세요." },
+    ],
+    5: [
+      { question: "'I have lived here ___ 2020.' 빈칸에 알맞은 것은?", choices: ['since', 'for', 'from', 'at'], answer: 'since', explanation: "since는 특정 시점('~부터'), for는 기간('~동안')과 함께 씁니다.", hint: '2020은 특정 시점이에요. 기간이 아니라 시작 시점을 나타낼 때 쓰는 전치사를 떠올려보세요.' },
+      { question: "'She has just ___ her homework.' 빈칸에 알맞은 것은?", choices: ['finished', 'finish', 'finishing', 'finishes'], answer: 'finished', explanation: "현재완료(have/has + p.p.)는 '막 ~했다'는 의미로 방금 끝난 일을 나타냅니다.", hint: 'has 다음에는 동사원형이 아니라 특별한 형태가 와야 해요. 어떤 형태일지 떠올려보세요.' },
+      { question: "'They made her happy.'에서 her happy는 문장에서 어떤 역할일까요?", choices: ['목적어와 목적격보어', '주어와 동사', '목적어와 부사', '두 개의 목적어'], answer: '목적어와 목적격보어', explanation: "make + 목적어 + 목적격보어 구조로, happy가 her의 상태를 설명합니다.", hint: 'happy는 형용사로 목적어(her)의 상태를 보충 설명하고 있어요. 5형식 문장의 구조를 떠올려보세요.' },
+      { question: "'I want ___ the piano.' 빈칸에 알맞은 것은?", choices: ['to play', 'playing', 'play', 'played'], answer: 'to play', explanation: "want는 to부정사를 목적어로 취하는 동사입니다.", hint: "want 뒤에는 동사원형이 아니라 특별한 형태가 와요. '~하는 것을 원하다'라는 뜻을 만드는 형태를 떠올려보세요." },
+      { question: "'I heard someone ___ the door.' 빈칸에 알맞은 것은?", choices: ['knock', 'to knock', 'knocked', 'knocks'], answer: 'knock', explanation: "지각동사(hear, see 등)는 목적어 뒤에 동사원형을 씁니다.", hint: '지각동사(hear, see 등) 뒤에는 to부정사가 아니라 동사의 어떤 형태가 오는지 떠올려보세요.' },
+      { question: "'Although'와 바꿔 쓸 수 있는 접속사는?", choices: ['though', 'but', 'so', 'because'], answer: 'though', explanation: "although와 though는 둘 다 '비록 ~일지라도'라는 뜻의 접속사입니다.", hint: '이 질문의 단어와 비슷한 뜻이면서, 앞부분 세 글자만 뗀 더 짧고 캐주얼한 접속사를 떠올려보세요.' },
+    ],
+    6: [
+      { question: "'This is the house ___ I was born.' 빈칸에 알맞은 것은?", choices: ['where', 'which', 'who', 'when'], answer: 'where', explanation: "장소를 나타내는 선행사(the house) 뒤에는 관계부사 where를 씁니다.", hint: 'the house는 장소예요. 장소를 꾸며줄 때 쓰는 관계부사를 떠올려보세요.' },
+      { question: "'If I ___ a bird, I could fly.' 빈칸에 알맞은 것은?", choices: ['were', 'am', 'was', 'be'], answer: 'were', explanation: "가정법 과거에서는 be동사의 과거형으로 인칭에 관계없이 were를 씁니다.", hint: '가정법에서는 현실과 반대되는 상상을 말할 때 be동사를 인칭에 상관없이 항상 같은 형태로 써요.' },
+      { question: "'He said, \"I am tired.\"'를 간접화법으로 바꾸면?", choices: ['He said that he was tired.', 'He said that he is tired.', 'He said I am tired.', 'He said that he will tired.'], answer: 'He said that he was tired.', explanation: "직접화법을 간접화법으로 바꿀 때 시제는 한 단계 과거로, 인칭대명사도 알맞게 바뀝니다.", hint: '주절의 said가 과거이므로 종속절의 시제도 한 단계 뒤로 물러나요(현재 → 과거).' },
+      { question: "'He is ___ student in the class.' 빈칸에 알맞은 것은?", choices: ['the smartest', 'smarter', 'more smart', 'smartest'], answer: 'the smartest', explanation: "최상급 앞에는 the를 붙입니다.", hint: '최상급(가장 ~한) 표현 앞에는 꼭 붙는 관사가 있어요.' },
+      { question: "'find out'과 의미가 가장 비슷한 것은?", choices: ['discover', 'lose', 'ignore', 'hide'], answer: 'discover', explanation: "find out은 '알아내다, 발견하다'라는 뜻으로 discover와 비슷합니다.", hint: 'find out은 몰랐던 것을 새로 알게 됐을 때 쓰는 표현이에요.' },
+      { question: "'neither A nor B' 구문에서 동사의 수는 무엇에 맞출까요?", choices: ['B에 맞춘다', 'A에 맞춘다', '항상 단수', '항상 복수'], answer: 'B에 맞춘다', explanation: "neither A nor B, either A or B 구문은 동사를 B(더 가까운 것)에 맞춥니다.", hint: '이 구문은 두 개 중 동사와 더 가까이 있는 쪽에 수를 맞춘다는 규칙이 있어요.' },
+    ],
+    7: [
+      { question: "'It was Tom ___ broke the window.' 빈칸에 알맞은 것은?", choices: ['who', 'whom', 'which', 'what'], answer: 'who', explanation: "It is/was ~ that(who) 강조구문에서 사람을 강조할 때는 who도 쓸 수 있습니다.", hint: 'It was ~ that 강조구문이에요. 강조하는 대상이 사람(Tom)일 때 that 대신 쓸 수 있는 관계대명사가 있어요.' },
+      { question: "'Never ___ such a beautiful sunset.' 빈칸에 알맞은 것은?", choices: ['have I seen', 'I have seen', 'I saw', 'did I saw'], answer: 'have I seen', explanation: "부정어(Never)가 문장 앞에 오면 주어와 동사가 도치됩니다.", hint: '부정의 뜻을 가진 부사(Never)가 문장 맨 앞에 나오면 주어와 동사의 순서가 바뀌어요.' },
+      { question: "'___ tired, she kept studying.' 빈칸에 알맞은 분사구문은?", choices: ['Being', 'Been', 'To be', 'Be'], answer: 'Being', explanation: "분사구문은 접속사와 주어를 생략하고 동사를 -ing 형태로 바꿔 만듭니다(Being tired = Although she was tired).", hint: '분사구문은 동사를 어떤 형태로 바꿔서 문장을 시작하는지 떠올려보세요.' },
+      { question: "완료부정사(to have + p.p.)는 본동사 기준으로 어떤 시점을 나타낼까요?", choices: ['본동사보다 앞선 시점', '본동사와 같은 시점', '미래의 일', '반복되는 일'], answer: '본동사보다 앞선 시점', explanation: "완료부정사(to have p.p.)는 본동사의 시점보다 이전에 일어난 일을 나타냅니다.", hint: "완료부정사는 '더 먼저 일어난 일'을 나타낼 때 쓰는 특별한 부정사 형태예요." },
+      { question: "'used to'와 'would'의 공통점은?", choices: ['과거의 습관을 나타낸다', '미래를 나타낸다', '현재 상태를 나타낸다', '명령을 나타낸다'], answer: '과거의 습관을 나타낸다', explanation: "used to와 would는 모두 과거의 반복적인 습관이나 행동을 나타낼 수 있습니다(단, used to만 과거의 상태도 나타낼 수 있음).", hint: '둘 다 예전에는 ~하곤 했다는 뜻으로 쓰이는 표현이에요.' },
+      { question: "'The more you practice, the better you get.'과 같은 구조가 나타내는 것은?", choices: ['할수록 더 ~해지는 비례관계', '과거의 습관', '최상급 비교', '가정법 과거'], answer: '할수록 더 ~해지는 비례관계', explanation: "'the 비교급 ~, the 비교급 ~' 구문은 '~할수록 더 ~하다'라는 비례관계를 나타냅니다.", hint: '두 개의 비교급이 나란히 쓰이면서, 하나가 변하면 다른 하나도 같이 변한다는 것을 나타내는 구문이에요.' },
+    ],
+    8: [
+      { question: "'The book, the cover of which was torn, was still readable.'에서 the cover of which는 무엇을 나타낼까요?", choices: ["the book's cover", "the cover's book", 'a new cover', 'nothing'], answer: "the book's cover", explanation: "소유격 관계대명사 'of which'는 the book's cover(그 책의 표지)를 나타냅니다.", hint: 'of which는 소유의 의미를 나타내는 관계대명사예요. 무엇의 표지인지 생각해보세요.' },
+      { question: "'ubiquitous'의 의미로 가장 알맞은 것은?", choices: ['어디에나 있는', '매우 드문', '시대에 뒤떨어진', '복잡한'], answer: '어디에나 있는', explanation: "ubiquitous는 '어디에나 존재하는, 편재하는'이라는 뜻의 단어입니다.", hint: '스마트폰처럼 요즘 어디서나 쉽게 볼 수 있는 것을 표현할 때 쓰는 단어예요.' },
+      { question: "'She studied hard. ___, she failed the exam.' 빈칸에 알맞은 연결어는?", choices: ['Nevertheless', 'Therefore', 'Similarly', 'For example'], answer: 'Nevertheless', explanation: "앞뒤 내용이 상반될 때는 Nevertheless(그럼에도 불구하고)를 씁니다.", hint: '열심히 공부했는데 시험에 떨어졌다는 건 예상과 반대되는 결과예요. 반전을 나타내는 연결어를 떠올려보세요.' },
+      { question: "'She is not so much a singer as a dancer.'의 의미는?", choices: ['그녀는 가수라기보다는 무용수이다', '그녀는 가수이자 무용수이다', '그녀는 가수도 무용수도 아니다', '그녀는 가수보다 무용수를 더 좋아한다'], answer: '그녀는 가수라기보다는 무용수이다', explanation: "'not so much A as B'는 'A라기보다는 B'라는 뜻입니다.", hint: "'not so much A as B' 구문은 두 대상을 비교하며 어느 쪽에 더 가까운지를 나타내요." },
+      { question: "'in retrospect'의 의미로 가장 알맞은 것은?", choices: ['돌이켜보면', '앞으로는', '즉시', '우연히'], answer: '돌이켜보면', explanation: "in retrospect는 '돌이켜 생각해보면'이라는 뜻의 표현입니다.", hint: '지나간 일을 다시 떠올리며 생각할 때 쓰는 표현이에요.' },
+      { question: "다음 중 글의 요지를 파악할 때 가장 주의 깊게 봐야 할 것은?", choices: ['반복되는 핵심 주장과 결론 문장', '예시로 든 세부 사항', '낯선 단어의 개수', '문장의 길이'], answer: '반복되는 핵심 주장과 결론 문장', explanation: "글의 요지는 보통 반복되는 핵심 주장이나 결론 부분에 드러납니다.", hint: '글쓴이가 가장 하고 싶은 말은 보통 어디에 나타날까요? 세부 예시보다 더 중요한 것을 생각해보세요.' },
     ],
   };
 

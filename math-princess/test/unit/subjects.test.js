@@ -7,13 +7,21 @@ const SUBJ = require(path.join(__dirname, '..', '..', 'subjects.js'));
 
 console.log('subjects.js unit tests');
 
+// 영어는 수학처럼 고등학교 수준까지 더 어려워질 수 있도록 8단계로 확장했고,
+// 과학은 기존대로 초4~중1 범위인 4단계를 유지한다.
 const SUBJECTS = [
-  { name: '영어', levels: SUBJ.ENGLISH_LEVELS, isUnlocked: SUBJ.isEnglishLevelUnlocked, generate: SUBJ.generateEnglishProblem },
-  { name: '과학', levels: SUBJ.SCIENCE_LEVELS, isUnlocked: SUBJ.isScienceLevelUnlocked, generate: SUBJ.generateScienceProblem },
+  {
+    name: '영어', levels: SUBJ.ENGLISH_LEVELS, isUnlocked: SUBJ.isEnglishLevelUnlocked, generate: SUBJ.generateEnglishProblem,
+    expectedThresholds: [0, 8, 18, 28, 38, 48, 58, 68],
+  },
+  {
+    name: '과학', levels: SUBJ.SCIENCE_LEVELS, isUnlocked: SUBJ.isScienceLevelUnlocked, generate: SUBJ.generateScienceProblem,
+    expectedThresholds: [0, 8, 18, 28],
+  },
 ];
 
-SUBJECTS.forEach(({ name, levels, isUnlocked, generate }) => {
-  eq(levels.length, 4, `${name}은 초4~중1 총 4레벨이어야 함`);
+SUBJECTS.forEach(({ name, levels, isUnlocked, generate, expectedThresholds }) => {
+  eq(levels.length, expectedThresholds.length, `${name}은 총 ${expectedThresholds.length}레벨이어야 함`);
 
   levels.forEach((level) => {
     const SAMPLES = 30;
@@ -32,13 +40,13 @@ SUBJECTS.forEach(({ name, levels, isUnlocked, generate }) => {
     }
   });
 
-  // 해금 임계값이 수학의 앞 4단계(0/8/18/28)와 반드시 같아야 한다(README/주석에 명시된 설계 의도)
-  const EXPECTED = [0, 8, 18, 28];
+  // 해금 임계값이 수학과 같은 지능 기준이어야 한다(README/주석에 명시된 설계 의도)
   levels.forEach((level, idx) => {
-    eq(level.unlockIntelligence, EXPECTED[idx], `${name} 레벨 ${level.id} 해금 지능치는 수학 레벨 ${idx + 1}과 같아야 함`);
-    ok(isUnlocked(level.id, EXPECTED[idx]), `${name} 레벨 ${level.id}은 지능 ${EXPECTED[idx]}에서 해금`);
-    if (EXPECTED[idx] > 0) {
-      ok(!isUnlocked(level.id, EXPECTED[idx] - 1), `${name} 레벨 ${level.id}은 지능 ${EXPECTED[idx] - 1}에서는 잠김`);
+    const threshold = expectedThresholds[idx];
+    eq(level.unlockIntelligence, threshold, `${name} 레벨 ${level.id} 해금 지능치는 수학 레벨 ${idx + 1}과 같아야 함`);
+    ok(isUnlocked(level.id, threshold), `${name} 레벨 ${level.id}은 지능 ${threshold}에서 해금`);
+    if (threshold > 0) {
+      ok(!isUnlocked(level.id, threshold - 1), `${name} 레벨 ${level.id}은 지능 ${threshold - 1}에서는 잠김`);
     }
   });
 });

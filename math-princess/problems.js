@@ -83,8 +83,7 @@
     { id: 6, name: '확률과 통계', desc: '확률, 평균', unlockIntelligence: 48 },
     { id: 7, name: '수열과 로그', desc: '등차수열, 등비수열, 로그', unlockIntelligence: 58 },
     { id: 8, name: '삼각함수와 벡터', desc: '삼각비, 벡터', unlockIntelligence: 68 },
-    { id: 9, name: '미분과 적분', desc: '다항함수 미분 · 적분', unlockIntelligence: 78 },
-    { id: 10, name: '심화 문제', desc: '올림피아드 · 논리 문제', unlockIntelligence: 88 },
+    { id: 9, name: '심화 문제', desc: '올림피아드 · 논리 문제', unlockIntelligence: 78 },
   ];
 
   function isLevelUnlocked(levelId, intelligence) {
@@ -101,7 +100,7 @@
   /* 레벨별 생성기 (플러그인 방식: GENERATORS[level] = [fn, fn, ...])       */
   /* ---------------------------------------------------------------- */
 
-  const GENERATORS = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [], 10: [] };
+  const GENERATORS = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [], 8: [], 9: [] };
 
   function register(level, fn) {
     GENERATORS[level].push(fn);
@@ -397,45 +396,17 @@
     });
   });
 
-  // ---- Level 9: 미분과 적분 ----
-  register(9, () => {
-    const a = randInt(1, 6);
-    const n = randInt(2, 4);
-    const x = randInt(1, 5);
-    const derivCoef = a * n;
-    const value = derivCoef * Math.pow(x, n - 1);
-    return makeProblem(9, {
-      question: `f(x) = ${a}x^${n} 일 때 f'(${x})의 값은?`,
-      answer: String(value),
-      explanation: `f'(x) = ${derivCoef}x^${n - 1} → f'(${x}) = ${value}`,
-      hint: '예를 들어 f(x) = 2x³에서 f\'(x)를 구하려면, 지수를 앞으로 내려 곱하고 지수는 1을 빼서 f\'(x) = 6x²이 돼요(2×3=6, 지수 3-1=2). 그 다음 원하는 x값을 대입하면 돼요. 지금 문제도 같은 규칙으로 미분한 다음 값을 대입해보세요!',
-    });
-  });
-
-  register(9, () => {
-    const a = randInt(1, 5);
-    const upper = randInt(2, 5);
-    const value = (a / 2) * upper * upper;
-    return makeProblem(9, {
-      question: `∫₀^${upper} ${a}x dx 의 값은?`,
-      answer: String(value),
-      tolerance: 0.05,
-      explanation: `[${a}x²/2]₀^${upper} = ${value}`,
-      hint: '예를 들어 ∫₀² 3x dx를 구하려면 먼저 부정적분 (3/2)x²을 만들고, 위끝(2)을 대입한 값에서 아래끝(0)을 대입한 값을 빼면 (3/2)×4 - 0 = 6이 돼요. 지금 문제도 같은 방법으로 계산해보세요!',
-    });
-  });
-
-  // ---- Level 10: 심화 문제 (조합/논리) ----
+  // ---- Level 9: 심화 문제 (조합/논리) ----
   function factorial(n) {
     let r = 1;
     for (let i = 2; i <= n; i++) r *= i;
     return r;
   }
-  register(10, () => {
+  register(9, () => {
     const n = randInt(4, 7);
     const r = randInt(2, n - 1);
     const nPr = factorial(n) / factorial(n - r);
-    return makeProblem(10, {
+    return makeProblem(9, {
       question: `${n}명 중 ${r}명을 순서를 고려해 뽑는 경우의 수(순열)는?`,
       answer: String(nPr),
       explanation: `${n}P${r} = ${n}! / (${n}-${r})! = ${nPr}`,
@@ -443,11 +414,11 @@
     });
   });
 
-  register(10, () => {
+  register(9, () => {
     const n = randInt(4, 8);
     const r = randInt(2, n - 1);
     const nCr = factorial(n) / (factorial(r) * factorial(n - r));
-    return makeProblem(10, {
+    return makeProblem(9, {
       question: `${n}명 중 ${r}명을 순서 상관없이 뽑는 경우의 수(조합)는?`,
       answer: String(nCr),
       explanation: `${n}C${r} = ${n}! / (${r}! × (${n}-${r})!) = ${nCr}`,
