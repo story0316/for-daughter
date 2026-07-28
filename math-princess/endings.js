@@ -80,6 +80,13 @@
       requirement: (s) => s.intelligence >= 65 && s.focus >= 60,
     },
     {
+      id: 'finance-minister',
+      emoji: '📋',
+      title: '왕국의 재무장관',
+      desc: '똑똑한 머리와 지치지 않는 체력으로 왕국의 살림을 빈틈없이 꾸려나가는 재무장관이 되었다.',
+      requirement: (s) => s.intelligence >= 65 && s.stamina >= 70,
+    },
+    {
       id: 'math-youtuber',
       emoji: '🎥',
       title: '인기 지식 유튜버',
@@ -129,6 +136,13 @@
       requirement: (s) => s.stress >= 80,
     },
     {
+      id: 'wealthy-merchant',
+      emoji: '💰',
+      title: '소문난 재테크의 달인',
+      desc: '화려한 스펙보다 알뜰한 살림과 꾸준한 벌이를 택한 끝에, 왕국에서 손꼽히는 부자가 되었다.',
+      requirement: (s, npcs, ctx) => ((ctx && ctx.gold) || 0) >= 4000,
+    },
+    {
       id: 'ordinary-happy',
       emoji: '🌷',
       title: '평범하지만 행복한 나날',
@@ -145,10 +159,10 @@
     return clamped;
   }
 
-  function computeEnding(stats, npcs) {
+  function computeEnding(stats, npcs, extra) {
     const s = clampStats(stats);
     for (const ending of ENDINGS) {
-      if (ending.requirement(s, npcs || [])) return ending;
+      if (ending.requirement(s, npcs || [], extra || {})) return ending;
     }
     return ENDINGS[ENDINGS.length - 1];
   }

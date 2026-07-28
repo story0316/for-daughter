@@ -34,6 +34,8 @@ async function testPlanAndExecuteFourWeeks() {
       await drainQuizSession(page);
       const active = await activeScreenId(page);
       if (active === 'screen-session-summary') await page.click('#btn-summary-confirm');
+      // 운동/휴식 뒤에는 일정 확률로 랜덤 이벤트 팝업이 뜰 수 있다(게임 자체 사양).
+      if ((await activeScreenId(page)) === 'screen-event') await page.click('#btn-event-confirm');
       await page.waitForSelector('#screen-main.active', { timeout: 12000 });
       const saved = await getSavedState(page);
       if (week < 3) {
@@ -60,6 +62,8 @@ async function testEndingTriggersAtFinalWeek() {
     await page.click('[data-menu="execute"]');
     await page.waitForSelector('#screen-quiz.active');
     await drainQuizSession(page);
+    // 운동/휴식 뒤에는 일정 확률로 랜덤 이벤트 팝업이 뜰 수 있다(게임 자체 사양).
+    if ((await activeScreenId(page)) === 'screen-event') await page.click('#btn-event-confirm');
     await page.waitForSelector('#screen-ending.active', { timeout: 12000 });
     const title = await page.textContent('#ending-title');
     ok(title.trim().length > 0, '마지막 달 마지막 주를 마치면 엔딩 화면에 제목이 표시되어야 함');

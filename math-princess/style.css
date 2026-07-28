@@ -401,6 +401,7 @@ html, body {
 }
 
 .stat-row-track {
+  position: relative;
   flex: 1 1 auto;
   height: 8px;
   border-radius: 999px;
@@ -408,18 +409,46 @@ html, body {
   overflow: hidden;
 }
 
+/* 이번 달 남은 계획을 다 실행하면 어디까지 오를지 미리 보여주는 반투명 예상 바.
+   실제 게이지(.stat-row-fill) 뒤에 깔려서, 그보다 넓을 때만 "여기까지 갈 수
+   있어요"하는 여유분처럼 삐져나와 보인다. */
+.stat-row-projected {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.3);
+  transition: width 0.4s ease;
+}
+
 .stat-row-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, #ffb0cf, #b48fff);
+  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1), background 0.3s ease;
 }
 
 .stat-row-fill.stress-fill {
   background: linear-gradient(90deg, #ffd873, #ff6b6b);
 }
 
+.stat-row-fill.pulse {
+  animation: stat-fill-pulse 0.7s ease;
+}
+
+@keyframes stat-fill-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+  30% { box-shadow: 0 0 12px 3px rgba(255, 255, 255, 0.75); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
 .stat-row-value {
+  position: relative;
   flex: 0 0 54px;
   display: flex;
   align-items: center;
@@ -429,6 +458,32 @@ html, body {
   font-weight: 800;
   color: #fff;
   text-align: right;
+}
+
+.stat-row-delta {
+  position: absolute;
+  right: 0;
+  top: -13px;
+  font-size: 10.5px;
+  font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.stat-row-delta.show {
+  animation: stat-delta-pop 1.6s ease forwards;
+}
+
+.stat-row-delta.positive { color: #7effc0; text-shadow: 0 0 6px rgba(126, 255, 192, 0.6); }
+.stat-row-delta.negative { color: #ff8fa3; text-shadow: 0 0 6px rgba(255, 143, 163, 0.6); }
+
+@keyframes stat-delta-pop {
+  0% { opacity: 0; transform: translateY(4px) scale(0.8); }
+  15% { opacity: 1; transform: translateY(-2px) scale(1.15); }
+  30% { opacity: 1; transform: translateY(-4px) scale(1); }
+  75% { opacity: 1; transform: translateY(-8px) scale(1); }
+  100% { opacity: 0; transform: translateY(-15px) scale(1); }
 }
 
 .stat-row-tier {
