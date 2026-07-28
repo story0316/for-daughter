@@ -54,6 +54,8 @@
     characterPortrait: document.getElementById('character-portrait'),
     characterName: document.getElementById('character-name'),
     outfitBadge: document.getElementById('outfit-badge'),
+    portraitExpRingFill: document.getElementById('portrait-exp-ring-fill'),
+    portraitProgressLabel: document.getElementById('portrait-progress-label'),
     mainMenuGrid: document.getElementById('main-menu-grid'),
     scheduleBanner: document.getElementById('schedule-banner'),
     scheduleBannerText: document.getElementById('schedule-banner-text'),
@@ -437,6 +439,25 @@
     `;
   }
 
+  // 옷 단계(평범한 옷 → 대관식 드레스)와 같은 순서로, 능력치 막대와 톤을
+  // 맞춘 회색→파랑→보라→핑크→금색 팔레트에 만점(품위 100) 전용 밝은 금색을
+  // 하나 더한 6단계 색상표. 초상화 EXP 링이 지금 품위 단계에 맞는 색으로 보이게 한다.
+  const PORTRAIT_RING_COLORS = ['#8a93b8', '#6fa8ff', '#b48fff', '#ff8fb3', '#ffd873', '#fff6c9'];
+  const PORTRAIT_RING_CIRCUMFERENCE = 2 * Math.PI * 46;
+
+  // 메인 화면 초상화 테두리에 "평민 → 공주" 여정을 경험치 링으로 보여준다.
+  // 진행도는 옷을 실제로 갈아입었는지가 아니라 그 근거가 되는 품위 점수
+  // 자체(0~100)를 기준으로 하여, 성장 그 자체를 보여주는 지표로 삼는다.
+  function updatePortraitProgressRing() {
+    const grace = Engine.graceScore(state.stats);
+    const percent = Math.max(0, Math.min(100, grace));
+    const outfit = Engine.currentOutfit(state.stats);
+    const offset = PORTRAIT_RING_CIRCUMFERENCE * (1 - percent / 100);
+    el.portraitExpRingFill.style.strokeDashoffset = String(offset);
+    el.portraitExpRingFill.style.stroke = PORTRAIT_RING_COLORS[outfit.tierIndex];
+    el.portraitProgressLabel.textContent = `평민 → 공주 ${Math.round(percent)}%`;
+  }
+
   function renderMain() {
     playBgm('default');
     el.turnLabel.textContent = yearMonthLabel(state.turn);
@@ -450,6 +471,7 @@
     const equippedTier = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.characterPortrait, state.wardrobe.equipped, 'main');
     el.outfitBadge.textContent = `${equippedTier.emoji} ${equippedTier.name}`;
+    updatePortraitProgressRing();
     const { total: projectedDeltas } = Engine.estimateRemainingWeeksDelta(state);
     renderStatPanel(el.mainStatPanel, state.stats, projectedDeltas);
     updateScheduleBanner();

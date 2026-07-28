@@ -71,11 +71,16 @@
 
       <div class="character-wrap">
         <div class="portrait-frame portrait-frame-main">
+          <svg class="portrait-exp-ring" viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="portrait-exp-ring-track" cx="50" cy="50" r="46"></circle>
+            <circle id="portrait-exp-ring-fill" class="portrait-exp-ring-fill" cx="50" cy="50" r="46"></circle>
+          </svg>
           <div class="portrait-frame-ring"></div>
           <div id="character-portrait" class="character-portrait"></div>
         </div>
         <div id="character-name" class="character-name">우리 딸</div>
         <div id="outfit-badge" class="outfit-badge">👕 평범한 옷</div>
+        <div id="portrait-progress-label" class="portrait-progress-label">평민 → 공주 0%</div>
       </div>
 
       <div id="main-stat-panel" class="stat-panel main-stat-panel"></div>
