@@ -30,6 +30,7 @@
       quiz: document.getElementById('screen-quiz'),
       sessionSummary: document.getElementById('screen-session-summary'),
       event: document.getElementById('screen-event'),
+      noblePromotion: document.getElementById('screen-noble-promotion'),
       branching: document.getElementById('screen-branching'),
       ending: document.getElementById('screen-ending'),
       endingGallery: document.getElementById('screen-ending-gallery'),
@@ -56,6 +57,7 @@
     outfitBadge: document.getElementById('outfit-badge'),
     portraitExpRingFill: document.getElementById('portrait-exp-ring-fill'),
     portraitProgressLabel: document.getElementById('portrait-progress-label'),
+    nobleTitleBadge: document.getElementById('noble-title-badge'),
     mainMenuGrid: document.getElementById('main-menu-grid'),
     scheduleBanner: document.getElementById('schedule-banner'),
     scheduleBannerText: document.getElementById('schedule-banner-text'),
@@ -129,6 +131,10 @@
     eventTitle: document.getElementById('event-title'),
     eventDesc: document.getElementById('event-desc'),
     btnEventConfirm: document.getElementById('btn-event-confirm'),
+
+    nobleTitleInput: document.getElementById('noble-title-input'),
+    nobleTitleError: document.getElementById('noble-title-error'),
+    btnNobleTitleConfirm: document.getElementById('btn-noble-title-confirm'),
 
     branchingEmoji: document.getElementById('branching-emoji'),
     branchingPrompt: document.getElementById('branching-prompt'),
@@ -472,10 +478,47 @@
     renderPortraitInto(el.characterPortrait, state.wardrobe.equipped, 'main');
     el.outfitBadge.textContent = `${equippedTier.emoji} ${equippedTier.name}`;
     updatePortraitProgressRing();
+    if (state.nobleTitle) {
+      el.nobleTitleBadge.textContent = `👑 ${state.nobleTitle}`;
+      el.nobleTitleBadge.style.display = 'inline-block';
+    } else {
+      el.nobleTitleBadge.style.display = 'none';
+    }
     const { total: projectedDeltas } = Engine.estimateRemainingWeeksDelta(state);
     renderStatPanel(el.mainStatPanel, state.stats, projectedDeltas);
     updateScheduleBanner();
   }
+
+  // 성장 능력치 6개가 전부 Lv5를 다 채우면(값 50), 메인 화면으로 돌아가는
+  // 대신 왕실 작위 수여 이벤트를 먼저 보여준다. 그 외의 경우엔 평소처럼
+  // 메인 화면을 그린다. onArrived는 실제로 메인 화면에 도착했을 때만
+  // 실행할 후속 작업(예: 왕자님과 우연히 마주치는 토스트)을 위한 콜백이다.
+  function goToMainScreen(onArrived) {
+    if (Engine.noblePromotionEligible(state)) {
+      showNoblePromotionCeremony();
+      return;
+    }
+    renderMain();
+    showScreen('main');
+    if (onArrived) onArrived();
+  }
+
+  function showNoblePromotionCeremony() {
+    el.nobleTitleInput.value = '';
+    el.nobleTitleError.textContent = '';
+    showScreen('noblePromotion');
+  }
+
+  el.btnNobleTitleConfirm.addEventListener('click', () => {
+    if (!Engine.grantNobleTitle(state, el.nobleTitleInput.value)) {
+      el.nobleTitleError.textContent = '작위명을 입력해주세요';
+      return;
+    }
+    saveGame();
+    showLevelToast(`👑 ${state.nobleTitle} 작위를 받아 귀족이 되었어요!`);
+    renderMain();
+    showScreen('main');
+  });
 
   /* ---------------- 레벨업 토스트 ---------------- */
 
@@ -859,7 +902,7 @@
     showScreen('npcSelect');
   }
 
-  el.btnNpcBack.addEventListener('click', () => showScreen('main'));
+  el.btnNpcBack.addEventListener('click', () => goToMainScreen());
 
   function meetNpc(npcId) {
     const beforeTiers = Engine.snapshotGrowthTiers(state.stats);
@@ -992,8 +1035,7 @@
   }
 
   el.btnShopBack.addEventListener('click', () => {
-    renderMain();
-    showScreen('main');
+    goToMainScreen();
   });
 
   el.shopTabBtns.forEach((btn) => {
@@ -1379,8 +1421,8 @@
   });
 
   el.btnScheduleBack.addEventListener('click', () => {
-    renderMain(); // 계획을 바꿨을 수 있으니 게이지바의 예상치(반투명 바)도 다시 계산해서 보여준다
-    showScreen('main');
+    // 계획을 바꿨을 수 있으니 게이지바의 예상치(반투명 바)도 다시 계산해서 보여준다
+    goToMainScreen();
   });
 
   function executeSchedule() {
@@ -1564,7 +1606,7 @@
       });
   }
 
-  el.btnStatusBack.addEventListener('click', () => showScreen('main'));
+  el.btnStatusBack.addEventListener('click', () => goToMainScreen());
 
   el.mainMenuGrid.addEventListener('click', (e) => {
     const btn = e.target.closest('.main-menu-btn');
@@ -1587,9 +1629,9 @@
       return;
     }
     saveGame();
-    showScreen('main');
-    renderMain();
-    if (princeEncounter) showLevelToast('🤴 궁에서 우연히 왕자님과 마주쳤어요! (호감도 상승)');
+    goToMainScreen(() => {
+      if (princeEncounter) showLevelToast('🤴 궁에서 우연히 왕자님과 마주쳤어요! (호감도 상승)');
+    });
   }
 
   // 한 주(週)의 활동을 마쳤을 때 호출한다. 이번 달(턴) 안에 남은 주가 있으면
@@ -1599,8 +1641,7 @@
     const { monthAdvanced, ended, princeEncounter } = Engine.advanceWeekOrTurn(state, TOTAL_TURNS);
     if (!monthAdvanced) {
       saveGame();
-      showScreen('main');
-      renderMain();
+      goToMainScreen();
       return;
     }
     if (ended) {
@@ -1608,9 +1649,9 @@
       return;
     }
     saveGame();
-    showScreen('main');
-    renderMain();
-    if (princeEncounter) showLevelToast('🤴 궁에서 우연히 왕자님과 마주쳤어요! (호감도 상승)');
+    goToMainScreen(() => {
+      if (princeEncounter) showLevelToast('🤴 궁에서 우연히 왕자님과 마주쳤어요! (호감도 상승)');
+    });
   }
 
   function showEnding() {
@@ -1648,8 +1689,7 @@
     clearSave();
     saveGame();
     gameStarted = true;
-    showScreen('main');
-    renderMain();
+    goToMainScreen();
   });
 
   el.btnEndingHome.addEventListener('click', () => showScreen('start'));
@@ -1661,8 +1701,7 @@
     clearSave();
     saveGame();
     gameStarted = true;
-    showScreen('main');
-    renderMain();
+    goToMainScreen();
   }
 
   el.btnNewGame.addEventListener('click', () => {
@@ -1685,8 +1724,7 @@
   el.btnContinue.addEventListener('click', () => {
     if (loadGame()) {
       gameStarted = true;
-      showScreen('main');
-      renderMain();
+      goToMainScreen();
     }
   });
 

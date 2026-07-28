@@ -43,7 +43,8 @@ html, body {
 #screen-session-summary,
 #screen-event,
 #screen-branching,
-#screen-ending {
+#screen-ending,
+#screen-noble-promotion {
   align-items: center;
   justify-content: center;
   overflow-y: auto;
@@ -449,6 +450,47 @@ html, body {
   font-weight: 700;
   color: rgba(255, 255, 255, 0.65);
   letter-spacing: 0.2px;
+}
+
+/* 평민 → 귀족 신분 상승 뒤 메인 화면에 눈에 띄게 보여주는 작위 배지.
+   금색 그라디언트와 은은한 발광 효과로 다른 배지와 확실히 구분되게 했다. */
+.noble-title-badge {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #4a3410;
+  background: linear-gradient(120deg, #fff3c4, #ffd873 55%, #f5b942);
+  padding: 4px 14px;
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(255, 216, 115, 0.6);
+  animation: noble-badge-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes noble-badge-glow {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 216, 115, 0.5); }
+  50% { box-shadow: 0 0 16px rgba(255, 216, 115, 0.9); }
+}
+
+.noble-promotion-screen {
+  background: radial-gradient(circle at 50% 30%, rgba(255, 216, 115, 0.25), rgba(0, 0, 0, 0.55) 70%);
+}
+
+.noble-promotion-card {
+  border: 2px solid rgba(255, 216, 115, 0.8);
+  box-shadow: 0 0 30px rgba(255, 216, 115, 0.5), 0 10px 30px rgba(90, 50, 40, 0.3);
+}
+
+.noble-promotion-emoji {
+  font-size: 44px;
+}
+
+.noble-title-error {
+  min-height: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #c0455e;
+  margin: -8px 0 12px;
 }
 
 .stat-panel {

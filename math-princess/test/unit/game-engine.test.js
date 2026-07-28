@@ -25,10 +25,51 @@ eq(Engine.comboMultiplier(5), 1.6, '콤보 5부터 배율 1.6');
 eq(Engine.comboMultiplier(10), 2.2, '콤보 10부터 배율 2.2');
 eq(Engine.comboMultiplier(20), 3.0, '콤보 20부터 배율 3.0');
 
-eq(Engine.statTierIndex(0), 0, '스탯 0은 티어 0');
-eq(Engine.statTierIndex(19), 0, '스탯 19는 아직 티어 0');
-eq(Engine.statTierIndex(20), 1, '스탯 20부터 티어 1');
-eq(Engine.statTierIndex(80), 4, '스탯 80부터 티어 4(최고)');
+eq(Engine.statTierIndex(0), 0, '스탯 0은 티어 0(Lv1)');
+eq(Engine.statTierIndex(9), 0, '스탯 9는 아직 티어 0(Lv1)');
+eq(Engine.statTierIndex(10), 1, '스탯 10부터 티어 1(Lv2)');
+eq(Engine.statTierIndex(49), 4, '스탯 49는 아직 티어 4(Lv5)');
+eq(Engine.statTierIndex(50), 5, '스탯 50부터 티어 5(Lv6)');
+eq(Engine.statTierIndex(90), 9, '스탯 90부터 티어 9(Lv10, 최고)');
+eq(Engine.statTierIndex(100), 9, '스탯 100(만점)도 티어 9(Lv10)');
+
+/* ---------------- 평민 → 귀족 신분 상승(작위 수여) ---------------- */
+
+{
+  // 6개 성장 능력치가 전부 Lv5를 다 채워야(값 50) 승급 자격이 생긴다.
+  const state = Engine.makeInitialState();
+  ok(!Engine.noblePromotionEligible(state), '초기 상태(모든 능력치 50 미만)에서는 승급 자격이 없어야 함');
+
+  ['intelligence', 'focus', 'stamina', 'charm', 'creativity'].forEach((k) => { state.stats[k] = 50; });
+  ok(!Engine.noblePromotionEligible(state), '한 능력치(luck)만 50 미만이어도 승급 자격이 없어야 함');
+
+  state.stats.luck = 50;
+  ok(Engine.noblePromotionEligible(state), '성장 능력치 6개가 모두 50 이상이면 승급 자격이 생겨야 함');
+}
+{
+  // 이미 작위를 받았으면 조건을 다시 만족해도 재승급 자격이 생기면 안 된다.
+  const state = Engine.makeInitialState();
+  ['intelligence', 'focus', 'stamina', 'charm', 'creativity', 'luck'].forEach((k) => { state.stats[k] = 90; });
+  state.nobleTitle = '은빛 백작';
+  ok(!Engine.noblePromotionEligible(state), '이미 작위를 받았으면 다시 승급 자격이 생기면 안 됨');
+}
+{
+  const state = Engine.makeInitialState();
+  ok(Engine.grantNobleTitle(state, '  은빛 백작  '), '유효한 작위명이면 승급이 성공해야 함');
+  eq(state.nobleTitle, '은빛 백작', '작위명은 앞뒤 공백이 제거되어 저장되어야 함');
+  ok(!Engine.grantNobleTitle(state, '다른 작위'), '이미 작위가 있으면 다시 승급할 수 없어야 함(중복 방지)');
+  eq(state.nobleTitle, '은빛 백작', '중복 승급 시도는 기존 작위를 덮어쓰면 안 됨');
+}
+{
+  const state = Engine.makeInitialState();
+  ok(!Engine.grantNobleTitle(state, ''), '빈 문자열은 작위로 인정되면 안 됨');
+  ok(!Engine.grantNobleTitle(state, '   '), '공백만 있는 문자열도 작위로 인정되면 안 됨');
+  eq(state.nobleTitle, null, '유효하지 않은 시도 후에는 nobleTitle이 그대로 null이어야 함');
+
+  const tooLong = '가'.repeat(30);
+  Engine.grantNobleTitle(state, tooLong);
+  eq(state.nobleTitle.length, 20, '작위명은 너무 길면 20자로 잘려야 함');
+}
 
 approx(Engine.graceScore({ charm: 100, creativity: 0, intelligence: 0 }), 40, 0.01, '품위 점수는 매력 가중치 0.4');
 approx(Engine.graceScore({ charm: 0, creativity: 100, intelligence: 0 }), 30, 0.01, '품위 점수는 창의력 가중치 0.3');

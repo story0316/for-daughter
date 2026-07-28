@@ -79,6 +79,7 @@
           <div id="character-portrait" class="character-portrait"></div>
         </div>
         <div id="character-name" class="character-name">우리 딸</div>
+        <div id="noble-title-badge" class="noble-title-badge" style="display:none">👑</div>
         <div id="outfit-badge" class="outfit-badge">👕 평범한 옷</div>
         <div id="portrait-progress-label" class="portrait-progress-label">평민 → 공주 0%</div>
       </div>
@@ -375,6 +376,21 @@
         <h2 id="event-title">이벤트</h2>
         <p id="event-desc">즐거운 일이 생겼어요!</p>
         <button id="btn-event-confirm" class="btn btn-primary">확인</button>
+      </div>
+    </section>
+
+    <!-- 평민 → 귀족 신분 상승(작위 수여) -->
+    <section id="screen-noble-promotion" class="screen overlay-screen noble-promotion-screen">
+      <div class="card noble-promotion-card">
+        <div class="title-emoji noble-promotion-emoji">👑📜</div>
+        <h2>왕실에서 작위가 내려왔어요!</h2>
+        <p class="subtitle">그동안 갈고닦은 실력이 왕실의 인정을 받아, 작위 수여 기준을 모두 충족했어요. 평민에서 귀족으로 신분이 오르게 되었답니다!</p>
+        <div class="name-input-wrap">
+          <label for="noble-title-input" class="name-input-label">받고 싶은 작위 이름을 지어주세요</label>
+          <input type="text" id="noble-title-input" class="name-input" placeholder="예: 은빛 백작" maxlength="20" autocomplete="off" />
+        </div>
+        <div id="noble-title-error" class="noble-title-error"></div>
+        <button id="btn-noble-title-confirm" class="btn btn-primary">작위 받기</button>
       </div>
     </section>
 

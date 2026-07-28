@@ -49,8 +49,14 @@
       creativity: '창의력', stress: '스트레스', luck: '행운',
     };
     const GROWTH_STAT_KEYS = ['intelligence', 'focus', 'stamina', 'charm', 'creativity', 'luck'];
-    const STAT_TIER_THRESHOLDS = [0, 20, 40, 60, 80];
-    const STAT_TIER_COLORS = ['#8a93b8', '#6fa8ff', '#b48fff', '#ff8fb3', '#ffd873'];
+    // Lv1~10, 10점 단위(0~90)로 승급하며 100에서 Lv10이 된다. Lv5(50 이상)를
+    // 모든 성장 능력치에서 동시에 달성하면 평민→귀족 신분 상승 이벤트가 열린다.
+    const STAT_TIER_THRESHOLDS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90];
+    const STAT_TIER_COLORS = [
+      '#8a93b8', '#7d9ecf', '#6fa8ff', '#8f9dff', '#b48fff',
+      '#d68fd0', '#ff8fb3', '#ffab8f', '#ffd873', '#fff6c9',
+    ];
+    const NOBLE_PROMOTION_TIER = 5; // STAT_TIER_THRESHOLDS[5]=50: 이 값에 도달하면 "Lv5를 다 채움"(Lv6 문턱)
 
     const WEEKS_PER_MONTH = 4;
     const QUESTIONS_PER_STUDY = 4;
@@ -271,6 +277,23 @@
       return stats.charm * 0.4 + stats.creativity * 0.3 + stats.intelligence * 0.3;
     }
 
+    // 성장 능력치(지능/집중력/체력/매력/창의력/행운) 여섯 개 모두 Lv5를 다
+    // 채워(값 50 도달, STAT_TIER_THRESHOLDS[5]=50에서 Lv6로 넘어가는 문턱)
+    // 있고 아직 귀족으로 승급하지 않았으면 왕실 작위 수여 이벤트를 열 수
+    // 있다. 실제 승급(작위 저장)은 grantNobleTitle이 한다.
+    function noblePromotionEligible(state) {
+      if (state.nobleTitle) return false;
+      return GROWTH_STAT_KEYS.every((k) => state.stats[k] >= STAT_TIER_THRESHOLDS[NOBLE_PROMOTION_TIER]);
+    }
+
+    function grantNobleTitle(state, title) {
+      const trimmed = (title || '').trim();
+      if (!trimmed) return false;
+      if (state.nobleTitle) return false;
+      state.nobleTitle = trimmed.slice(0, 20);
+      return true;
+    }
+
     function affectionTierName(value) {
       let name = AFFECTION_TIERS[0].name;
       AFFECTION_TIERS.forEach((t) => { if (value >= t.min) name = t.name; });
@@ -325,6 +348,7 @@
         completedScenarios: [],
         career: null,
         certifications: { math: null, english: null, science: null },
+        nobleTitle: null,
       };
     }
 
@@ -367,6 +391,7 @@
         const value = loaded.certifications[key];
         if (value !== null && !MEDAL_TIERS.some((t) => t.id === value)) loaded.certifications[key] = null;
       });
+      if (typeof loaded.nobleTitle !== 'string' && loaded.nobleTitle !== null) loaded.nobleTitle = null;
       return loaded;
     }
 
@@ -994,6 +1019,7 @@
       // 기본 헬퍼
       randInt, randChoice, shuffle, statTierIndex, snapshotGrowthTiers, leveledUpStats,
       graceScore, affectionTierName, currentOutfit, comboMultiplier: Reward.comboMultiplier, itemBonusSum, clampStats,
+      noblePromotionEligible, grantNobleTitle, NOBLE_PROMOTION_TIER,
       // 상태 생성/이관
       makeInitialState, migrateLoadedState,
       // 과목/문제(질문 엔진에 위임)
