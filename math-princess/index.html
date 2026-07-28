@@ -35,6 +35,19 @@
       </div>
     </section>
 
+    <!-- 새로 시작 전 확인: 진행 중인 저장 데이터가 있으면 정말 지우고 새로 시작할지 물어본다 -->
+    <section id="screen-confirm-new-game" class="screen overlay-screen">
+      <div class="card">
+        <div class="title-emoji">⚠️</div>
+        <h2>정말 새로 시작할까요?</h2>
+        <p>진행 중인 게임이 있어요. 새로 시작하면 지금까지의 진행 상황이 사라지고 되돌릴 수 없어요.</p>
+        <div class="result-buttons">
+          <button id="btn-confirm-new-game" class="btn btn-primary">네, 새로 시작할게요</button>
+          <button id="btn-cancel-new-game" class="btn btn-secondary">아니요, 이어할래요</button>
+        </div>
+      </div>
+    </section>
+
     <!-- 엔딩 도감 화면: 지금까지 본 엔딩과 아직 못 본 엔딩을 모아 보여준다(여러 판에 걸쳐 누적) -->
     <section id="screen-ending-gallery" class="screen">
       <header class="hud">
@@ -193,7 +206,7 @@
           <span class="level-badge-num">🏆</span>
           <span class="level-info">
             <span class="level-title">왕국 수학경시대회</span>
-            <span class="level-desc">덧셈뺄셈부터 시작해 점점 어려워지는 문제 5개에 도전해요. 어려워질수록 상금도 커져요</span>
+            <span class="level-desc">덧셈뺄셈부터 시작해 점점 어려워지는 문제에 도전해요(문제 수는 직접 선택). 어려워질수록 상금도 커져요</span>
           </span>
           <span class="level-lock-icon">›</span>
         </button>
@@ -289,6 +302,9 @@
       <div class="quiz-wrap">
         <div id="quiz-question" class="quiz-question">3 + 4 = ?</div>
 
+        <button id="btn-quiz-hint" class="btn-hint">💡 도움 받기</button>
+        <div id="quiz-hint" class="quiz-hint" style="display:none"></div>
+
         <div id="quiz-choices" class="quiz-choices"></div>
 
         <div id="quiz-input-wrap" class="quiz-input-wrap">
@@ -315,6 +331,7 @@
         </div>
 
         <div id="quiz-feedback" class="quiz-feedback"></div>
+        <button id="btn-quiz-next" class="btn btn-primary btn-quiz-next" style="display:none">다음 →</button>
       </div>
     </section>
 

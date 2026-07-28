@@ -54,6 +54,18 @@ eq(Question.subjectName('science'), '과학', '과학 과목 이름');
 }
 
 {
+  // 예절 문제 은행 전체에 "도움 받기" 버튼이 보여줄 힌트가 있어야 하고,
+  // 생성된 문제 객체에도 그 힌트가 그대로 전달되어야 한다.
+  Question.ETIQUETTE_QUESTIONS.forEach((q) => {
+    ok(typeof q.hint === 'string' && q.hint.length > 5, `예절 문제에는 힌트가 있어야 함: "${q.question}"`);
+    ok(!q.hint.includes(q.answer), `예절 문제 힌트는 정답을 그대로 담고 있으면 안 됨: "${q.question}"`);
+  });
+  const session = { askedQuestions: [] };
+  const generated = Question.generateEtiquetteQuestion(session);
+  ok(typeof generated.hint === 'string' && generated.hint.length > 5, 'generateEtiquetteQuestion이 돌려주는 문제 객체에도 hint가 포함되어야 함');
+}
+
+{
   const scenario = { quiz: { bank: [
     { question: 'Q1', choices: ['a', 'b'], answer: 'a', explanation: 'e1' },
     { question: 'Q2', choices: ['a', 'b'], answer: 'b', explanation: 'e2' },

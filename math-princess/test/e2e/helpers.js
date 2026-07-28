@@ -48,6 +48,8 @@ function makeState(overrides) {
 
 // 문제 화면에서 선택형/입력형 상관없이 아무 답이나 골라 넘긴다(정답 여부는
 // 신경 쓰지 않는 흐름 테스트용 — 정답이 필요한 테스트는 별도로 answer map을 쓴다).
+// 정답을 낸 뒤에는 자동으로 넘어가지 않고 "다음" 버튼을 눌러야 하므로, 버튼이
+// 뜨는 걸 기다렸다가 직접 클릭한다.
 async function answerAnyQuizQuestion(page) {
   await page.waitForTimeout(150);
   const choiceBtn = await page.$('.choice-btn');
@@ -57,7 +59,8 @@ async function answerAnyQuizQuestion(page) {
     await page.click('.keypad-btn[data-key="1"]');
     await page.click('#btn-quiz-submit');
   }
-  await page.waitForTimeout(1300);
+  await page.waitForSelector('#btn-quiz-next', { state: 'visible' });
+  await page.click('#btn-quiz-next');
 }
 
 // 화면이 quiz에서 벗어날 때까지(세션의 모든 문제를 다 풀 때까지) 계속 답한다.

@@ -69,6 +69,16 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(Engine.migrateLoadedState(null), null, '유효하지 않은 저장 데이터는 null');
   eq(Engine.migrateLoadedState({}), null, 'turn이 없는 데이터는 null');
 }
+{
+  // CAREER_DEFS에서 삭제/변경되어 더 이상 존재하지 않는 직업 id가 저장되어
+  // 있으면(예: 밸런스 조정으로 직업 id가 바뀐 경우), 영원히 무직 취급도 못 받고
+  // 월급도 없이 발이 묶이지 않도록 무직으로 되돌려야 한다.
+  const migrated = Engine.migrateLoadedState({ turn: 1, career: 'no-such-career' });
+  eq(migrated.career, null, '존재하지 않는 직업 id는 무직(null)으로 되돌려야 함');
+  const validCareerId = Engine.CAREER_DEFS[0].id;
+  const migratedValid = Engine.migrateLoadedState({ turn: 1, career: validCareerId });
+  eq(migratedValid.career, validCareerId, '유효한 직업 id는 그대로 유지되어야 함');
+}
 
 /* ---------------- 세션: 정답/오답 반영 ---------------- */
 
@@ -206,6 +216,29 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   state.turn = 48;
   const r = Engine.advanceTurn(state, 48);
   eq(r.ended, true, 'TOTAL_TURNS를 넘기면 ended=true');
+}
+
+{
+  // 정원사 고용 중에 행운이 이미 최대치(100)에 가까우면, 달이 넘어갈 때
+  // 자동으로 더해지는 행운이 100을 넘지 않도록 clampStats가 적용되어야 한다.
+  const state = Engine.makeInitialState();
+  state.items.gardener = true;
+  state.stats.luck = 100;
+  Engine.advanceTurn(state, 48);
+  eq(state.stats.luck, 100, '행운은 advanceTurn 이후에도 100을 넘으면 안 됨');
+}
+
+/* ---------------- 이번 달 계획 미리보기 ---------------- */
+
+{
+  // 빨래하기를 직접 하면 스트레스가 쌓이고(+) 체력이 깎이는(-) 트레이드오프인데,
+  // 미리보기(estimateActivityDelta)가 실제 보상 공식(reward-engine.js의
+  // laundryBonusReward)과 부호가 어긋나면 스케줄 화면의 예상 변화가 정반대로
+  // 표시된다.
+  const state = Engine.makeInitialState();
+  const d = Engine.estimateActivityDelta(state, 'laundry');
+  ok(d.stress > 0, '빨래하기 미리보기의 스트레스 변화는 양수(쌓임)여야 함 - 실제 보상과 부호가 일치해야 함');
+  ok(d.stamina < 0, '빨래하기 미리보기의 체력 변화는 음수(소모)여야 함');
 }
 
 {

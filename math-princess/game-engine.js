@@ -321,6 +321,7 @@
       if (typeof loaded.talkedThisTurn === 'undefined') loaded.talkedThisTurn = false;
       if (!Array.isArray(loaded.completedScenarios)) loaded.completedScenarios = [];
       if (typeof loaded.career === 'undefined') loaded.career = null;
+      if (loaded.career !== null && !CAREER_DEFS.some((c) => c.id === loaded.career)) loaded.career = null;
       return loaded;
     }
 
@@ -738,8 +739,8 @@
         d.stress += -12 * rm - 5 * r;
         d.stamina += 10 * rm + 3 * r;
       } else if (activityId === 'laundry') {
-        d.stress += -6 - 3 * r;
-        d.stamina += -2;
+        d.stress += 5 - 3 * r;
+        d.stamina += -3;
         d.gold += 10 + 5 * r;
       } else if (activityId === 'garden') {
         d.stamina += -4;
@@ -823,6 +824,7 @@
       state.talkedThisTurn = false;
       const { princeEncounter } = applyServantEffects(state);
       applyAffectionDecay(state);
+      clampStats(state);
       return { ended: state.turn > totalTurns, princeEncounter };
     }
 
