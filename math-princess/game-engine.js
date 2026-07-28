@@ -13,12 +13,27 @@
  * 일이 일어났는지"는 여기서 정하고, "그걸 어떻게 보여줄지"는 script.js가
  * 정한다.
  *
+ * 내부적으로는 두 개의 더 작은 순수 엔진을 조합해서 쓴다:
+ *   - question-engine.js: 다음에 어떤 문제를 낼지(과목/레벨 선택, 문제 생성)
+ *   - reward-engine.js:   정답/오답에 얼마를 줄지(골드/스탯 공식, 호감도 증가량)
+ * 밸런스 수치(보상 배율, 증감량)만 조정하고 싶을 때는 reward-engine.js만
+ * 보면 되고, 새 과목/문제 유형을 추가할 때는 question-engine.js만 보면 된다.
+ * 세션 흐름·NPC/시나리오·상점/옷장·턴 진행처럼 여러 값을 조합해 "무슨 일이
+ * 일어났는지"를 결정하는 오케스트레이션은 이 파일(game-engine.js)의 몫이다.
+ *
  * createEngine({ P, SUBJ, SC, E })로 문제/시나리오/엔딩 모듈을 주입받아
  * 만든다(브라우저에서는 window.MathPrincess*, Node 테스트에서는
  * require한 모듈을 그대로 넘기면 된다).
  */
 (function (root) {
   'use strict';
+
+  const QuestionEngineModule = (typeof module !== 'undefined' && module.exports)
+    ? require('./question-engine.js')
+    : root.MathPrincessQuestionEngine;
+  const RewardEngineModule = (typeof module !== 'undefined' && module.exports)
+    ? require('./reward-engine.js')
+    : root.MathPrincessRewardEngine;
 
   function createEngine(deps) {
     const P = deps.P;
@@ -27,13 +42,6 @@
     const E = deps.E;
 
     /* ---------------- 상수 ---------------- */
-
-    const SUBJECTS = {
-      math: { name: '수학', isLevelUnlocked: P.isLevelUnlocked, generateProblem: P.generateProblem, maxLevel: 10 },
-      english: { name: '영어', isLevelUnlocked: SUBJ.isEnglishLevelUnlocked, generateProblem: SUBJ.generateEnglishProblem, maxLevel: 4 },
-      science: { name: '과학', isLevelUnlocked: SUBJ.isScienceLevelUnlocked, generateProblem: SUBJ.generateScienceProblem, maxLevel: 4 },
-    };
-    const SUBJECT_KEYS = Object.keys(SUBJECTS);
 
     const STAT_KEYS = ['intelligence', 'focus', 'stamina', 'charm', 'creativity', 'stress', 'luck'];
     const STAT_LABELS = {
@@ -58,17 +66,6 @@
       { emoji: '🤒', title: '감기몸살', desc: '감기에 걸려서 며칠 앓아누웠어요.', apply: (s) => { s.stats.stamina -= 10; } },
       { emoji: '💌', title: '선생님의 칭찬', desc: '선생님이 칭찬해주셔서 기분이 좋아요.', apply: (s) => { s.stats.charm += 2; s.stats.stress -= 5; } },
       { emoji: '🏆', title: '장학금 획득!', desc: '열심히 공부한 결과 장학금을 받았어요!', apply: (s) => { s.gold += 100; }, requirement: (s) => s.stats.intelligence >= 50 },
-    ];
-
-    const ETIQUETTE_QUESTIONS = [
-      { question: '연회장에 들어갈 때 가장 예의바른 행동은 무엇일까요?', choices: ['조용히 미소지으며 인사하기', '큰 소리로 부르기', '먼저 앉아서 기다리기', '음식부터 먹기'], answer: '조용히 미소지으며 인사하기', explanation: '들어갈 때는 밝게 미소지으며 조용히 인사하는 게 기본 예절이에요.' },
-      { question: '식사할 때 나이프와 포크는 어떻게 사용해야 할까요?', choices: ['왼손 포크, 오른손 나이프로 조용히', '아무 손이나 편한 대로', '손으로 집어서 먹기', '포크로 소리 내며 먹기'], answer: '왼손 포크, 오른손 나이프로 조용히', explanation: '나이프와 포크는 소리 나지 않게, 왼손 포크·오른손 나이프로 사용해요.' },
-      { question: '다른 사람이 이야기하고 있을 때 나는 어떻게 해야 할까요?', choices: ['끝까지 귀 기울여 듣는다', '말을 끊고 내 얘기를 한다', '휴대폰을 본다', '딴 곳을 본다'], answer: '끝까지 귀 기울여 듣는다', explanation: '상대방의 말이 끝날 때까지 귀 기울여 듣는 것이 대화의 기본 예절이에요.' },
-      { question: '누군가를 처음 만나 인사할 때 가장 좋은 태도는?', choices: ['눈을 마주치고 미소지으며 인사한다', '고개를 푹 숙이고 아무 말 안 한다', '뒤돌아선다', '손을 흔들지 않고 지나간다'], answer: '눈을 마주치고 미소지으며 인사한다', explanation: '눈을 맞추고 밝게 미소지으며 인사하면 좋은 첫인상을 줄 수 있어요.' },
-      { question: '차를 마시는 다과회에서 지켜야 할 예절은?', choices: ['조용히 한 모금씩 마신다', '소리 내며 후루룩 마신다', '단숨에 들이켠다', '차를 흘리며 마신다'], answer: '조용히 한 모금씩 마신다', explanation: '차는 소리 내지 않고 천천히, 한 모금씩 마시는 것이 예의랍니다.' },
-      { question: '누군가 나에게 친절을 베풀었을 때 해야 할 말은?', choices: ['"고맙습니다"라고 인사한다', '아무 말도 하지 않는다', '그냥 지나간다', '표정을 찡그린다'], answer: '"고맙습니다"라고 인사한다', explanation: '고마운 마음은 꼭 말로 표현하는 게 좋은 예절이에요.' },
-      { question: '약속 시간에 대한 예절로 알맞은 것은?', choices: ['약속 시간에 맞춰 도착한다', '많이 늦어도 상관없다', '아무 때나 간다', '못 갈 땐 말 안 해도 된다'], answer: '약속 시간에 맞춰 도착한다', explanation: '시간 약속을 지키는 것은 상대방을 존중하는 기본 예절이에요.' },
-      { question: '실수로 다른 사람의 발을 밟았을 때는?', choices: ['바로 "미안합니다"라고 사과한다', '못 본 척한다', '웃고 넘어간다', '오히려 화를 낸다'], answer: '바로 "미안합니다"라고 사과한다', explanation: '실수했을 때는 바로 진심으로 사과하는 것이 예의예요.' },
     ];
 
     const TALK_LINES = [
@@ -137,13 +134,13 @@
       banquet: { emoji: '💃', name: '연회 참석' },
     };
 
-    const MULTI_SUBJECT_TYPES = ['study', 'job', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
-    const BONUS_QUIZ_TYPES = ['exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
-
     const ASSUMED_CORRECT_RATE = 0.75;
     const EXPECTED_COMBO_MULTIPLIER = 1.3;
     const DELTA_STAT_KEYS = ['gold', 'intelligence', 'focus', 'stamina', 'charm', 'creativity', 'stress', 'luck'];
     const DELTA_STAT_LABELS = { gold: '골드', intelligence: '지능', focus: '집중력', stamina: '체력', charm: '매력', creativity: '창의력', stress: '스트레스', luck: '행운' };
+
+    const Question = QuestionEngineModule.createQuestionEngine({ P, SUBJ });
+    const Reward = RewardEngineModule.createRewardEngine({ ITEMS });
 
     /* ---------------- 기본 헬퍼 ---------------- */
 
@@ -197,16 +194,16 @@
       return Object.assign({ tierIndex }, tier);
     }
 
-    function comboMultiplier(combo) {
-      if (combo >= 20) return 3.0;
-      if (combo >= 10) return 2.2;
-      if (combo >= 5) return 1.6;
-      if (combo >= 2) return 1.2;
-      return 1.0;
+    function itemBonusSum(state, key) {
+      return Reward.itemBonusSum(state.items, key);
     }
 
-    function itemBonusSum(state, key) {
-      return ITEMS.filter((i) => state.items[i.id]).reduce((sum, i) => sum + (i[key] || 0), 0);
+    // 보상 엔진이 돌려준 { gold?, intelligence?, ... } 형태의 변화량을 state에 그대로 더한다.
+    function applyDelta(state, delta) {
+      Object.keys(delta).forEach((k) => {
+        if (k === 'gold') state.gold += delta.gold;
+        else state.stats[k] += delta[k];
+      });
     }
 
     function clampStats(state) {
@@ -263,60 +260,16 @@
       return loaded;
     }
 
-    /* ---------------- 과목/문제 ---------------- */
+    /* ---------------- 과목/문제 (질문 엔진에 위임) ---------------- */
 
-    function unlockedLevelsFor(state, subjectKey) {
-      const subj = SUBJECTS[subjectKey];
-      const ids = [];
-      for (let i = 1; i <= subj.maxLevel; i++) {
-        if (subj.isLevelUnlocked(i, state.stats.intelligence)) ids.push(i);
-      }
-      return ids;
-    }
-
-    function pickRandomSubjectAndLevel(state) {
-      const subjectKey = randChoice(SUBJECT_KEYS);
-      const unlocked = unlockedLevelsFor(state, subjectKey);
-      const recentBand = unlocked.slice(-3);
-      const level = randChoice(recentBand.length ? recentBand : [1]);
-      return { subject: subjectKey, level };
-    }
-
-    function pickRandomSubjectLevel1() {
-      return { subject: randChoice(SUBJECT_KEYS), level: 1 };
-    }
-
-    function generateEtiquetteQuestion(session) {
-      const remaining = ETIQUETTE_QUESTIONS.filter((q) => !session.askedQuestions.includes(q.question));
-      const pool = remaining.length ? remaining : ETIQUETTE_QUESTIONS;
-      const picked = randChoice(pool);
-      session.askedQuestions.push(picked.question);
-      return { type: 'choice', question: picked.question, choices: shuffle(picked.choices), answer: picked.answer, explanation: picked.explanation, rewardGold: 0, level: 0 };
-    }
-
-    function generateScenarioQuestion(session) {
-      const bank = session.scenario.quiz.bank;
-      const remaining = bank.filter((q) => !session.askedQuestions.includes(q.question));
-      const pool = remaining.length ? remaining : bank;
-      const picked = randChoice(pool);
-      session.askedQuestions.push(picked.question);
-      return { type: 'choice', question: picked.question, choices: shuffle(picked.choices), answer: picked.answer, explanation: picked.explanation, rewardGold: 0, level: 0 };
-    }
-
-    // 세션 유형에 맞는 다음 문제를 만든다(UI는 이 결과로 화면만 그리면 된다).
-    // 필요하면 session.currentSubject를 채워준다(표시용 과목 이름을 UI가 알 수 있도록).
-    function generateNextProblem(state, session) {
-      if (session.type === 'banquet') return generateEtiquetteQuestion(session);
-      if (session.type === 'scenario-quiz') return generateScenarioQuestion(session);
-      if (MULTI_SUBJECT_TYPES.includes(session.type)) {
-        const picked = session.type === 'job' ? pickRandomSubjectLevel1() : pickRandomSubjectAndLevel(state);
-        session.currentSubject = picked.subject;
-        return SUBJECTS[picked.subject].generateProblem(picked.level);
-      }
-      return P.generateProblem(session.level);
-    }
-
-    function subjectName(key) { return SUBJECTS[key].name; }
+    function unlockedLevelsFor(state, subjectKey) { return Question.unlockedLevelsFor(state.stats.intelligence, subjectKey); }
+    function pickRandomSubjectAndLevel(state) { return Question.pickRandomSubjectAndLevel(state.stats.intelligence); }
+    function pickRandomSubjectLevel1() { return Question.pickRandomSubjectLevel1(); }
+    function subjectName(key) { return Question.subjectName(key); }
+    function generateEtiquetteQuestion(session) { return Question.generateEtiquetteQuestion(session); }
+    function generateScenarioQuestion(session) { return Question.generateScenarioQuestion(session); }
+    function generateNextProblem(state, session) { return Question.generateNextProblem(state.stats.intelligence, session); }
+    function typicalStudyLevel(state) { return Question.typicalStudyLevel(state.stats.intelligence); }
 
     /* ---------------- 세션(문제 풀이) 생성 ---------------- */
 
@@ -344,31 +297,17 @@
       return makeSession('scenario-quiz', { scenario, count: scenario.quiz.questionsPerSession, askedQuestions: [] });
     }
 
-    /* ---------------- 정답/오답 반영 ---------------- */
+    /* ---------------- 정답/오답 반영 (보상 엔진에 위임) ---------------- */
 
     function applyCorrect(state, session, problem) {
       state.combo++;
       state.bestCombo = Math.max(state.bestCombo, state.combo);
       session.sessionBestCombo = Math.max(session.sessionBestCombo, state.combo);
 
-      if (session.type === 'banquet') {
-        state.stats.charm += 4 + itemBonusSum(state, 'charmBonus');
-      } else if (session.type === 'scenario-quiz' || BONUS_QUIZ_TYPES.includes(session.type)) {
-        // 세션 종료 시 한 번에 적용(아래 finish* 함수들)
-      } else {
-        const multiplier = comboMultiplier(state.combo) + itemBonusSum(state, 'comboBonus');
-        const jobBonus = session.type === 'job' ? 1.5 : 1;
-        const goldMultiplier = 1 + itemBonusSum(state, 'goldBonus');
-        const goldGain = Math.round(problem.rewardGold * multiplier * jobBonus * goldMultiplier);
-        state.gold += goldGain;
-        session.goldEarned += goldGain;
-        if (session.type === 'study') {
-          state.stats.intelligence += problem.level + itemBonusSum(state, 'intBonus');
-          state.stats.creativity += problem.level * 0.2;
-        } else {
-          state.stats.stamina -= 2;
-        }
-      }
+      const reward = Reward.correctAnswerReward(session.type, problem, state.combo, state.items);
+      if (typeof reward.gold === 'number') session.goldEarned += reward.gold;
+      applyDelta(state, reward);
+
       state.totalCorrect++;
       session.correctCount++;
       clampStats(state);
@@ -376,16 +315,7 @@
 
     function applyWrong(state, session) {
       state.combo = 0;
-      if (session.type === 'banquet') {
-        state.stats.stress += 2;
-      } else if (session.type === 'scenario-quiz' || BONUS_QUIZ_TYPES.includes(session.type)) {
-        // no-op
-      } else if (session.type === 'study') {
-        state.stats.stress += 6;
-        state.stats.stamina -= 4;
-      } else {
-        state.stats.stamina -= 3;
-      }
+      applyDelta(state, Reward.wrongAnswerPenalty(session.type));
       clampStats(state);
     }
 
@@ -410,7 +340,7 @@
       const dressedForPrince = state.wardrobe.equipped >= PRINCE_MIN_TIER;
       if (success && dressedForPrince) {
         const princeState = state.npcs.find((n) => n.id === 'prince');
-        princeState.affection += randInt(10, 16) + itemBonusSum(state, 'affectionBonus');
+        princeState.affection += Reward.affectionGain([10, 16], state.items);
         princeState.lastMetTurn = state.turn;
         clampStats(state);
         return { result: 'met-prince', correctCount: session.correctCount, count: session.count, princeAffection: princeState.affection };
@@ -424,39 +354,28 @@
 
     function finishExerciseBonusOutcome(state, session) {
       const bonus = session.correctCount > 0;
-      state.stats.stamina += 8;
-      state.stats.focus += 4;
-      state.stats.stress += 3;
-      if (bonus) { state.stats.focus += 3; state.stats.stamina += 2; }
+      applyDelta(state, Reward.exerciseBonusReward(bonus));
       clampStats(state);
       return { bonus };
     }
 
     function finishRestBonusOutcome(state, session) {
       const bonus = session.correctCount > 0;
-      const restMultiplier = 1 + itemBonusSum(state, 'restBonus');
-      state.stats.stress -= 12 * restMultiplier;
-      state.stats.stamina += 10 * restMultiplier;
-      if (bonus) { state.stats.stress -= 5; state.stats.stamina += 3; }
+      applyDelta(state, Reward.restBonusReward(bonus, state.items));
       clampStats(state);
       return { bonus };
     }
 
     function finishLaundryBonusOutcome(state, session) {
       const bonus = session.correctCount > 0;
-      state.stats.stress -= 6;
-      state.stats.stamina -= 2;
-      state.gold += 10;
-      if (bonus) { state.stats.stress -= 3; state.gold += 5; }
+      applyDelta(state, Reward.laundryBonusReward(bonus));
       clampStats(state);
       return { bonus };
     }
 
     function finishGardenBonusOutcome(state, session) {
       const bonus = session.correctCount > 0;
-      state.stats.stamina -= 4;
-      state.gold += 25;
-      if (bonus) state.gold += 15;
+      applyDelta(state, Reward.gardenBonusReward(bonus));
       clampStats(state);
       return { bonus };
     }
@@ -503,9 +422,7 @@
         Object.keys(npcEffects).forEach((npcId) => {
           const npcState = state.npcs.find((n) => n.id === npcId);
           if (!npcState) return;
-          const eff = npcEffects[npcId];
-          const gain = Array.isArray(eff) ? randInt(eff[0], eff[1]) : eff;
-          npcState.affection += gain + itemBonusSum(state, 'affectionBonus');
+          npcState.affection += Reward.affectionGain(npcEffects[npcId], state.items);
           npcState.lastMetTurn = state.turn;
         });
       }
@@ -524,7 +441,7 @@
       const def = NPC_DEFS.find((n) => n.id === npcId);
       const npcState = state.npcs.find((n) => n.id === npcId);
       def.apply(state);
-      npcState.affection += randInt(8, 14) + itemBonusSum(state, 'affectionBonus');
+      npcState.affection += Reward.affectionGain([8, 14], state.items);
       npcState.lastMetTurn = state.turn;
       clampStats(state);
       return { kind: 'met', npcDef: def, npcState, line: randChoice(def.lines) };
@@ -624,13 +541,10 @@
 
     /* ---------------- 이번 달 계획 미리보기 ---------------- */
 
-    function typicalStudyLevel(state) {
-      const unlocked = unlockedLevelsFor(state, 'math');
-      return unlocked.length ? unlocked[unlocked.length - 1] : 1;
-    }
-
     // 활동 하나를 한 주 동안 했을 때 예상되는 스탯/골드 변화를 어림잡는다
-    // (정답률 ASSUMED_CORRECT_RATE 가정, 대략적인 예상치).
+    // (정답률 ASSUMED_CORRECT_RATE 가정, 대략적인 예상치). 실제 보상 계산은
+    // reward-engine.js가 담당하므로, 여기서 밸런스 수치를 바꿔도 이 미리보기가
+    // 자동으로 맞아떨어지지는 않는다는 점에 유의(순수 예상치 근사이기 때문).
     function estimateActivityDelta(state, activityId) {
       const d = { gold: 0, intelligence: 0, focus: 0, stamina: 0, charm: 0, creativity: 0, stress: 0, luck: 0 };
       const level = typicalStudyLevel(state);
@@ -741,17 +655,20 @@
 
     return {
       // 상수
-      SUBJECTS, SUBJECT_KEYS, STAT_KEYS, STAT_LABELS, GROWTH_STAT_KEYS, STAT_TIER_THRESHOLDS, STAT_TIER_COLORS,
+      SUBJECTS: Question.SUBJECTS, SUBJECT_KEYS: Question.SUBJECT_KEYS,
+      STAT_KEYS, STAT_LABELS, GROWTH_STAT_KEYS, STAT_TIER_THRESHOLDS, STAT_TIER_COLORS,
       WEEKS_PER_MONTH, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT,
-      SAVE_KEY, EVENTS, ETIQUETTE_QUESTIONS, TALK_LINES, ITEMS, BANQUET_ENTRY_FEE, BANQUET_MIN_TIER, PRINCE_MIN_TIER,
+      SAVE_KEY, EVENTS, ETIQUETTE_QUESTIONS: Question.ETIQUETTE_QUESTIONS, TALK_LINES, ITEMS,
+      BANQUET_ENTRY_FEE, BANQUET_MIN_TIER, PRINCE_MIN_TIER,
       AFFECTION_TIERS, AFFECTION_DECAY_GRACE_TURNS, AFFECTION_DECAY_AMOUNT, OUTFIT_TIERS, NPC_DEFS, ACTIVITY_DEFS,
-      MULTI_SUBJECT_TYPES, BONUS_QUIZ_TYPES, ASSUMED_CORRECT_RATE, EXPECTED_COMBO_MULTIPLIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS,
+      MULTI_SUBJECT_TYPES: Question.MULTI_SUBJECT_TYPES, BONUS_QUIZ_TYPES: Reward.DEFERRED_REWARD_TYPES,
+      ASSUMED_CORRECT_RATE, EXPECTED_COMBO_MULTIPLIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS,
       // 기본 헬퍼
       randInt, randChoice, shuffle, statTierIndex, snapshotGrowthTiers, leveledUpStats,
-      graceScore, affectionTierName, currentOutfit, comboMultiplier, itemBonusSum, clampStats,
+      graceScore, affectionTierName, currentOutfit, comboMultiplier: Reward.comboMultiplier, itemBonusSum, clampStats,
       // 상태 생성/이관
       makeInitialState, migrateLoadedState,
-      // 과목/문제
+      // 과목/문제(질문 엔진에 위임)
       unlockedLevelsFor, pickRandomSubjectAndLevel, pickRandomSubjectLevel1, subjectName,
       generateEtiquetteQuestion, generateScenarioQuestion, generateNextProblem,
       // 세션
