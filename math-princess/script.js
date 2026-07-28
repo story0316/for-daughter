@@ -145,8 +145,10 @@
   const ITEMS = [
     { id: 'sharp', emoji: '✏️', name: '샤프', cost: 300, desc: '문제 정답 시 골드 +10%', goldBonus: 0.1 },
     { id: 'tablet', emoji: '📱', name: '태블릿', cost: 600, desc: '공부 정답 시 지능 +1 추가 획득', intBonus: 1 },
+    { id: 'maid', emoji: '🧹', name: '하녀 고용', cost: 700, desc: '빨래를 대신 해줘요. 매턴 자동으로 스트레스 -2', servant: 'laundry' },
     { id: 'apartment', emoji: '🏢', name: '아파트로 이사', cost: 1000, desc: '휴식 효과 +50%', restBonus: 0.5 },
     { id: 'laptop', emoji: '💻', name: '노트북', cost: 1200, desc: '콤보 보상 배율 +0.2', comboBonus: 0.2 },
+    { id: 'gardener', emoji: '🌾', name: '정원사 고용', cost: 1300, desc: '텃밭을 대신 가꿔줘요. 매턴 자동으로 골드 +10', servant: 'garden' },
     { id: 'tiara', emoji: '👑', name: '작은 티아라', cost: 1500, desc: '연회에서 정답 맞힐 때 매력 +1 추가 획득', charmBonus: 1 },
     { id: 'invitation', emoji: '✉️', name: '왕실 초대장', cost: 2000, desc: '인물을 만날 때 호감도 +2 추가 획득', affectionBonus: 2 },
     { id: 'house', emoji: '🏡', name: '단독주택으로 이사', cost: 2500, desc: '휴식 효과 추가 +50% (총 100%)', restBonus: 0.5 },
@@ -154,6 +156,12 @@
     { id: 'orchestra', emoji: '🎻', name: '개인 오케스트라 레슨', cost: 4000, desc: '공부 정답 시 지능 +2 추가 획득', intBonus: 2 },
     { id: 'palace', emoji: '🏰', name: '별궁으로 이사', cost: 5000, desc: '휴식 효과 추가 +50% (총 150%)', restBonus: 0.5 },
   ];
+
+  // 사교모임(연회) 입장료와, 연회·왕자님을 만나는 데 필요한 최소 옷 단계(OUTFIT_TIERS 인덱스).
+  // 품위 점수로 해금만 해둔 옷이 아니라 "지금 입고 있는" 옷 기준으로 판정한다.
+  const BANQUET_ENTRY_FEE = 150;
+  const BANQUET_MIN_TIER = 1; // 단정한 옷 이상
+  const PRINCE_MIN_TIER = 2; // 예쁜 드레스 이상
 
   // 품위(교양) 점수: 매력·창의력·지능을 섞어 계산한다. 이 점수가 오를수록
   // 입는 옷이 화려해지고, 만날 수 있는 사람의 폭도 넓어진다.
@@ -631,7 +639,9 @@
   // "공부/알바/운동 보너스/휴식 보너스"는 수학·영어·과학이 매 문제마다
   // 무작위로 섞여 나온다. 알바는 항상 가장 쉬운 레벨만, 나머지는 지능에
   // 맞는 레벨 범위에서 고른다.
-  const MULTI_SUBJECT_TYPES = ['study', 'job', 'exercise-bonus', 'rest-bonus'];
+  const MULTI_SUBJECT_TYPES = ['study', 'job', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
+  // 정답/오답 즉시 보상 대신, 세션이 끝난 뒤 한 번에 보너스 효과를 적용하는 유형들.
+  const BONUS_QUIZ_TYPES = ['exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
 
   function nextQuizQuestion() {
     if (session.index >= session.count) {
@@ -664,7 +674,11 @@
               ? `🏃 운동 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
               : session.type === 'rest-bonus'
                 ? `🛌 휴식 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
-                : `${session.scenario.entryEmoji} ${session.scenario.title}`;
+                : session.type === 'laundry-bonus'
+                  ? `🧺 빨래 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
+                  : session.type === 'garden-bonus'
+                    ? `🌾 텃밭 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
+                    : `${session.scenario.entryEmoji} ${session.scenario.title}`;
     el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
     el.quizLevelBadge.textContent = session.type === 'banquet' ? '예절' : session.type === 'scenario-quiz' ? session.scenario.arc : `Lv.${problem.level}`;
@@ -762,9 +776,9 @@
     } else if (session.type === 'scenario-quiz') {
       // 시나리오 퀴즈는 문제마다 즉시 보상을 주지 않고, 세션이 끝난 뒤
       // scenario.outcomes.success/fail 효과를 한 번에 적용한다.
-    } else if (session.type === 'exercise-bonus' || session.type === 'rest-bonus') {
-      // 운동/휴식 보너스 문제도 세션 종료 시(finishExerciseBonusSession/
-      // finishRestBonusSession) 한 번에 보너스 효과를 적용한다.
+    } else if (BONUS_QUIZ_TYPES.includes(session.type)) {
+      // 운동/휴식/빨래/텃밭 보너스 문제도 세션 종료 시(finishXBonusSession)
+      // 한 번에 보너스 효과를 적용한다.
     } else {
       const multiplier = comboMultiplier(state.combo) + itemBonusSum('comboBonus');
       const jobBonus = session.type === 'job' ? 1.5 : 1;
@@ -795,8 +809,8 @@
       state.stats.stress += 2;
     } else if (session.type === 'scenario-quiz') {
       // 시나리오 퀴즈는 outcomes.fail 효과가 세션 종료 시 한 번에 적용된다.
-    } else if (session.type === 'exercise-bonus' || session.type === 'rest-bonus') {
-      // 틀려도 페널티 없이 원래 운동/휴식 효과만 그대로 받는다.
+    } else if (BONUS_QUIZ_TYPES.includes(session.type)) {
+      // 틀려도 페널티 없이 원래 보너스 활동 효과만 그대로 받는다.
     } else if (session.type === 'study') {
       state.stats.stress += 6;
       state.stats.stamina -= 4;
@@ -823,6 +837,14 @@
       finishRestBonusSession();
       return;
     }
+    if (session.type === 'laundry-bonus') {
+      finishLaundryBonusSession();
+      return;
+    }
+    if (session.type === 'garden-bonus') {
+      finishGardenBonusSession();
+      return;
+    }
     el.summaryEmoji.textContent = session.correctCount === session.count ? '🌟' : '✅';
     el.summaryTitle.textContent = session.type === 'study' ? '공부를 마쳤어요!' : '알바를 마쳤어요!';
     el.summaryDesc.textContent = `${session.count}문제 중 ${session.correctCount}개를 맞혔어요`;
@@ -839,8 +861,9 @@
     const prince = NPC_DEFS.find((n) => n.id === 'prince');
     const princeState = state.npcs.find((n) => n.id === 'prince');
     const beforeTiers = snapshotGrowthTiers(state.stats);
+    const dressedForPrince = state.wardrobe.equipped >= PRINCE_MIN_TIER;
 
-    if (success) {
+    if (success && dressedForPrince) {
       princeState.affection += randInt(10, 16) + itemBonusSum('affectionBonus');
       princeState.lastMetTurn = state.turn;
       clampStats();
@@ -848,6 +871,12 @@
       el.eventEmoji.innerHTML = npcAvatarHTML(prince, 'npc-avatar-lg');
       el.eventTitle.textContent = '연회에서 왕자님을 만나다';
       el.eventDesc.textContent = `${session.count}문제 중 ${session.correctCount}개를 맞혀 예절을 뽐냈어요! 왕자님이 다가와 말을 걸어주었어요. (애정도 ${Math.round(princeState.affection)})`;
+    } else if (success && !dressedForPrince) {
+      clampStats();
+      announceStatLevelUps(beforeTiers);
+      el.eventEmoji.textContent = '💃';
+      el.eventTitle.textContent = '연회를 마쳤어요';
+      el.eventDesc.textContent = `${session.count}문제 중 ${session.correctCount}개를 맞혀 예절을 뽐냈어요! 하지만 지금 입은 옷으로는 왕자님 눈에 띄지 못했어요. ${OUTFIT_TIERS[PRINCE_MIN_TIER].name} 이상으로 갈아입어 보세요.`;
     } else {
       clampStats();
       announceStatLevelUps(beforeTiers);
@@ -934,6 +963,72 @@
     maybeTriggerEvent(0.15);
   }
 
+  // 빨래하기: 하녀를 고용하면 매턴 자동으로 처리되어 더 이상 스케줄할 필요가 없다.
+  function doLaundry() {
+    session = {
+      type: 'laundry-bonus',
+      count: 1,
+      index: 0,
+      correctCount: 0,
+      sessionBestCombo: 0,
+      goldEarned: 0,
+      answered: false,
+      currentProblem: null,
+      currentSubject: null,
+    };
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
+  function finishLaundryBonusSession() {
+    const bonus = session.correctCount > 0;
+    const beforeTiers = snapshotGrowthTiers(state.stats);
+    state.stats.stress -= 6;
+    state.stats.stamina -= 2;
+    state.gold += 10;
+    if (bonus) {
+      state.stats.stress -= 3;
+      state.gold += 5;
+    }
+    clampStats();
+    announceStatLevelUps(beforeTiers);
+    saveGame();
+    if (bonus) showLevelToast('🧺 빨래하다 주머니에서 동전을 발견했어요!');
+    advanceTurn();
+  }
+
+  // 텃밭 가꾸기: 정원사를 고용하면 매턴 자동으로 처리되어 더 이상 스케줄할 필요가 없다.
+  function doGarden() {
+    session = {
+      type: 'garden-bonus',
+      count: 1,
+      index: 0,
+      correctCount: 0,
+      sessionBestCombo: 0,
+      goldEarned: 0,
+      answered: false,
+      currentProblem: null,
+      currentSubject: null,
+    };
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
+  function finishGardenBonusSession() {
+    const bonus = session.correctCount > 0;
+    const beforeTiers = snapshotGrowthTiers(state.stats);
+    state.stats.stamina -= 4;
+    state.gold += 25;
+    if (bonus) {
+      state.gold += 15;
+    }
+    clampStats();
+    announceStatLevelUps(beforeTiers);
+    saveGame();
+    if (bonus) showLevelToast('🌾 튼실한 작물을 더 수확했어요!');
+    advanceTurn();
+  }
+
   function maybeTriggerEvent(chance) {
     if (Math.random() > chance) {
       advanceTurn();
@@ -963,6 +1058,7 @@
     el.npcList.innerHTML = '';
     NPC_DEFS.forEach((def) => {
       const unlocked = def.unlock(state.stats);
+      const needsDressUp = unlocked && def.id === 'prince' && state.wardrobe.equipped < PRINCE_MIN_TIER;
       const npcState = state.npcs.find((n) => n.id === def.id);
       const activeScenario = unlocked ? findActiveScenario(def.id) : null;
       const card = document.createElement('button');
@@ -971,7 +1067,7 @@
         ${unlocked ? npcAvatarHTML(def, 'npc-avatar-md') : '<span class="level-badge-num">🔒</span>'}
         <span class="level-info">
           <span class="level-title">${def.name}</span>
-          <span class="level-desc">${unlocked ? (activeScenario ? `<span class="npc-scenario-hint">✨ ${activeScenario.title}</span>` : def.desc) : def.unlockHint(state.stats)}</span>
+          <span class="level-desc">${needsDressUp ? `👗 ${OUTFIT_TIERS[PRINCE_MIN_TIER].name} 이상을 입어야 만날 수 있어요` : unlocked ? (activeScenario ? `<span class="npc-scenario-hint">✨ ${activeScenario.title}</span>` : def.desc) : def.unlockHint(state.stats)}</span>
           ${unlocked ? `<span class="npc-affection-track"><span class="npc-affection-fill" style="width:${npcState.affection}%"></span></span><span class="npc-affection-label">${affectionTierName(npcState.affection)} · ${Math.round(npcState.affection)}</span>` : ''}
         </span>
         <span class="level-lock-icon">${unlocked ? '›' : '🔒'}</span>
@@ -987,6 +1083,10 @@
   el.btnNpcBack.addEventListener('click', () => showScreen('main'));
 
   function meetNpc(npcId) {
+    if (npcId === 'prince' && state.wardrobe.equipped < PRINCE_MIN_TIER) {
+      showLevelToast(`👑 ${OUTFIT_TIERS[PRINCE_MIN_TIER].name} 이상을 입어야 왕자님을 뵐 수 있어요`);
+      return;
+    }
     const activeScenario = findActiveScenario(npcId);
     if (activeScenario) {
       runScenario(activeScenario);
@@ -1297,6 +1397,8 @@
     job: { emoji: '💼', name: '알바' },
     exercise: { emoji: '🏃', name: '운동' },
     rest: { emoji: '🛌', name: '휴식' },
+    laundry: { emoji: '🧺', name: '빨래하기' },
+    garden: { emoji: '🌾', name: '텃밭 가꾸기' },
     friend: { emoji: '🎡', name: '친구 만나기' },
     banquet: { emoji: '💃', name: '연회 참석' },
   };
@@ -1306,8 +1408,41 @@
     else if (activity === 'job') startJobSession();
     else if (activity === 'exercise') doExercise();
     else if (activity === 'rest') doRest();
-    else if (activity === 'friend') openNpcSelect();
-    else if (activity === 'banquet') startBanquetSession();
+    else if (activity === 'laundry') {
+      if (state.items.maid) {
+        showLevelToast('🧹 하녀가 이미 빨래를 도맡아 하고 있어요');
+        state.scheduledActivity = null;
+        showScreen('main');
+        renderMain();
+        return;
+      }
+      doLaundry();
+    } else if (activity === 'garden') {
+      if (state.items.gardener) {
+        showLevelToast('🌾 정원사가 이미 텃밭을 돌보고 있어요');
+        state.scheduledActivity = null;
+        showScreen('main');
+        renderMain();
+        return;
+      }
+      doGarden();
+    } else if (activity === 'friend') openNpcSelect();
+    else if (activity === 'banquet') tryStartBanquet();
+  }
+
+  // 사교모임(연회)은 입장료를 내야 하고, 일정 옷 단계 이상을 입고 있어야 들어갈 수 있다.
+  function tryStartBanquet() {
+    if (state.wardrobe.equipped < BANQUET_MIN_TIER) {
+      showLevelToast(`💃 ${OUTFIT_TIERS[BANQUET_MIN_TIER].name} 이상을 입어야 연회에 입장할 수 있어요`);
+      return;
+    }
+    if (state.gold < BANQUET_ENTRY_FEE) {
+      showLevelToast(`💰 연회 입장료 ${BANQUET_ENTRY_FEE}G가 부족해요`);
+      return;
+    }
+    state.gold -= BANQUET_ENTRY_FEE;
+    saveGame();
+    startBanquetSession();
   }
 
   function updateScheduleBanner() {
@@ -1320,13 +1455,33 @@
     }
   }
 
+  // 하녀/정원사를 고용한 뒤에는 그 집안일을 더 이상 직접 스케줄할 필요가
+  // 없다는 것을 잠금 카드 스타일로 보여준다(자동으로 처리되는 중).
+  function updateScheduleListLocks() {
+    const laundryBtn = el.scheduleList.querySelector('[data-activity="laundry"]');
+    const gardenBtn = el.scheduleList.querySelector('[data-activity="garden"]');
+    if (laundryBtn) {
+      laundryBtn.classList.toggle('locked', !!state.items.maid);
+      laundryBtn.querySelector('.level-desc').textContent = state.items.maid
+        ? '🧹 하녀가 대신 처리하고 있어요'
+        : '문제를 풀며 빨래를 해요. 하녀를 고용하면 자동화돼요';
+    }
+    if (gardenBtn) {
+      gardenBtn.classList.toggle('locked', !!state.items.gardener);
+      gardenBtn.querySelector('.level-desc').textContent = state.items.gardener
+        ? '🌾 정원사가 대신 돌보고 있어요'
+        : '문제를 풀며 텃밭을 가꿔 골드를 벌어요. 정원사를 고용하면 자동화돼요';
+    }
+  }
+
   function openSchedule() {
+    updateScheduleListLocks();
     showScreen('schedule');
   }
 
   el.scheduleList.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-activity]');
-    if (!btn) return;
+    if (!btn || btn.classList.contains('locked')) return;
     state.scheduledActivity = btn.dataset.activity;
     saveGame();
     updateScheduleBanner();
@@ -1466,10 +1621,18 @@
     });
   }
 
+  // 하녀/정원사를 고용하면 그 뒤로는 직접 스케줄하지 않아도 매턴 자동으로
+  // 집안일 효과를 받는다(하녀 고용에 든 돈이 결국 시간을 벌어주는 구조).
+  function applyServantEffects() {
+    if (state.items.maid) state.stats.stress = Math.max(0, state.stats.stress - 2);
+    if (state.items.gardener) state.gold += 10;
+  }
+
   function advanceTurn() {
     state.turn++;
     state.scheduledActivity = null;
     state.talkedThisTurn = false;
+    applyServantEffects();
     applyAffectionDecay();
     if (state.turn > TOTAL_TURNS) {
       showEnding();
