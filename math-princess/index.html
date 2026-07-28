@@ -30,8 +30,21 @@
         <div class="start-buttons">
           <button id="btn-new-game" class="btn btn-primary">새로 시작하기</button>
           <button id="btn-continue" class="btn btn-secondary" style="display:none">이어하기</button>
+          <button id="btn-open-ending-gallery" class="btn btn-secondary">📖 엔딩 도감</button>
         </div>
       </div>
+    </section>
+
+    <!-- 엔딩 도감 화면: 지금까지 본 엔딩과 아직 못 본 엔딩을 모아 보여준다(여러 판에 걸쳐 누적) -->
+    <section id="screen-ending-gallery" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-ending-gallery-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label">엔딩 도감</div>
+        </div>
+      </header>
+      <div id="ending-gallery-summary" class="ending-gallery-summary"></div>
+      <div id="ending-gallery-list" class="ending-gallery-list"></div>
     </section>
 
     <!-- 메인 허브 화면 -->
@@ -317,6 +330,7 @@
       <div class="card">
         <div id="ending-emoji" class="title-emoji">🏅</div>
         <h2 id="ending-title">엔딩 타이틀</h2>
+        <div id="ending-new-badge" class="ending-new-badge" style="display:none">🆕 새로운 엔딩을 발견했어요!</div>
         <p id="ending-desc">엔딩 설명</p>
         <p id="ending-npc-line" class="ending-npc-line"></p>
         <div class="portrait-frame portrait-frame-small">

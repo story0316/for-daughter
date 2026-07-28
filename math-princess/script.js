@@ -29,12 +29,19 @@
       event: document.getElementById('screen-event'),
       branching: document.getElementById('screen-branching'),
       ending: document.getElementById('screen-ending'),
+      endingGallery: document.getElementById('screen-ending-gallery'),
     },
     totalTurnsLabel: document.getElementById('total-turns-label'),
     totalYearsLabel: document.getElementById('total-years-label'),
     btnNewGame: document.getElementById('btn-new-game'),
     btnContinue: document.getElementById('btn-continue'),
     characterNameInput: document.getElementById('character-name-input'),
+
+    btnOpenEndingGallery: document.getElementById('btn-open-ending-gallery'),
+    btnEndingGalleryBack: document.getElementById('btn-ending-gallery-back'),
+    endingGallerySummary: document.getElementById('ending-gallery-summary'),
+    endingGalleryList: document.getElementById('ending-gallery-list'),
+    endingNewBadge: document.getElementById('ending-new-badge'),
 
     turnLabel: document.getElementById('turn-label'),
     goldLabel: document.getElementById('gold-label'),
@@ -220,6 +227,55 @@
       return false;
     }
   }
+
+  /* ---------------- 엔딩 도감(여러 판에 걸쳐 누적되는 별도 저장) ---------------- */
+
+  const ENDINGS_COLLECTION_KEY = 'math-princess-endings-v1';
+
+  function loadEndingCollection() {
+    try {
+      const arr = JSON.parse(localStorage.getItem(ENDINGS_COLLECTION_KEY) || '[]');
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // 이번에 도달한 엔딩을 도감에 기록한다. 이미 본 적 있으면 false, 처음 보는
+  // 엔딩이면 true를 돌려줘서 화면에 "새로운 엔딩 발견!" 배지를 띄울 수 있게 한다.
+  function recordEndingAchieved(endingId) {
+    const collected = loadEndingCollection();
+    if (collected.includes(endingId)) return false;
+    collected.push(endingId);
+    try {
+      localStorage.setItem(ENDINGS_COLLECTION_KEY, JSON.stringify(collected));
+    } catch (e) {
+      // no-op
+    }
+    return true;
+  }
+
+  function renderEndingGallery() {
+    const collected = loadEndingCollection();
+    el.endingGallerySummary.textContent = `${collected.length} / ${E.ENDINGS.length} 엔딩 달성`;
+    el.endingGalleryList.innerHTML = '';
+    E.ENDINGS.forEach((ending) => {
+      const achieved = collected.includes(ending.id);
+      const card = document.createElement('div');
+      card.className = `ending-gallery-card${achieved ? '' : ' locked'}`;
+      card.innerHTML = achieved
+        ? `<span class="ending-gallery-emoji">${ending.emoji}</span><span class="ending-gallery-title">${ending.title}</span>`
+        : `<span class="ending-gallery-emoji">🔒</span><span class="ending-gallery-title">???</span>`;
+      el.endingGalleryList.appendChild(card);
+    });
+  }
+
+  el.btnOpenEndingGallery.addEventListener('click', () => {
+    renderEndingGallery();
+    showScreen('endingGallery');
+  });
+
+  el.btnEndingGalleryBack.addEventListener('click', () => showScreen('start'));
 
   /* ---------------- 공통 렌더 헬퍼 ---------------- */
 
@@ -1174,6 +1230,9 @@
       el.endingNpcLine.textContent = '';
     }
 
+    const isNewEnding = recordEndingAchieved(summary.ending.id);
+    el.endingNewBadge.style.display = isNewEnding ? 'inline-block' : 'none';
+
     renderPortraitInto(el.endingCharacterPortrait, summary.finalOutfit.tierIndex, 'ending');
     el.endingOutfitBadge.textContent = `${summary.finalOutfit.emoji} ${summary.finalOutfit.name}`;
 
@@ -1194,6 +1253,8 @@
     showScreen('main');
     renderMain();
   });
+
+  el.btnEndingHome.addEventListener('click', () => showScreen('start'));
 
   /* ---------------- 시작 화면 ---------------- */
 
