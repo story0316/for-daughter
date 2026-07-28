@@ -193,6 +193,41 @@ html, body {
   box-shadow: none;
 }
 
+.count-pick-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #6a3a5a;
+  margin: 8px 0;
+}
+
+.count-pick-slider {
+  width: 100%;
+  margin: 12px 0;
+  accent-color: #ff8fb3;
+}
+
+.count-pick-hint {
+  font-size: 13px;
+  color: #8a7a86;
+  margin-bottom: 6px;
+}
+
+.count-pick-multiplier {
+  font-size: 15px;
+  font-weight: 600;
+  color: #b4569a;
+  margin-bottom: 16px;
+}
+
+.count-pick-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.count-pick-actions .btn {
+  flex: 1;
+}
+
 .result-buttons {
   display: flex;
   flex-direction: column;

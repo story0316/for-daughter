@@ -200,6 +200,21 @@
       </div>
     </section>
 
+    <!-- 문제 수 선택 화면(공부/알바/경시대회) -->
+    <section id="screen-question-count-pick" class="screen overlay-screen">
+      <div class="card">
+        <div id="count-pick-title" class="subtitle">문제 수를 골라주세요</div>
+        <div class="count-pick-value" id="count-pick-value">4문제</div>
+        <input type="range" id="count-pick-slider" class="count-pick-slider" min="3" max="15" step="1" value="4">
+        <div class="count-pick-hint">문제 수가 많을수록 문제당 보상이 커져요(대신 체력·스트레스도 그만큼 더 들어요)</div>
+        <div class="count-pick-multiplier" id="count-pick-multiplier">기본 보상</div>
+        <div class="count-pick-actions">
+          <button id="btn-count-pick-back" class="btn btn-secondary">‹ 뒤로</button>
+          <button id="btn-count-pick-confirm" class="btn btn-primary">이 문제 수로 도전</button>
+        </div>
+      </div>
+    </section>
+
     <!-- 상태 화면 -->
     <section id="screen-status" class="screen">
       <header class="hud">

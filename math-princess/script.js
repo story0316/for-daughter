@@ -21,6 +21,7 @@
       main: document.getElementById('screen-main'),
       schedule: document.getElementById('screen-schedule'),
       weekPick: document.getElementById('screen-week-pick'),
+      questionCountPick: document.getElementById('screen-question-count-pick'),
       status: document.getElementById('screen-status'),
       shop: document.getElementById('screen-shop'),
       npcSelect: document.getElementById('screen-npc-select'),
@@ -60,6 +61,13 @@
     btnWeekPickBack: document.getElementById('btn-week-pick-back'),
     weekPickTitle: document.getElementById('week-pick-title'),
     weekPickList: document.getElementById('week-pick-list'),
+
+    countPickTitle: document.getElementById('count-pick-title'),
+    countPickValue: document.getElementById('count-pick-value'),
+    countPickSlider: document.getElementById('count-pick-slider'),
+    countPickMultiplier: document.getElementById('count-pick-multiplier'),
+    btnCountPickBack: document.getElementById('btn-count-pick-back'),
+    btnCountPickConfirm: document.getElementById('btn-count-pick-confirm'),
 
     btnStatusBack: document.getElementById('btn-status-back'),
     statusPortrait: document.getElementById('status-portrait'),
@@ -430,14 +438,14 @@
 
   /* ---------------- 활동: 공부 / 알바 / 연회 ---------------- */
 
-  function startStudySession() {
-    session = Engine.startStudySession();
+  function startStudySession(count) {
+    session = Engine.startStudySession(count);
     showScreen('quiz');
     nextQuizQuestion();
   }
 
-  function startJobSession() {
-    session = Engine.startJobSession();
+  function startJobSession(count) {
+    session = Engine.startJobSession(count);
     showScreen('quiz');
     nextQuizQuestion();
   }
@@ -448,8 +456,8 @@
     nextQuizQuestion();
   }
 
-  function startCompetitionSession() {
-    session = Engine.startCompetitionSession(state);
+  function startCompetitionSession(count) {
+    session = Engine.startCompetitionSession(state, count);
     showScreen('quiz');
     nextQuizQuestion();
   }
@@ -968,8 +976,9 @@
   /* ---------------- 메인 메뉴 (스케줄 / 실행 / 쇼핑 / 옷갈아입기 / 대화 / 상태) ---------------- */
 
   function runActivity(activity) {
-    if (activity === 'study') startStudySession();
-    else if (activity === 'job') startJobSession();
+    const chosenCount = state.weekPlanCount[state.weekIndex];
+    if (activity === 'study') startStudySession(chosenCount);
+    else if (activity === 'job') startJobSession(chosenCount);
     else if (activity === 'exercise') doExercise();
     else if (activity === 'rest') doRest();
     else if (activity === 'laundry') {
@@ -994,7 +1003,7 @@
         advanceWeekOrTurn();
         return;
       }
-      startCompetitionSession();
+      startCompetitionSession(chosenCount);
     }
   }
 
@@ -1079,6 +1088,16 @@
     });
   }
 
+  // 공부/알바/왕국 수학경시대회는 문제 수를 도전자가 직접 고를 수 있다.
+  const COUNTABLE_ACTIVITIES = ['study', 'job', 'competition'];
+
+  function activityDefaultCount(activityId) {
+    if (activityId === 'study') return Engine.QUESTIONS_PER_STUDY;
+    if (activityId === 'job') return Engine.QUESTIONS_PER_JOB;
+    if (activityId === 'competition') return Engine.QUESTIONS_PER_COMPETITION;
+    return null;
+  }
+
   function renderWeekPlanScreen() {
     el.weekPlanList.innerHTML = '';
     for (let i = 0; i < WEEKS_PER_MONTH; i++) {
@@ -1086,13 +1105,16 @@
       const def = activityId ? ACTIVITY_DEFS[activityId] : null;
       const done = i < state.weekIndex;
       const isCurrent = i === state.weekIndex;
+      const countLabel = activityId && COUNTABLE_ACTIVITIES.includes(activityId)
+        ? ` · 문제 ${state.weekPlanCount[i] != null ? state.weekPlanCount[i] : activityDefaultCount(activityId)}개`
+        : '';
       const card = document.createElement('button');
       card.className = `level-card week-plan-card${done ? ' locked' : ''}${isCurrent ? ' current' : ''}`;
       card.innerHTML = `
         <span class="level-badge-num">${i + 1}주</span>
         <span class="level-info">
           <span class="level-title">${def ? `${def.emoji} ${def.name}` : '무엇을 할까요?'}</span>
-          <span class="level-desc">${done ? '이미 지나간 주예요' : isCurrent ? '이번 주 (다음 실행)' : '탭해서 계획하기'}</span>
+          <span class="level-desc">${done ? '이미 지나간 주예요' : (isCurrent ? '이번 주 (다음 실행)' : '탭해서 계획하기') + countLabel}</span>
         </span>
         <span class="level-lock-icon">${done ? '✔️' : '›'}</span>
       `;
@@ -1110,6 +1132,7 @@
   }
 
   let editingWeekIndex = 0;
+  let countPickActivity = null;
 
   function openWeekActivityPicker(weekIdx) {
     editingWeekIndex = weekIdx;
@@ -1118,10 +1141,53 @@
     showScreen('weekPick');
   }
 
+  function updateCountPickPreview() {
+    const n = Number(el.countPickSlider.value);
+    el.countPickValue.textContent = `${n}문제`;
+    const lm = Engine.sessionLengthMultiplier(n, activityDefaultCount(countPickActivity));
+    const pct = Math.round((lm - 1) * 100);
+    el.countPickMultiplier.textContent = pct === 0
+      ? '기본 보상'
+      : pct > 0 ? `문제당 보상 +${pct}%` : `문제당 보상 ${pct}%`;
+  }
+
+  function openQuestionCountPicker(activityId) {
+    countPickActivity = activityId;
+    const def = ACTIVITY_DEFS[activityId];
+    const existing = state.weekPlanCount[editingWeekIndex];
+    const initial = existing != null ? existing : activityDefaultCount(activityId);
+    el.countPickTitle.textContent = `${def.emoji} ${def.name} · 문제 수를 골라주세요`;
+    el.countPickSlider.min = Engine.SESSION_LENGTH_MIN;
+    el.countPickSlider.max = Engine.SESSION_LENGTH_MAX;
+    el.countPickSlider.value = initial;
+    updateCountPickPreview();
+    showScreen('questionCountPick');
+  }
+
+  el.countPickSlider.addEventListener('input', updateCountPickPreview);
+
+  el.btnCountPickConfirm.addEventListener('click', () => {
+    state.weekPlan[editingWeekIndex] = countPickActivity;
+    state.weekPlanCount[editingWeekIndex] = Number(el.countPickSlider.value);
+    saveGame();
+    showScreen('schedule');
+    renderWeekPlanScreen();
+  });
+
+  el.btnCountPickBack.addEventListener('click', () => {
+    showScreen('weekPick');
+  });
+
   el.weekPickList.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-activity]');
     if (!btn || btn.classList.contains('locked')) return;
-    state.weekPlan[editingWeekIndex] = btn.dataset.activity;
+    const activityId = btn.dataset.activity;
+    if (COUNTABLE_ACTIVITIES.includes(activityId)) {
+      openQuestionCountPicker(activityId);
+      return;
+    }
+    state.weekPlan[editingWeekIndex] = activityId;
+    state.weekPlanCount[editingWeekIndex] = null;
     saveGame();
     showScreen('schedule');
     renderWeekPlanScreen();

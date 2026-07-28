@@ -61,6 +61,36 @@
     const COMPETITION_MIN_INTELLIGENCE = 50;
     const SAVE_KEY = 'math-princess-save-v1';
 
+    // 공부/알바/경시대회는 문제 수를 도전자가 직접 고를 수 있다(SESSION_LENGTH_MIN
+    // ~ SESSION_LENGTH_MAX). 각 활동의 기본값(QUESTIONS_PER_*)을 그대로 고르면
+    // 보상 배율이 1.0(기존 밸런스 그대로)이고, 문제 수를 더 많이 고를수록 문제당
+    // 보상이 최대 SESSION_LENGTH_MAX_BONUS(=1.5배)까지 커진다 — 대신 문제 수가
+    // 늘어난 만큼 체력/스트레스 비용도 그대로 늘어나므로, 짧게 여러 번보다 길게
+    // 한 번 도전하는 쪽이 더 효율적이 되도록(체감 보상 증가) 만든 장치다. 반대로
+    // 기본값보다 적게 고르면 그만큼 효율이 조금 떨어진다.
+    const SESSION_LENGTH_MIN = 3;
+    const SESSION_LENGTH_MAX = 15;
+    const SESSION_LENGTH_MAX_BONUS = 0.5;
+    const SESSION_LENGTH_MIN_PENALTY = 0.2;
+
+    function clampSessionLength(count) {
+      const n = Math.round(count);
+      return Math.max(SESSION_LENGTH_MIN, Math.min(SESSION_LENGTH_MAX, Number.isFinite(n) ? n : SESSION_LENGTH_MIN));
+    }
+
+    // count가 defaultCount와 같으면 1.0, SESSION_LENGTH_MAX까지 늘어나면
+    // 1+SESSION_LENGTH_MAX_BONUS, SESSION_LENGTH_MIN까지 줄어들면
+    // 1-SESSION_LENGTH_MIN_PENALTY가 되도록 선형 보간한다.
+    function sessionLengthMultiplier(count, defaultCount) {
+      const n = clampSessionLength(count);
+      if (n >= defaultCount) {
+        if (SESSION_LENGTH_MAX === defaultCount) return 1;
+        return 1 + SESSION_LENGTH_MAX_BONUS * (n - defaultCount) / (SESSION_LENGTH_MAX - defaultCount);
+      }
+      if (defaultCount === SESSION_LENGTH_MIN) return 1;
+      return 1 - SESSION_LENGTH_MIN_PENALTY * (defaultCount - n) / (defaultCount - SESSION_LENGTH_MIN);
+    }
+
     const EVENTS = [
       { emoji: '😄', title: '즐거운 시간', desc: '친구와 수다를 떨며 즐거운 시간을 보냈어요.', apply: (s) => { s.stats.charm += 3; } },
       { emoji: '😤', title: '라이벌의 도발', desc: '라이벌이 시험 자랑을 해서 오기가 생겼어요!', apply: (s) => { s.stats.intelligence += 2; s.stats.stress += 3; } },
@@ -255,6 +285,7 @@
         npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 })),
         wardrobe: { equipped: 0, owned: OUTFIT_TIERS.map((_, i) => i === 0), notifiedGraceTier: 0 },
         weekPlan: new Array(WEEKS_PER_MONTH).fill(null),
+        weekPlanCount: new Array(WEEKS_PER_MONTH).fill(null),
         weekIndex: 0,
         talkedThisTurn: false,
         completedScenarios: [],
@@ -281,6 +312,9 @@
       if (!Array.isArray(loaded.weekPlan) || loaded.weekPlan.length !== WEEKS_PER_MONTH) {
         loaded.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
         if (loaded.scheduledActivity) loaded.weekPlan[0] = loaded.scheduledActivity;
+      }
+      if (!Array.isArray(loaded.weekPlanCount) || loaded.weekPlanCount.length !== WEEKS_PER_MONTH) {
+        loaded.weekPlanCount = new Array(WEEKS_PER_MONTH).fill(null);
       }
       if (typeof loaded.weekIndex !== 'number' || loaded.weekIndex < 0 || loaded.weekIndex >= WEEKS_PER_MONTH) loaded.weekIndex = 0;
       delete loaded.scheduledActivity;
@@ -328,10 +362,19 @@
     }
 
     // 이번 공부 세션 내내 한 과목만 다루도록(연계성) 세션 시작 시 과목을 하나 고정해둔다.
-    function startStudySession() {
-      return makeSession('study', { count: QUESTIONS_PER_STUDY, fixedSubject: randChoice(Question.SUBJECT_KEYS) });
+    // count를 생략하면 기본 문제 수(QUESTIONS_PER_STUDY)를 쓴다.
+    function startStudySession(count) {
+      const n = clampSessionLength(count != null ? count : QUESTIONS_PER_STUDY);
+      return makeSession('study', {
+        count: n,
+        rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_STUDY),
+        fixedSubject: randChoice(Question.SUBJECT_KEYS),
+      });
     }
-    function startJobSession() { return makeSession('job', { count: QUESTIONS_PER_JOB }); }
+    function startJobSession(count) {
+      const n = clampSessionLength(count != null ? count : QUESTIONS_PER_JOB);
+      return makeSession('job', { count: n, rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_JOB) });
+    }
     function startBanquetSession() { return makeSession('banquet', { level: 1, count: QUESTIONS_PER_BANQUET, askedQuestions: [] }); }
     function startExerciseSession() { return makeSession('exercise-bonus', { count: 1 }); }
     function startRestSession() { return makeSession('rest-bonus', { count: 1 }); }
@@ -339,9 +382,11 @@
     function startGardenSession() { return makeSession('garden-bonus', { count: 1 }); }
     // 덧셈뺄셈(레벨 1)부터 시작해 현재 해금된 최고 레벨까지 점점 어려워지는
     // 수학 문제로만 출제한다(다른 과목과 안 섞임 — "수학" 경시대회이므로).
-    function startCompetitionSession(state) {
-      const levels = competitionLevelRamp(typicalStudyLevel(state), QUESTIONS_PER_COMPETITION);
-      return makeSession('competition', { levels, count: QUESTIONS_PER_COMPETITION });
+    // count를 생략하면 기본 문제 수(QUESTIONS_PER_COMPETITION)를 쓴다.
+    function startCompetitionSession(state, count) {
+      const n = clampSessionLength(count != null ? count : QUESTIONS_PER_COMPETITION);
+      const levels = competitionLevelRamp(typicalStudyLevel(state), n);
+      return makeSession('competition', { levels, count: n, rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_COMPETITION) });
     }
     // 관련 인물과 친할수록(NPC_HINT_AFFECTION 이상) 문제에 힌트가 붙고,
     // 아주 친하면(NPC_LENIENT_AFFECTION 이상) 통과 기준이 1개 낮아진다.
@@ -360,7 +405,7 @@
       state.bestCombo = Math.max(state.bestCombo, state.combo);
       session.sessionBestCombo = Math.max(session.sessionBestCombo, state.combo);
 
-      const reward = Reward.correctAnswerReward(session.type, problem, state.combo, state.items);
+      const reward = Reward.correctAnswerReward(session.type, problem, state.combo, state.items, session.rewardMultiplier);
       if (typeof reward.gold === 'number') session.goldEarned += reward.gold;
       applyDelta(state, reward);
 
@@ -443,7 +488,7 @@
       let bonusGold = 0;
       if (perfect) {
         const topLevel = session.levels[session.levels.length - 1];
-        const bonus = Reward.competitionPerfectBonus(topLevel);
+        const bonus = Reward.competitionPerfectBonus(topLevel, session.rewardMultiplier);
         bonusGold = bonus.gold;
         applyDelta(state, bonus);
       }
@@ -665,21 +710,25 @@
     // (정답률 ASSUMED_CORRECT_RATE 가정, 대략적인 예상치). 실제 보상 계산은
     // reward-engine.js가 담당하므로, 여기서 밸런스 수치를 바꿔도 이 미리보기가
     // 자동으로 맞아떨어지지는 않는다는 점에 유의(순수 예상치 근사이기 때문).
-    function estimateActivityDelta(state, activityId) {
+    function estimateActivityDelta(state, activityId, count) {
       const d = { gold: 0, intelligence: 0, focus: 0, stamina: 0, charm: 0, creativity: 0, stress: 0, luck: 0 };
       const level = typicalStudyLevel(state);
       const rewardGold = 8 + level * 4;
       const r = ASSUMED_CORRECT_RATE;
       if (activityId === 'study') {
-        d.gold += Math.round(QUESTIONS_PER_STUDY * r * rewardGold * EXPECTED_COMBO_MULTIPLIER * (1 + itemBonusSum(state, 'goldBonus')));
-        d.intelligence += QUESTIONS_PER_STUDY * r * (level + itemBonusSum(state, 'intBonus'));
-        d.creativity += QUESTIONS_PER_STUDY * r * level * 0.2;
-        d.stress += QUESTIONS_PER_STUDY * (1 - r) * 6;
-        d.stamina += -QUESTIONS_PER_STUDY * (1 - r) * 4 - QUESTIONS_PER_STUDY * r * 2;
+        const n = clampSessionLength(count != null ? count : QUESTIONS_PER_STUDY);
+        const lm = sessionLengthMultiplier(n, QUESTIONS_PER_STUDY);
+        d.gold += Math.round(n * r * rewardGold * EXPECTED_COMBO_MULTIPLIER * (1 + itemBonusSum(state, 'goldBonus')) * lm);
+        d.intelligence += n * r * (level + itemBonusSum(state, 'intBonus'));
+        d.creativity += n * r * level * 0.2;
+        d.stress += n * (1 - r) * 6;
+        d.stamina += -n * (1 - r) * 4 - n * r * 2;
       } else if (activityId === 'job') {
+        const n = clampSessionLength(count != null ? count : QUESTIONS_PER_JOB);
+        const lm = sessionLengthMultiplier(n, QUESTIONS_PER_JOB);
         const level1Reward = 8 + 1 * 4;
-        d.gold += Math.round(QUESTIONS_PER_JOB * r * level1Reward * EXPECTED_COMBO_MULTIPLIER * 1.5 * (1 + itemBonusSum(state, 'goldBonus')));
-        d.stamina += -QUESTIONS_PER_JOB * r * 2 - QUESTIONS_PER_JOB * (1 - r) * 3;
+        d.gold += Math.round(n * r * level1Reward * EXPECTED_COMBO_MULTIPLIER * 1.5 * (1 + itemBonusSum(state, 'goldBonus')) * lm);
+        d.stamina += -n * r * 2 - n * (1 - r) * 3;
       } else if (activityId === 'exercise') {
         d.stamina += 8 + 2 * r;
         d.focus += 4 + 3 * r;
@@ -703,14 +752,16 @@
         d.charm += QUESTIONS_PER_BANQUET * r * (4 + itemBonusSum(state, 'charmBonus'));
         d.stress += QUESTIONS_PER_BANQUET * (1 - r) * 2;
       } else if (activityId === 'competition') {
-        const levels = competitionLevelRamp(typicalStudyLevel(state), QUESTIONS_PER_COMPETITION);
+        const n = clampSessionLength(count != null ? count : QUESTIONS_PER_COMPETITION);
+        const lm = sessionLengthMultiplier(n, QUESTIONS_PER_COMPETITION);
+        const levels = competitionLevelRamp(typicalStudyLevel(state), n);
         let expectedGold = 0;
-        levels.forEach((lvl) => { expectedGold += r * (10 + lvl * 3); });
-        const perfectChance = Math.pow(r, QUESTIONS_PER_COMPETITION);
-        expectedGold += perfectChance * (20 + levels[levels.length - 1] * 4);
+        levels.forEach((lvl) => { expectedGold += r * (10 + lvl * 3) * lm; });
+        const perfectChance = Math.pow(r, n);
+        expectedGold += perfectChance * (20 + levels[levels.length - 1] * 4) * lm;
         d.gold += Math.round(expectedGold);
-        d.intelligence += QUESTIONS_PER_COMPETITION * r * 1.5;
-        d.stress += QUESTIONS_PER_COMPETITION * (1 - r) * 3;
+        d.intelligence += n * r * 1.5;
+        d.stress += n * (1 - r) * 3;
       }
       return d;
     }
@@ -723,7 +774,7 @@
         const activity = state.weekPlan[i];
         if (!activity) continue;
         planned++;
-        const d = estimateActivityDelta(state, activity);
+        const d = estimateActivityDelta(state, activity, state.weekPlanCount[i]);
         DELTA_STAT_KEYS.forEach((k) => { total[k] += d[k]; });
       }
       return { total, planned };
@@ -767,6 +818,7 @@
     function advanceTurn(state, totalTurns) {
       state.turn++;
       state.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
+      state.weekPlanCount = new Array(WEEKS_PER_MONTH).fill(null);
       state.weekIndex = 0;
       state.talkedThisTurn = false;
       const { princeEncounter } = applyServantEffects(state);
@@ -806,6 +858,7 @@
       STAT_KEYS, STAT_LABELS, GROWTH_STAT_KEYS, STAT_TIER_THRESHOLDS, STAT_TIER_COLORS,
       WEEKS_PER_MONTH, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT,
       QUESTIONS_PER_COMPETITION, COMPETITION_MIN_INTELLIGENCE,
+      SESSION_LENGTH_MIN, SESSION_LENGTH_MAX, sessionLengthMultiplier,
       SAVE_KEY, EVENTS, ETIQUETTE_QUESTIONS: Question.ETIQUETTE_QUESTIONS, TALK_LINES, ITEMS,
       BANQUET_ENTRY_FEE, BANQUET_MIN_TIER, PRINCE_MIN_TIER,
       STRESS_OVERFLOW_THRESHOLD, NPC_HINT_AFFECTION, NPC_LENIENT_AFFECTION, CAREER_DEFS,

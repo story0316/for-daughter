@@ -77,4 +77,31 @@ async function activeScreenId(page) {
   return page.evaluate(() => document.querySelector('.screen.active')?.id);
 }
 
-module.exports = { BASE_URL, withPage, seedAndContinue, makeState, answerAnyQuizQuestion, drainQuizSession, getSavedState, activeScreenId };
+// #screen-schedule이 열려 있는 상태에서 weekIdx번째 칸에 activityId를 배정한다.
+// 공부/알바/경시대회처럼 문제 수를 고를 수 있는 활동은 count-pick 슬라이더
+// 화면까지 거쳐 count(생략 시 기본값)를 확정하고 다시 #screen-schedule로 돌아온다.
+const COUNTABLE_ACTIVITIES = ['study', 'job', 'competition'];
+
+async function planWeekActivity(page, weekIdx, activityId, count) {
+  const cards = await page.$$('#week-plan-list .level-card');
+  await cards[weekIdx].click();
+  await page.waitForSelector('#screen-week-pick.active');
+  await page.click(`[data-activity="${activityId}"]`);
+  if (COUNTABLE_ACTIVITIES.includes(activityId)) {
+    await page.waitForSelector('#screen-question-count-pick.active');
+    if (count != null) {
+      await page.evaluate((n) => {
+        const slider = document.querySelector('#count-pick-slider');
+        slider.value = String(n);
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+      }, count);
+    }
+    await page.click('#btn-count-pick-confirm');
+  }
+  await page.waitForSelector('#screen-schedule.active');
+}
+
+module.exports = {
+  BASE_URL, withPage, seedAndContinue, makeState, answerAnyQuizQuestion, drainQuizSession, getSavedState, activeScreenId,
+  planWeekActivity,
+};

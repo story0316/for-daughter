@@ -1,7 +1,7 @@
 // 수학 경시대회: 지능 요건 미달이면 스케줄에서 고를 수 없고(잠김), 요건을
 // 만족하면 도전할 수 있으며 성적에 따라 큰 상금이 한 번에 지급되는지 검증한다.
 const { ok, eq, summary } = require('../helpers/assert');
-const { withPage, seedAndContinue, makeState, drainQuizSession, getSavedState } = require('./helpers');
+const { withPage, seedAndContinue, makeState, drainQuizSession, getSavedState, planWeekActivity } = require('./helpers');
 
 async function testLockedBelowThreshold() {
   const errors = await withPage(async (page) => {
@@ -39,6 +39,8 @@ async function testCompetitionAwardsBigPrize() {
     const locked = await page.evaluate(() => document.querySelector('[data-activity="competition"]').classList.contains('locked'));
     ok(!locked, '지능 70이면 경시대회 카드가 잠겨 있지 않아야 함');
     await page.click('[data-activity="competition"]');
+    await page.waitForSelector('#screen-question-count-pick.active');
+    await page.click('#btn-count-pick-confirm');
     await page.waitForSelector('#screen-schedule.active');
     await page.click('#btn-schedule-back');
     await page.waitForSelector('#screen-main.active');

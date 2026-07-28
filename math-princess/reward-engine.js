@@ -36,19 +36,26 @@
     // 정답 하나에 대한 스탯/골드 증가량을 계산한다. { gold, intelligence, ... }
     // 형태로 "바뀔 값만" 돌려주므로, 호출부는 이 키들만 state에 더하면 된다.
     // 보상이 세션 종료 시 한 번에 반영되는 유형(DEFERRED_REWARD_TYPES)은 {}.
-    function correctAnswerReward(sessionType, problem, combo, items) {
+    // lengthMultiplier는 공부/알바/경시대회에서 도전자가 고른 문제 수에 따라
+    // game-engine.js가 계산해 넘겨주는 배율이다(문제 수가 많을수록 1을 넘어
+    // 최대 1.5배까지 커짐, 생략하면 1). 골드 보상에만 적용해 "길게 도전할수록
+    // 이득"이라는 트레이드오프를 주고, 정답률에 따라 자연히 늘어나는 스탯
+    // 성장량 자체는 배율로 부풀리지 않는다.
+    function correctAnswerReward(sessionType, problem, combo, items, lengthMultiplier) {
+      const lm = lengthMultiplier || 1;
       if (sessionType === 'banquet') {
         return { charm: 4 + itemBonusSum(items, 'charmBonus') };
       }
       if (sessionType === 'competition') {
-        return competitionQuestionReward(problem.level);
+        const base = competitionQuestionReward(problem.level);
+        return { gold: Math.round(base.gold * lm), intelligence: base.intelligence };
       }
       if (DEFERRED_REWARD_TYPES.includes(sessionType)) {
         return {};
       }
       const multiplier = comboMultiplier(combo) + itemBonusSum(items, 'comboBonus');
       const jobBonus = sessionType === 'job' ? 1.5 : 1;
-      const goldMultiplier = 1 + itemBonusSum(items, 'goldBonus');
+      const goldMultiplier = (1 + itemBonusSum(items, 'goldBonus')) * lm;
       const gold = Math.round(problem.rewardGold * multiplier * jobBonus * goldMultiplier);
       if (sessionType === 'study') {
         return { gold, intelligence: problem.level + itemBonusSum(items, 'intBonus'), creativity: problem.level * 0.2 };
@@ -107,10 +114,12 @@
       return { gold: 10 + level * 3, intelligence: 1.5 };
     }
 
-    // 5문제를 전부 맞히면(만점) 붙는 보너스. 가장 어려웠던 마지막 문제의
-    // 레벨에 비례해 커진다.
-    function competitionPerfectBonus(topLevel) {
-      return { gold: 20 + topLevel * 4 };
+    // 문제를 전부 맞히면(만점) 붙는 보너스. 가장 어려웠던 마지막 문제의
+    // 레벨에 비례해 커지고, lengthMultiplier(도전자가 고른 문제 수에 따른
+    // 배율)도 함께 적용된다.
+    function competitionPerfectBonus(topLevel, lengthMultiplier) {
+      const lm = lengthMultiplier || 1;
+      return { gold: Math.round((20 + topLevel * 4) * lm) };
     }
 
     // 인물 호감도 증가량. rangeOrValue는 [최소,최대] 배열이거나 고정값.
