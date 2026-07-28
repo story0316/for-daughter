@@ -145,6 +145,19 @@
       },
     ];
 
+    // 기초 과목(수학/영어/과학) 등급 인증. 수학/영어/과학은 전부 같은 지능
+    // 임계값(0/8/18/28/38/48/58/68)을 공유하도록 설계되어 있어서, 그 임계값에
+    // 대응하는 과목별 레벨을 그대로 인증 등급의 시험 범위로 재사용한다.
+    // 동메달=레벨1(초4), 은메달=레벨4(초5~중1), 금메달=레벨7(중2~고1).
+    // 지능이 그 레벨에 도달했다고 자동으로 메달이 붙지는 않고, 실제로 그
+    // 레벨의 문제를 풀어 시험을 통과해야만(state.certifications에) 영구히 기록된다.
+    const MEDAL_TIERS = [
+      { id: 'bronze', name: '동메달', emoji: '🥉', requiredLevel: 1, questionCount: 5, passCount: 4 },
+      { id: 'silver', name: '은메달', emoji: '🥈', requiredLevel: 4, questionCount: 5, passCount: 4 },
+      { id: 'gold', name: '금메달', emoji: '🥇', requiredLevel: 7, questionCount: 5, passCount: 4 },
+    ];
+    const CERT_SUBJECT_KEYS = ['math', 'english', 'science'];
+
     const BANQUET_ENTRY_FEE = 150;
     const BANQUET_MIN_TIER = 1;
     const PRINCE_MIN_TIER = 2;
@@ -290,6 +303,7 @@
         talkedThisTurn: false,
         completedScenarios: [],
         career: null,
+        certifications: { math: null, english: null, science: null },
       };
     }
 
@@ -322,6 +336,13 @@
       if (!Array.isArray(loaded.completedScenarios)) loaded.completedScenarios = [];
       if (typeof loaded.career === 'undefined') loaded.career = null;
       if (loaded.career !== null && !CAREER_DEFS.some((c) => c.id === loaded.career)) loaded.career = null;
+      if (!loaded.certifications || typeof loaded.certifications !== 'object' || Array.isArray(loaded.certifications)) {
+        loaded.certifications = { math: null, english: null, science: null };
+      }
+      CERT_SUBJECT_KEYS.forEach((key) => {
+        const value = loaded.certifications[key];
+        if (value !== null && !MEDAL_TIERS.some((t) => t.id === value)) loaded.certifications[key] = null;
+      });
       return loaded;
     }
 
@@ -672,6 +693,60 @@
       return career ? career.princeAffectionBonus : 0;
     }
 
+    /* ---------------- 기초 과목 등급 인증(동/은/금메달) ---------------- */
+
+    function medalTierIndex(medalId) {
+      return MEDAL_TIERS.findIndex((t) => t.id === medalId);
+    }
+
+    // 이 과목에서 다음으로 도전할 수 있는(아직 못 딴) 등급을 돌려준다.
+    // 이미 금메달까지 다 땄으면 null.
+    function nextMedalTier(state, subjectKey) {
+      const currentIdx = medalTierIndex(state.certifications[subjectKey]);
+      return MEDAL_TIERS[currentIdx + 1] || null;
+    }
+
+    // 다음 등급 시험에 응시할 수 있으려면, 그 등급이 요구하는 레벨이 지금
+    // 지능으로 이미 해금되어 있어야 한다(과학처럼 레벨 자체가 부족한 과목은
+    // 애초에 해당 등급이 영원히 해금되지 않을 수 있다).
+    function certExamEligible(state, subjectKey) {
+      const tier = nextMedalTier(state, subjectKey);
+      if (!tier) return false;
+      const subject = Question.SUBJECTS[subjectKey];
+      return subject.isLevelUnlocked(tier.requiredLevel, state.stats.intelligence);
+    }
+
+    // 과학처럼 그 과목 자체에 해당 레벨 콘텐츠가 아예 없는 경우(지능이
+    // 아무리 높아도 영원히 해금될 수 없음)를 가려낸다. isLevelUnlocked를
+    // 무한대 지능으로 호출해서 "언젠가는 해금 가능"인지 "애초에 그런 레벨이
+    // 없음"인지 구분한다. UI가 "곧 도전 가능"과 "이 과목은 여기까지가
+    // 한계"를 다른 문구로 보여줄 수 있게 해준다.
+    function certTierContentExists(subjectKey, tier) {
+      return Question.SUBJECTS[subjectKey].isLevelUnlocked(tier.requiredLevel, Infinity);
+    }
+
+    function startCertExamSession(state, subjectKey) {
+      const tier = nextMedalTier(state, subjectKey);
+      return makeSession('cert-exam', { subject: subjectKey, tier, count: tier.questionCount, askedQuestions: [] });
+    }
+
+    function finishCertExamOutcome(state, session) {
+      const pass = session.correctCount >= session.tier.passCount;
+      let goldEarned = 0;
+      if (pass) {
+        const bonus = Reward.certExamReward(medalTierIndex(session.tier.id));
+        goldEarned = bonus.gold;
+        applyDelta(state, bonus);
+        // 이미 더 높은 등급을 갖고 있다면 낮은 등급으로 덮어쓰지 않는다
+        // (재시험 삼아 낮은 등급을 다시 봐도 등급이 깎이지 않도록).
+        if (medalTierIndex(state.certifications[session.subject]) < medalTierIndex(session.tier.id)) {
+          state.certifications[session.subject] = session.tier.id;
+        }
+      }
+      clampStats(state);
+      return { pass, subject: session.subject, tier: session.tier, correctCount: session.correctCount, count: session.count, goldEarned };
+    }
+
     /* ---------------- 스케줄/활동 게이트 ---------------- */
 
     function currentWeekActivity(state) {
@@ -864,6 +939,7 @@
       SAVE_KEY, EVENTS, ETIQUETTE_QUESTIONS: Question.ETIQUETTE_QUESTIONS, TALK_LINES, ITEMS,
       BANQUET_ENTRY_FEE, BANQUET_MIN_TIER, PRINCE_MIN_TIER,
       STRESS_OVERFLOW_THRESHOLD, NPC_HINT_AFFECTION, NPC_LENIENT_AFFECTION, CAREER_DEFS,
+      MEDAL_TIERS, CERT_SUBJECT_KEYS,
       AFFECTION_TIERS, AFFECTION_DECAY_GRACE_TURNS, AFFECTION_DECAY_AMOUNT, OUTFIT_TIERS, NPC_DEFS, ACTIVITY_DEFS,
       MULTI_SUBJECT_TYPES: Question.MULTI_SUBJECT_TYPES, BONUS_QUIZ_TYPES: Reward.DEFERRED_REWARD_TYPES,
       ASSUMED_CORRECT_RATE, EXPECTED_COMBO_MULTIPLIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS,
@@ -888,6 +964,8 @@
       buyItem, equipOutfit, buyOutfit, checkWardrobeGraceNotification,
       // 직업
       careerRequirementMet, unlockedCareers, applyForCareer, resignCareer,
+      // 기초 과목 등급 인증
+      nextMedalTier, certExamEligible, certTierContentExists, startCertExamSession, finishCertExamOutcome,
       // 스케줄/활동
       currentWeekActivity, tryStartBanquet, competitionUnlocked, talkToDaughter,
       // 계획 미리보기

@@ -50,6 +50,15 @@
         const base = competitionQuestionReward(problem.level);
         return { gold: Math.round(base.gold * lm), intelligence: base.intelligence };
       }
+      // 인증 시험은 상금/스탯이 문제마다 붙지 않고 시험 종료 시 한 번에
+      // 통과 여부로 결정되지만(certExamReward), 오답에는 그래도 체력/스트레스
+      // 대가가 있어야 "준비 없이 마구 찍어서 통과할 때까지 무한 재도전"이
+      // 공짜가 되지 않는다. 그래서 정답 보상만 여기서 빈 값으로 두고, 오답
+      // 페널티는 DEFERRED_REWARD_TYPES가 아니라 아래 wrongAnswerPenalty에서
+      // 따로 부과한다.
+      if (sessionType === 'cert-exam') {
+        return {};
+      }
       if (DEFERRED_REWARD_TYPES.includes(sessionType)) {
         return {};
       }
@@ -67,6 +76,7 @@
     function wrongAnswerPenalty(sessionType) {
       if (sessionType === 'banquet') return { stress: 2 };
       if (sessionType === 'competition') return { stress: 3 };
+      if (sessionType === 'cert-exam') return { stamina: -3, stress: 5 };
       if (DEFERRED_REWARD_TYPES.includes(sessionType)) return {};
       if (sessionType === 'study') return { stress: 6, stamina: -4 };
       return { stamina: -3 };
@@ -122,6 +132,13 @@
       return { gold: Math.round((20 + topLevel * 4) * lm) };
     }
 
+    // 기초 과목 등급 인증 시험을 통과했을 때 주는 축하금. 등급이 높을수록
+    // (동=0, 은=1, 금=2) 더 큰 목돈을 준다 - 매주 반복하는 활동이 아니라
+    // 한 번뿐인 성취라서 그만큼 화끈하게 보상한다.
+    function certExamReward(tierIndex) {
+      return { gold: 60 + tierIndex * 60 };
+    }
+
     // 인물 호감도 증가량. rangeOrValue는 [최소,최대] 배열이거나 고정값.
     // 왕실 초대장(ITEMS의 affectionBonus) 보너스가 항상 함께 적용된다.
     function affectionGain(rangeOrValue, items) {
@@ -134,7 +151,7 @@
       itemBonusSum, comboMultiplier,
       correctAnswerReward, wrongAnswerPenalty,
       exerciseBonusReward, restBonusReward, laundryBonusReward, gardenBonusReward,
-      competitionQuestionReward, competitionPerfectBonus, affectionGain,
+      competitionQuestionReward, competitionPerfectBonus, certExamReward, affectionGain,
     };
   }
 

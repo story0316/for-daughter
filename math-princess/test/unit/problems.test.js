@@ -7,7 +7,7 @@ const P = require(path.join(__dirname, '..', '..', 'problems.js'));
 
 console.log('problems.js unit tests');
 
-// 레벨 1~10 전부 다량 생성해서 구조/정답판정/보상공식이 항상 일관되는지 확인
+// 레벨 1~9 전부 다량 생성해서 구조/정답판정/보상공식이 항상 일관되는지 확인
 for (const level of P.LEVELS.map((l) => l.id)) {
   const SAMPLES = 40;
   for (let i = 0; i < SAMPLES; i++) {
@@ -29,7 +29,9 @@ for (const level of P.LEVELS.map((l) => l.id)) {
 }
 
 // 레벨 해금 임계값(script.js의 지능 요구치와 반드시 일치해야 함)
-const EXPECTED_THRESHOLDS = { 1: 0, 2: 8, 3: 18, 4: 28, 5: 38, 6: 48, 7: 58, 8: 68, 9: 78, 10: 88 };
+const EXPECTED_THRESHOLDS = { 1: 0, 2: 8, 3: 18, 4: 28, 5: 38, 6: 48, 7: 58, 8: 68, 9: 78 };
+eq(P.LEVELS.length, 9, '수학 레벨은 총 9단계여야 함(미적분 제외)');
+ok(!P.LEVELS.some((l) => /미분|적분/.test(l.name) || /미분|적분/.test(l.desc)), '미분/적분 레벨은 더 이상 존재하면 안 됨');
 Object.entries(EXPECTED_THRESHOLDS).forEach(([levelId, threshold]) => {
   const id = Number(levelId);
   ok(P.isLevelUnlocked(id, threshold), `레벨 ${id}은 지능 ${threshold}에서 해금되어야 함`);

@@ -275,7 +275,9 @@ html, body {
 
 .hud {
   flex: 0 0 auto;
-  padding: 12px 16px 10px;
+  /* 오른쪽 위에 떠 있는 음소거 버튼(.btn-mute-toggle, absolute 위치)과 겹치지
+     않도록 오른쪽 여백을 그 버튼 자리만큼 더 넉넉하게 둔다. */
+  padding: 12px 54px 10px 16px;
   background: rgba(18, 12, 28, 0.85);
   color: #fff;
   z-index: 5;
@@ -647,10 +649,60 @@ html, body {
 }
 
 .status-npc-list,
-.status-item-list {
+.status-item-list,
+.status-cert-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.status-cert-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.status-cert-row-name {
+  flex: 0 0 40px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffe3ef;
+}
+
+.status-cert-row-medal {
+  flex: 1 1 auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.status-cert-btn {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(180deg, #ff9fc4, #ff6b9d);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.status-cert-maxed {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffd873;
+}
+
+.status-cert-locked {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  color: #b0a8c0;
+  text-align: right;
 }
 
 .status-npc-row,

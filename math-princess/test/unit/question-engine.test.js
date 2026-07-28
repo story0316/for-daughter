@@ -16,6 +16,19 @@ eq(Question.subjectName('math'), '수학', '수학 과목 이름');
 eq(Question.subjectName('english'), '영어', '영어 과목 이름');
 eq(Question.subjectName('science'), '과학', '과학 과목 이름');
 
+// SUBJECTS[key].maxLevel은 실제 LEVELS 테이블 길이와 반드시 일치해야 한다.
+// (영어를 8단계로 확장했을 때 이 maxLevel을 4로 갱신하지 않아, 공부/알바
+// 세션이 실제로는 절대 영어 레벨 5~8을 출제하지 않는 회귀가 있었다.)
+eq(Question.SUBJECTS.math.maxLevel, P.LEVELS.length, '수학 maxLevel은 실제 LEVELS 개수와 같아야 함');
+eq(Question.SUBJECTS.english.maxLevel, SUBJ.ENGLISH_LEVELS.length, '영어 maxLevel은 실제 ENGLISH_LEVELS 개수와 같아야 함');
+eq(Question.SUBJECTS.science.maxLevel, SUBJ.SCIENCE_LEVELS.length, '과학 maxLevel은 실제 SCIENCE_LEVELS 개수와 같아야 함');
+{
+  // maxLevel이 실제보다 작으면 지능이 아무리 높아도 그 이상 레벨은 절대
+  // 뽑히지 않으므로, 실제로 상위 레벨까지 해금/출제되는지 직접 확인한다.
+  const unlocked = Question.unlockedLevelsFor(100, 'english');
+  ok(unlocked.includes(8), '지능이 충분하면 영어 레벨 8(고2)까지 해금되어야 함');
+}
+
 {
   const unlocked = Question.unlockedLevelsFor(0, 'math');
   ok(unlocked.includes(1), '지능 0에서도 레벨 1은 해금되어야 함');

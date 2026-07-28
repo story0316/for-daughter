@@ -10,6 +10,7 @@
   const {
     STAT_KEYS, STAT_LABELS, OUTFIT_TIERS, NPC_DEFS, ITEMS, ACTIVITY_DEFS,
     WEEKS_PER_MONTH, PRINCE_MIN_TIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS, CAREER_DEFS,
+    MEDAL_TIERS, CERT_SUBJECT_KEYS,
   } = Engine;
 
   const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 48;
@@ -77,6 +78,7 @@
     statusOutfitBadge: document.getElementById('status-outfit-badge'),
     statusCareerBadge: document.getElementById('status-career-badge'),
     statusStatPanel: document.getElementById('status-stat-panel'),
+    statusCertList: document.getElementById('status-cert-list'),
     statusNpcList: document.getElementById('status-npc-list'),
     statusItemList: document.getElementById('status-item-list'),
     statusUpcomingList: document.getElementById('status-upcoming-list'),
@@ -531,7 +533,9 @@
                     ? `🌾 텃밭 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
                     : session.type === 'competition'
                       ? '🏆 왕국 수학경시대회'
-                      : `${session.scenario.entryEmoji} ${session.scenario.title}`;
+                      : session.type === 'cert-exam'
+                        ? `📜 ${Engine.subjectName(session.subject)} ${session.tier.name} 인증 시험`
+                        : `${session.scenario.entryEmoji} ${session.scenario.title}`;
     el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
     el.quizLevelBadge.textContent = session.type === 'banquet' ? '예절' : session.type === 'scenario-quiz' ? session.scenario.arc : `Lv.${problem.level}`;
@@ -645,6 +649,7 @@
     if (session.type === 'laundry-bonus') { finishLaundryBonusSession(); return; }
     if (session.type === 'garden-bonus') { finishGardenBonusSession(); return; }
     if (session.type === 'competition') { finishCompetitionSession(); return; }
+    if (session.type === 'cert-exam') { finishCertExamSession(); return; }
 
     const outcome = Engine.finishStudyOrJobOutcome(session);
     el.summaryEmoji.textContent = outcome.perfect ? '🌟' : '✅';
@@ -652,6 +657,7 @@
     el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
     el.summaryGold.textContent = outcome.goldEarned;
     el.summaryCombo.textContent = outcome.bestCombo;
+    updateSummaryConfirmLabel();
     showScreen('sessionSummary');
   }
 
@@ -687,12 +693,28 @@
     el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
     el.summaryGold.textContent = outcome.goldEarned;
     el.summaryCombo.textContent = session.sessionBestCombo;
+    updateSummaryConfirmLabel();
     saveGame();
     showScreen('sessionSummary');
   }
 
+  // 이번 주가 이번 달의 마지막 주(4주차)일 때만 실제로 달이 넘어가므로,
+  // 그렇지 않을 때 "다음 달로"라고 표시하면 오해를 준다.
+  function updateSummaryConfirmLabel() {
+    const isLastWeek = state.weekIndex === WEEKS_PER_MONTH - 1;
+    el.btnSummaryConfirm.textContent = isLastWeek ? '다음 달로' : '다음 주로';
+  }
+
   el.btnSummaryConfirm.addEventListener('click', () => {
+    const wasCertExam = session && session.type === 'cert-exam';
     session = null;
+    if (wasCertExam) {
+      // 인증 시험은 예약된 주간 활동이 아니라 상태 화면에서 바로 응시하는
+      // 것이므로, 확인을 눌러도 주/달을 넘기지 않고 상태 화면으로 돌아간다.
+      renderStatusScreen();
+      showScreen('status');
+      return;
+    }
     advanceWeekOrTurn();
   });
 
@@ -1320,6 +1342,7 @@
       el.statusCareerBadge.style.display = 'none';
     }
     renderStatPanel(el.statusStatPanel, state.stats);
+    renderCertificationSection();
 
     el.statusNpcList.innerHTML = '';
     NPC_DEFS.forEach((def) => {
@@ -1360,6 +1383,70 @@
     }
 
     renderUpcomingScenarios();
+  }
+
+  // 과목별(수학/영어/과학) 등급 인증 현황과, 다음 등급에 도전할 수 있으면
+  // "시험 보기" 버튼을 보여준다. 지능만 높다고 자동으로 붙는 게 아니라
+  // 실제로 그 레벨 시험을 봐서 통과해야 하는 성취형 배지다.
+  function renderCertificationSection() {
+    el.statusCertList.innerHTML = '';
+    CERT_SUBJECT_KEYS.forEach((subjectKey) => {
+      const subjectLabel = Engine.subjectName(subjectKey);
+      const currentMedalId = state.certifications[subjectKey];
+      const currentMedal = MEDAL_TIERS.find((t) => t.id === currentMedalId);
+      const nextTier = Engine.nextMedalTier(state, subjectKey);
+      const eligible = Engine.certExamEligible(state, subjectKey);
+      const row = document.createElement('div');
+      row.className = 'status-cert-row';
+      const medalLabel = currentMedal ? `${currentMedal.emoji} ${currentMedal.name}` : '🔓 미인증';
+      let actionHtml;
+      if (!nextTier) {
+        actionHtml = '<span class="status-cert-maxed">최고 등급 달성</span>';
+      } else if (eligible) {
+        actionHtml = `<button class="status-cert-btn" data-subject="${subjectKey}">${nextTier.emoji} ${nextTier.name} 시험 보기</button>`;
+      } else if (!Engine.certTierContentExists(subjectKey, nextTier)) {
+        // 과학처럼 그 과목 자체에 더 어려운 콘텐츠가 없어서, 지능이 아무리
+        // 높아져도 다음 등급에는 영원히 도전할 수 없는 경우.
+        actionHtml = `<span class="status-cert-maxed">이 과목은 ${currentMedal ? currentMedal.name : '여기'}까지가 최고 등급이에요</span>`;
+      } else {
+        actionHtml = `<span class="status-cert-locked">🔒 다음 등급(${nextTier.name})은 아직 준비가 더 필요해요</span>`;
+      }
+      row.innerHTML = `
+        <span class="status-cert-row-name">${subjectLabel}</span>
+        <span class="status-cert-row-medal">${medalLabel}</span>
+        ${actionHtml}
+      `;
+      el.statusCertList.appendChild(row);
+    });
+  }
+
+  el.statusCertList.addEventListener('click', (e) => {
+    const btn = e.target.closest('.status-cert-btn');
+    if (!btn) return;
+    startCertExamUI(btn.dataset.subject);
+  });
+
+  function startCertExamUI(subjectKey) {
+    session = Engine.startCertExamSession(state, subjectKey);
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
+  function finishCertExamSession() {
+    const beforeTiers = Engine.snapshotGrowthTiers(state.stats);
+    const outcome = Engine.finishCertExamOutcome(state, session);
+    announceStatLevelUps(beforeTiers);
+    const subjectLabel = Engine.subjectName(outcome.subject);
+    el.summaryEmoji.textContent = outcome.pass ? outcome.tier.emoji : '📖';
+    el.summaryTitle.textContent = outcome.pass
+      ? `${subjectLabel} ${outcome.tier.name} 인증에 성공했어요!`
+      : `${subjectLabel} ${outcome.tier.name} 인증에는 아직이에요`;
+    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
+    el.summaryGold.textContent = outcome.goldEarned;
+    el.summaryCombo.textContent = session.sessionBestCombo;
+    el.btnSummaryConfirm.textContent = '확인';
+    saveGame();
+    showScreen('sessionSummary');
   }
 
   // 아직 완성되지 않은(준비중) 시나리오를 잠금 카드로 미리 보여준다.

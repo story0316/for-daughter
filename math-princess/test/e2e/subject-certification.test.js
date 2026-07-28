@@ -1,0 +1,107 @@
+// 기초 과목(수학/영어/과학) 등급 인증(동/은/금메달) 시스템: 상태 화면에 표시,
+// 시험 응시 흐름(주/달을 소모하지 않고 상태 화면으로 돌아옴), 실패해도 기존
+// 등급이 유지되는지, 과목별 진행 상황이 올바르게 표시되는지 검증한다.
+const { ok, eq, summary } = require('../helpers/assert');
+const { withPage, seedAndContinue, makeState, getSavedState, activeScreenId } = require('./helpers');
+
+async function openStatus(page) {
+  await page.click('[data-menu="status"]');
+  await page.waitForSelector('#screen-status.active');
+}
+
+async function testShowsUncertifiedWithButtonByDefault() {
+  const errors = await withPage(async (page) => {
+    await seedAndContinue(page, makeState({ stats: { intelligence: 60, focus: 40, stamina: 60, charm: 60, creativity: 40, stress: 10, luck: 30 } }));
+    await openStatus(page);
+    const rows = await page.$$eval('.status-cert-row', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+    eq(rows.length, 3, '수학/영어/과학 3과목 인증 행이 있어야 함');
+    rows.forEach((text) => {
+      ok(text.includes('미인증'), `초기 상태는 미인증이어야 함 (got "${text}")`);
+      ok(text.includes('동메달 시험 보기'), `초기 상태는 동메달 시험 버튼이 있어야 함 (got "${text}")`);
+    });
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
+}
+
+async function testFailingExamKeepsNullAndReturnsToStatusWithoutConsumingWeek() {
+  const errors = await withPage(async (page) => {
+    await seedAndContinue(page, makeState({ weekIndex: 1, stats: { intelligence: 60, focus: 40, stamina: 60, charm: 60, creativity: 40, stress: 10, luck: 30 } }));
+    await openStatus(page);
+    await page.click('.status-cert-btn[data-subject="math"]');
+    await page.waitForSelector('#screen-quiz.active');
+    eq(await page.textContent('#quiz-session-label'), '📜 수학 동메달 인증 시험', '세션 라벨이 인증 시험을 보여줘야 함');
+
+    for (let i = 0; i < 5; i++) {
+      const active = await page.evaluate(() => document.querySelector('.screen.active').id);
+      if (active !== 'screen-quiz') break;
+      // 수학 동메달(레벨1)은 전부 입력형 사칙연산이라, 절대 답이 될 수 없는
+      // 값을 넣어 확실히 오답 처리되게 한다.
+      for (const ch of '999999') {
+        await page.click(`.keypad-btn[data-key="${ch}"]`);
+      }
+      await page.click('#btn-quiz-submit');
+      await page.waitForSelector('#btn-quiz-next', { state: 'visible' });
+      await page.click('#btn-quiz-next');
+      await page.waitForTimeout(150);
+    }
+    await page.waitForSelector('#screen-session-summary.active');
+    ok((await page.textContent('#summary-title')).includes('아직이에요'), '전부 틀리면 통과 실패 문구가 떠야 함');
+    eq((await page.textContent('#btn-summary-confirm')).trim(), '확인', '인증 시험 결과 화면의 버튼은 "확인"이어야 함(다음 주/달이 아님)');
+
+    await page.click('#btn-summary-confirm');
+    await page.waitForSelector('#screen-status.active', { timeout: 8000 });
+
+    const saved = await getSavedState(page);
+    eq(saved.certifications.math, null, '실패하면 미인증 상태가 유지되어야 함');
+    eq(saved.weekIndex, 1, '인증 시험은 주/달을 소모하면 안 됨(weekIndex가 그대로여야 함)');
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
+}
+
+async function testDisplaysExistingMedalsAndNextTierCorrectly() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({
+      stats: { intelligence: 90, focus: 80, stamina: 60, charm: 60, creativity: 40, stress: 10, luck: 30 },
+      certifications: { math: 'silver', english: 'gold', science: null },
+    });
+    await seedAndContinue(page, state);
+    await openStatus(page);
+    const rows = await page.$$eval('.status-cert-row', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()));
+    const mathRow = rows.find((r) => r.startsWith('수학'));
+    const englishRow = rows.find((r) => r.startsWith('영어'));
+    const scienceRow = rows.find((r) => r.startsWith('과학'));
+
+    ok(mathRow.includes('은메달') && mathRow.includes('금메달 시험 보기'), `은메달 보유 중이면 다음 목표(금메달) 버튼이 떠야 함 (got "${mathRow}")`);
+    ok(englishRow.includes('금메달') && englishRow.includes('최고 등급 달성'), `금메달(최고 등급)이면 더 이상 시험 버튼이 없어야 함 (got "${englishRow}")`);
+    ok(scienceRow.includes('미인증') && scienceRow.includes('동메달 시험 보기'), `미인증 과목은 동메달부터 시작해야 함 (got "${scienceRow}")`);
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
+}
+
+async function testScienceCannotReachGoldEvenAtHighIntelligence() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({
+      stats: { intelligence: 95, focus: 80, stamina: 60, charm: 60, creativity: 40, stress: 10, luck: 30 },
+      certifications: { math: null, english: null, science: 'silver' },
+    });
+    await seedAndContinue(page, state);
+    await openStatus(page);
+    const scienceRow = (await page.$$eval('.status-cert-row', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()))).find((r) => r.startsWith('과학'));
+    ok(scienceRow.includes('은메달'), '과학은 은메달 상태를 유지해야 함');
+    ok(!scienceRow.includes('금메달 시험 보기'), `과학은 금메달 콘텐츠가 없어서 지능이 아무리 높아도 시험 버튼이 뜨면 안 됨 (got "${scienceRow}")`);
+    // "곧 준비되면 도전 가능"처럼 오해를 주는 잠김 문구가 아니라, 콘텐츠 자체가
+    // 없어서 여기가 한계라는 걸 명확히 알려주는 문구가 떠야 한다.
+    ok(scienceRow.includes('최고 등급이에요'), `과학의 금메달은 "여기가 한계"라는 안내가 떠야 함(잠김 문구가 아니라) (got "${scienceRow}")`);
+    ok(!scienceRow.includes('준비가 더 필요'), `과학의 금메달은 "준비가 더 필요"(곧 될 것 같은 문구)가 뜨면 안 됨 (got "${scienceRow}")`);
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
+}
+
+(async () => {
+  console.log('subject-certification e2e tests');
+  await testShowsUncertifiedWithButtonByDefault();
+  await testFailingExamKeepsNullAndReturnsToStatusWithoutConsumingWeek();
+  await testDisplaysExistingMedalsAndNextTierCorrectly();
+  await testScienceCannotReachGoldEvenAtHighIntelligence();
+  summary('subject-certification.test.js');
+})();
