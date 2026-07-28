@@ -46,12 +46,12 @@
 
   function parseFractionValue(str) {
     const s = String(str).trim();
-    if (/^-?\d+\/\d+$/.test(s)) {
+    if (/^[+-]?\d+\/\d+$/.test(s)) {
       const [n, d] = s.split('/').map(Number);
       if (d === 0) return null;
       return n / d;
     }
-    if (/^-?\d+(\.\d+)?$/.test(s)) {
+    if (/^[+-]?\d+(\.\d+)?$/.test(s)) {
       return Number(s);
     }
     return null;

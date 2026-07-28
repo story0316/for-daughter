@@ -16,7 +16,8 @@ const E = require(path.join(BASE, 'endings.js'));
 const { createEngine } = require(path.join(BASE, 'game-engine.js'));
 
 const Engine = createEngine({ P, SUBJ, SC, E });
-const { STAT_KEYS, NPC_DEFS, ITEMS, OUTFIT_TIERS, WEEKS_PER_MONTH, PRINCE_MIN_TIER, BANQUET_MIN_TIER, BANQUET_ENTRY_FEE, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT } = Engine;
+const { STAT_KEYS, NPC_DEFS, ITEMS, OUTFIT_TIERS, WEEKS_PER_MONTH, PRINCE_MIN_TIER, BANQUET_TIERS, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT } = Engine;
+const GRAND_SOCIAL_TIER = BANQUET_TIERS[BANQUET_TIERS.length - 1].id;
 const TOTAL_TURNS = 48;
 
 /* ---------------- 플레이어 정책이 쓰는 보조 함수 ---------------- */
@@ -40,7 +41,7 @@ function runBonusSession(state, type, answerRate) {
   return runQuestionSession(state, type, 1, answerRate);
 }
 
-function runWeekActivity(state, activity, answerRate, log) {
+function runWeekActivity(state, activity, answerRate, log, banquetTier) {
   if (activity === 'study') {
     runQuestionSession(state, 'study', QUESTIONS_PER_STUDY, answerRate);
   } else if (activity === 'job') {
@@ -60,7 +61,7 @@ function runWeekActivity(state, activity, answerRate, log) {
     const session = runBonusSession(state, 'garden-bonus', answerRate);
     Engine.finishGardenBonusOutcome(state, session);
   } else if (activity === 'banquet') {
-    tryRunBanquet(state, answerRate, log);
+    tryRunBanquet(state, answerRate, log, banquetTier || BANQUET_TIERS[0].id);
   }
 }
 
@@ -87,16 +88,36 @@ function meetNpc(state, npcId, answerRate, log) {
   // kind === 'met'인 경우 meetNpcAttempt가 이미 state를 반영했으므로 더 할 일 없음.
 }
 
-function tryRunBanquet(state, answerRate, log) {
-  const result = Engine.tryStartBanquet(state);
+function tryRunBanquet(state, answerRate, log, tierId) {
+  const result = Engine.tryStartBanquet(state, tierId);
   if (!result.ok) {
-    if (result.reason === 'outfit') log.banquetBlockedByOutfit = (log.banquetBlockedByOutfit || 0) + 1;
-    else log.banquetBlockedByGold = (log.banquetBlockedByGold || 0) + 1;
+    log[`banquetBlockedBy_${result.reason}`] = (log[`banquetBlockedBy_${result.reason}`] || 0) + 1;
     return;
   }
-  const session = runQuestionSession(state, 'banquet', QUESTIONS_PER_BANQUET, answerRate);
+  const session = runQuestionSession(state, 'banquet', QUESTIONS_PER_BANQUET, answerRate, { tierId });
   const outcome = Engine.finishBanquetOutcome(state, session);
   if (outcome.result === 'met-prince') log.banquetSuccesses = (log.banquetSuccesses || 0) + 1;
+}
+
+// 영어 인증 시험은 스케줄 활동이 아니라(주를 소모하지 않는) 상태 화면에서
+// 바로 볼 수 있는 행동이라, 매주 활동 선택과는 별개로 매주 한 번씩
+// "여유가 되면" 시도해본다(이미 은메달 이상이면 더 도전할 필요 없음).
+function englishReadyForGrandSocialGate(state) {
+  const idx = ['bronze', 'silver', 'gold'].indexOf(state.certifications.english);
+  return idx >= 1; // silver 이상
+}
+
+function maybeTakeEnglishCertExam(state, answerRate, log) {
+  if (englishReadyForGrandSocialGate(state)) return;
+  if (!Engine.certExamEligible(state, 'english')) return;
+  const session = Engine.startCertExamSession(state, 'english');
+  for (let i = 0; i < session.count; i++) {
+    const problem = Engine.generateNextProblem(state, session);
+    if (Math.random() < answerRate) Engine.applyCorrect(state, session, problem);
+    else Engine.applyWrong(state, session);
+  }
+  Engine.finishCertExamOutcome(state, session);
+  log.englishCertAttempts = (log.englishCertAttempts || 0) + 1;
 }
 
 function maybeBuyItems(state) {
@@ -142,6 +163,10 @@ function simulateBalanced(answerRate) {
           const def = NPC_DEFS[idx];
           if (def.unlock(state.stats)) { rotationRef.i = (idx + 1) % NPC_DEFS.length; meetNpc(state, def.id, answerRate, log); break; }
         }
+      } else if (activity === 'banquet') {
+        // 균형 잡힌 플레이어는 왕자님을 노리는 게 아니라 그냥 예절/매력을
+        // 쌓으려는 것뿐이므로 가장 가벼운 등급(작은 다과회)에 참석한다.
+        runWeekActivity(state, activity, answerRate, log, BANQUET_TIERS[0].id);
       } else {
         runWeekActivity(state, activity, answerRate, log);
       }
@@ -158,21 +183,25 @@ function simulateBalanced(answerRate) {
   return { state, ending, log };
 }
 
-// "왕자님 루트": 아직 왕자님을 만날 옷차림(PRINCE_MIN_TIER)을 갖추지 못했으면
-// 공부/알바로 돈과 품위를 먼저 쌓고, 갖춘 뒤에는 연회/친구 만나기로 왕자님과의
-// 관계에 집중하는 "적응형" 정책. 옷을 사려면 골드가 필요해진 뒤로는 이렇게
-// 순서를 지키는 게 자연스러운 공략법이라, 실제로 48개월 안에 도달 가능한지
-// (엔딩 임계값/옷차림 게이트가 너무 가혹하지 않은지) 확인한다.
+// "왕자님 루트": 아직 왕자님을 만날 옷차림(PRINCE_MIN_TIER)을 갖추지 못했거나
+// 고급 사교 모임에 필요한 영어 인증(은메달)이 없으면 공부/알바로 돈과 품위,
+// 영어 실력을 먼저 쌓고, 둘 다 갖춘 뒤에는 연회(고급 사교 모임)/친구 만나기로
+// 왕자님과의 관계에 집중하는 "적응형" 정책. 실제로 48개월 안에 도달 가능한지
+// (엔딩 임계값/옷차림/영어 인증 게이트가 너무 가혹하지 않은지) 확인한다.
 function simulatePrinceRoute(answerRate) {
   const state = Engine.makeInitialState();
   const log = { scenariosCompleted: [] };
   for (let turn = 1; turn <= TOTAL_TURNS; turn++) {
     state.turn = turn;
     for (let week = 0; week < WEEKS_PER_MONTH; week++) {
+      // 인증 시험은 주를 소모하지 않는 별도 행동이라 매주 활동 선택과는 무관하게 시도한다.
+      maybeTakeEnglishCertExam(state, answerRate, log);
+
       const dressedForPrince = state.wardrobe.equipped >= PRINCE_MIN_TIER;
+      const readyForGrandSocial = dressedForPrince && englishReadyForGrandSocialGate(state);
       let activity;
       if (state.stats.stamina < 20) activity = 'rest';
-      else if (!dressedForPrince) activity = Math.random() < 0.5 ? 'study' : 'job';
+      else if (!readyForGrandSocial) activity = Math.random() < 0.5 ? 'study' : 'job';
       else if (Math.random() < 0.7) activity = Math.random() < 0.5 ? 'banquet' : 'friend-prince';
       else activity = 'study';
 
@@ -180,6 +209,7 @@ function simulatePrinceRoute(answerRate) {
       if (overflow) {
         log.stressOverflowCount = (log.stressOverflowCount || 0) + 1;
       } else if (activity === 'friend-prince') meetNpc(state, 'prince', answerRate, log);
+      else if (activity === 'banquet') runWeekActivity(state, activity, answerRate, log, GRAND_SOCIAL_TIER);
       else runWeekActivity(state, activity, answerRate, log);
       maybeBuyOutfit(state);
       Engine.clampStats(state);

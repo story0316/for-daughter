@@ -198,7 +198,7 @@
           <span class="level-badge-num">💃</span>
           <span class="level-info">
             <span class="level-title">연회 참석</span>
-            <span class="level-desc">입장료 150G · 단정한 옷 이상 필요. 예절 문제를 다 맞히고 예쁜 드레스 이상을 입으면 왕자님을 만날 수 있어요</span>
+            <span class="level-desc">다과회부터 고급 사교 모임까지, 등급을 골라 참석해요. 왕자님은 고급 사교 모임(영어 인증 필요)에서만 만날 수 있어요</span>
           </span>
           <span class="level-lock-icon">›</span>
         </button>
@@ -226,6 +226,17 @@
           <button id="btn-count-pick-confirm" class="btn btn-primary">이 문제 수로 도전</button>
         </div>
       </div>
+    </section>
+
+    <!-- 연회 등급 선택 화면 -->
+    <section id="screen-banquet-tier-pick" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-banquet-tier-pick-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label">어떤 모임에 참석할까요?</div>
+        </div>
+      </header>
+      <div class="level-list" id="banquet-tier-pick-list"></div>
     </section>
 
     <!-- 상태 화면 -->
@@ -326,6 +337,7 @@
             <button class="keypad-btn" data-key="9">9</button>
             <button class="keypad-btn" data-key="0">0</button>
             <button class="keypad-btn keypad-special" data-key="-">-</button>
+            <button class="keypad-btn keypad-special" data-key="+">+</button>
             <button class="keypad-btn keypad-special" data-key=".">.</button>
             <button class="keypad-btn keypad-special" data-key="/">/</button>
             <button class="keypad-btn keypad-erase" data-key="erase">⌫</button>

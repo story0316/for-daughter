@@ -82,24 +82,33 @@ async function activeScreenId(page) {
 
 // #screen-schedule이 열려 있는 상태에서 weekIdx번째 칸에 activityId를 배정한다.
 // 공부/알바/경시대회처럼 문제 수를 고를 수 있는 활동은 count-pick 슬라이더
-// 화면까지 거쳐 count(생략 시 기본값)를 확정하고 다시 #screen-schedule로 돌아온다.
+// 화면까지 거쳐 count(생략 시 기본값)를 확정하고, 연회는 등급 선택 화면까지
+// 거쳐 tierId(생략 시 첫 번째로 열려있는 등급)를 확정한 뒤 다시
+// #screen-schedule로 돌아온다.
 const COUNTABLE_ACTIVITIES = ['study', 'job', 'competition'];
 
-async function planWeekActivity(page, weekIdx, activityId, count) {
+async function planWeekActivity(page, weekIdx, activityId, countOrTier) {
   const cards = await page.$$('#week-plan-list .level-card');
   await cards[weekIdx].click();
   await page.waitForSelector('#screen-week-pick.active');
   await page.click(`[data-activity="${activityId}"]`);
   if (COUNTABLE_ACTIVITIES.includes(activityId)) {
     await page.waitForSelector('#screen-question-count-pick.active');
-    if (count != null) {
+    if (countOrTier != null) {
       await page.evaluate((n) => {
         const slider = document.querySelector('#count-pick-slider');
         slider.value = String(n);
         slider.dispatchEvent(new Event('input', { bubbles: true }));
-      }, count);
+      }, countOrTier);
     }
     await page.click('#btn-count-pick-confirm');
+  } else if (activityId === 'banquet') {
+    await page.waitForSelector('#screen-banquet-tier-pick.active');
+    if (countOrTier) {
+      await page.click(`.level-card[data-tier="${countOrTier}"]`);
+    } else {
+      await page.click('#banquet-tier-pick-list .level-card:not(.locked)');
+    }
   }
   await page.waitForSelector('#screen-schedule.active');
 }

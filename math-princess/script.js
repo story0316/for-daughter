@@ -10,7 +10,7 @@
   const {
     STAT_KEYS, STAT_LABELS, OUTFIT_TIERS, NPC_DEFS, ITEMS, ACTIVITY_DEFS,
     WEEKS_PER_MONTH, PRINCE_MIN_TIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS, CAREER_DEFS,
-    MEDAL_TIERS, CERT_SUBJECT_KEYS,
+    MEDAL_TIERS, CERT_SUBJECT_KEYS, BANQUET_TIERS,
   } = Engine;
 
   const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 48;
@@ -23,6 +23,7 @@
       schedule: document.getElementById('screen-schedule'),
       weekPick: document.getElementById('screen-week-pick'),
       questionCountPick: document.getElementById('screen-question-count-pick'),
+      banquetTierPick: document.getElementById('screen-banquet-tier-pick'),
       status: document.getElementById('screen-status'),
       shop: document.getElementById('screen-shop'),
       npcSelect: document.getElementById('screen-npc-select'),
@@ -72,6 +73,9 @@
     countPickMultiplier: document.getElementById('count-pick-multiplier'),
     btnCountPickBack: document.getElementById('btn-count-pick-back'),
     btnCountPickConfirm: document.getElementById('btn-count-pick-confirm'),
+
+    btnBanquetTierPickBack: document.getElementById('btn-banquet-tier-pick-back'),
+    banquetTierPickList: document.getElementById('banquet-tier-pick-list'),
 
     btnStatusBack: document.getElementById('btn-status-back'),
     statusPortrait: document.getElementById('status-portrait'),
@@ -485,8 +489,8 @@
     nextQuizQuestion();
   }
 
-  function startBanquetSession() {
-    session = Engine.startBanquetSession();
+  function startBanquetSession(tierId) {
+    session = Engine.startBanquetSession(tierId);
     showScreen('quiz');
     nextQuizQuestion();
   }
@@ -522,7 +526,7 @@
         : session.type === 'job'
           ? `💼 알바 중 · ${Engine.subjectName(session.currentSubject)}`
           : session.type === 'banquet'
-            ? '💃 연회 참석 중'
+            ? `💃 ${(BANQUET_TIERS.find((t) => t.id === session.tierId) || BANQUET_TIERS[0]).name} 참석 중`
             : session.type === 'exercise-bonus'
               ? `🏃 운동 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
               : session.type === 'rest-bonus'
@@ -581,7 +585,7 @@
     if (!btn || !session || session.answered) return;
     if (btn.dataset.key === 'erase') {
       el.quizInput.value = el.quizInput.value.slice(0, -1);
-    } else if (el.quizInput.value.length < 8) {
+    } else if (el.quizInput.value.length < 12) {
       el.quizInput.value += btn.dataset.key;
     }
   });
@@ -675,10 +679,14 @@
       el.eventEmoji.textContent = '💃';
       el.eventTitle.textContent = '연회를 마쳤어요';
       el.eventDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혀 예절을 뽐냈어요! 하지만 지금 입은 옷으로는 왕자님 눈에 띄지 못했어요. ${outcome.requiredTierName} 이상으로 갈아입어 보세요.`;
+    } else if (outcome.result === 'success-lower-tier') {
+      el.eventEmoji.textContent = '💃';
+      el.eventTitle.textContent = '연회를 성공적으로 마쳤어요';
+      el.eventDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혀 예절을 뽐냈어요! 왕자님은 고급 사교 모임에서만 만날 수 있어요.`;
     } else {
       el.eventEmoji.textContent = '💃';
       el.eventTitle.textContent = '연회를 마쳤어요';
-      el.eventDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요. 예절을 조금 더 익히면 왕자님을 만날 수 있을 거예요!`;
+      el.eventDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요. 예절을 조금 더 익히면 다음엔 통과할 수 있을 거예요!`;
     }
     saveGame();
     showScreen('event');
@@ -1089,7 +1097,7 @@
       }
       doGarden();
     } else if (activity === 'friend') openNpcSelect();
-    else if (activity === 'banquet') tryStartBanquet();
+    else if (activity === 'banquet') tryStartBanquet(state.weekPlanBanquetTier[state.weekIndex] || BANQUET_TIERS[0].id);
     else if (activity === 'competition') {
       if (!Engine.competitionUnlocked(state)) {
         showLevelToast(`🏆 지능 ${Engine.COMPETITION_MIN_INTELLIGENCE} 이상이어야 왕국 수학경시대회에 도전할 수 있어요`);
@@ -1100,12 +1108,16 @@
     }
   }
 
-  // 사교모임(연회)은 입장료를 내야 하고, 일정 옷 단계 이상을 입고 있어야 들어갈 수 있다.
-  function tryStartBanquet() {
-    const result = Engine.tryStartBanquet(state);
+  // 사교모임(연회)은 등급별로 입장료·옷차림·품위·영어 인증 요건이 다르다.
+  function tryStartBanquet(tierId) {
+    const result = Engine.tryStartBanquet(state, tierId);
     if (!result.ok) {
       if (result.reason === 'outfit') {
         showLevelToast(`💃 ${result.requiredTierName} 이상을 입어야 연회에 입장할 수 있어요`);
+      } else if (result.reason === 'grace') {
+        showLevelToast(`💃 품위 ${result.requiredGrace} 이상이어야 입장할 수 있어요`);
+      } else if (result.reason === 'english-cert') {
+        showLevelToast(`📜 영어 ${result.requiredMedal.name} 이상 인증이 있어야 입장할 수 있어요`);
       } else {
         showLevelToast(`💰 연회 입장료 ${result.fee}G가 부족해요`);
       }
@@ -1113,7 +1125,7 @@
       return;
     }
     saveGame();
-    startBanquetSession();
+    startBanquetSession(tierId);
   }
 
   function currentWeekActivity() {
@@ -1200,7 +1212,9 @@
       const isCurrent = i === state.weekIndex;
       const countLabel = activityId && COUNTABLE_ACTIVITIES.includes(activityId)
         ? ` · 문제 ${state.weekPlanCount[i] != null ? state.weekPlanCount[i] : activityDefaultCount(activityId)}개`
-        : '';
+        : activityId === 'banquet'
+          ? ` · ${(BANQUET_TIERS.find((t) => t.id === state.weekPlanBanquetTier[i]) || BANQUET_TIERS[0]).name}`
+          : '';
       const card = document.createElement('button');
       card.className = `level-card week-plan-card${done ? ' locked' : ''}${isCurrent ? ' current' : ''}`;
       card.innerHTML = `
@@ -1279,11 +1293,62 @@
       openQuestionCountPicker(activityId);
       return;
     }
+    if (activityId === 'banquet') {
+      openBanquetTierPicker();
+      return;
+    }
     state.weekPlan[editingWeekIndex] = activityId;
     state.weekPlanCount[editingWeekIndex] = null;
     saveGame();
     showScreen('schedule');
     renderWeekPlanScreen();
+  });
+
+  // 연회는 등급(다과회/사교모임/고급 사교모임)을 골라야 하므로 별도 선택 화면을 둔다.
+  function renderBanquetTierPickList() {
+    el.banquetTierPickList.innerHTML = '';
+    BANQUET_TIERS.forEach((tier) => {
+      const met = Engine.banquetTierRequirementMet(state, tier);
+      const reqParts = [`입장료 ${tier.entryFee}G`];
+      if (tier.minOutfitTier > 0) reqParts.push(`${OUTFIT_TIERS[tier.minOutfitTier].name} 이상`);
+      if (tier.minGraceScore > 0) reqParts.push(`품위 ${tier.minGraceScore} 이상(현재 ${Math.round(Engine.graceScore(state.stats))})`);
+      if (tier.requiredEnglishMedal) {
+        const medal = MEDAL_TIERS.find((m) => m.id === tier.requiredEnglishMedal);
+        reqParts.push(`영어 ${medal.name} 이상`);
+      }
+      const card = document.createElement('button');
+      card.className = `level-card${met ? '' : ' locked'}`;
+      card.dataset.tier = tier.id;
+      card.innerHTML = `
+        <span class="level-badge-num">${tier.emoji}</span>
+        <span class="level-info">
+          <span class="level-title">${tier.name}</span>
+          <span class="level-desc">${tier.desc}</span>
+          <span class="shop-cost">${reqParts.join(' · ')}</span>
+        </span>
+        <span class="level-lock-icon">${met ? '›' : '🔒'}</span>
+      `;
+      if (met) {
+        card.addEventListener('click', () => {
+          state.weekPlan[editingWeekIndex] = 'banquet';
+          state.weekPlanCount[editingWeekIndex] = null;
+          state.weekPlanBanquetTier[editingWeekIndex] = tier.id;
+          saveGame();
+          showScreen('schedule');
+          renderWeekPlanScreen();
+        });
+      }
+      el.banquetTierPickList.appendChild(card);
+    });
+  }
+
+  function openBanquetTierPicker() {
+    renderBanquetTierPickList();
+    showScreen('banquetTierPick');
+  }
+
+  el.btnBanquetTierPickBack.addEventListener('click', () => {
+    showScreen('weekPick');
   });
 
   el.btnWeekPickBack.addEventListener('click', () => {

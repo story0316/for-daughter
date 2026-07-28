@@ -28,6 +28,19 @@ for (const level of P.LEVELS.map((l) => l.id)) {
   }
 }
 
+// 숫자 키패드에 +(더하기) 버튼이 생기면서, 답 앞에 +를 붙여 입력해도(예: "+5")
+// -를 붙였을 때와 마찬가지로 정상적으로 채점되어야 한다.
+{
+  const posInt = { type: 'input', answer: '5' };
+  ok(P.checkAnswer(posInt, '+5'), '정수 답 앞에 +를 붙여도 정답 처리되어야 함');
+  const negInt = { type: 'input', answer: '-3' };
+  ok(P.checkAnswer(negInt, '-3'), '음수 답은 여전히 정답 처리되어야 함(회귀 확인)');
+  const decimal = { type: 'input', answer: '2.5' };
+  ok(P.checkAnswer(decimal, '+2.5'), '소수 답 앞에 +를 붙여도 정답 처리되어야 함');
+  const fraction = { type: 'input', answer: '3/4' };
+  ok(P.checkAnswer(fraction, '+3/4'), '분수 답 앞에 +를 붙여도 정답 처리되어야 함');
+}
+
 // 레벨 해금 임계값(script.js의 지능 요구치와 반드시 일치해야 함)
 const EXPECTED_THRESHOLDS = { 1: 0, 2: 8, 3: 18, 4: 28, 5: 38, 6: 48, 7: 58, 8: 68, 9: 78 };
 eq(P.LEVELS.length, 9, '수학 레벨은 총 9단계여야 함(미적분 제외)');
