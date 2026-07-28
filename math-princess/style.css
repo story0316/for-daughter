@@ -1014,6 +1014,28 @@ html, body {
   transform: translateX(-50%) translateY(6px);
 }
 
+.btn-mute-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 61;
+}
+
+.btn-mute-toggle:active {
+  transform: scale(0.92);
+}
+
 /* ---------- 친구 목록 (NPC) ---------- */
 .npc-card .level-badge-num {
   background: linear-gradient(180deg, #8fd4ff, #6fa8ff);

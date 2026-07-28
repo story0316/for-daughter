@@ -335,6 +335,8 @@
     wardrobeList: document.getElementById('wardrobe-list'),
 
     levelToast: document.getElementById('level-toast'),
+    bgmPlayer: document.getElementById('bgm-player'),
+    btnMuteToggle: document.getElementById('btn-mute-toggle'),
 
     btnNpcBack: document.getElementById('btn-npc-back'),
     npcList: document.getElementById('npc-list'),
@@ -384,6 +386,60 @@
 
   el.totalTurnsLabel.textContent = TOTAL_TURNS;
   el.totalYearsLabel.textContent = Math.round(TOTAL_TURNS / 12);
+
+  /* ---------------- 배경음악 ---------------- */
+
+  // 시나리오별로 다른 배경음악을 쓰고 싶을 때만 여기에 매핑을 추가한다.
+  // 매핑이 없는 시나리오/화면은 계속 'default' 트랙을 이어서 재생한다.
+  const BGM_TRACKS = {
+    default: 'assets/audio/bgm-default.mp3',
+    'garden-walk-prince': 'assets/audio/bgm-garden-walk-prince.mp3',
+    'friend-birthday': 'assets/audio/bgm-birthday.mp3',
+    'coronation-ball': 'assets/audio/bgm-coronation.mp3',
+    'noble-tea-party-invitation': 'assets/audio/bgm-tea-party.mp3',
+    'tea-party-manners': 'assets/audio/bgm-tea-party.mp3',
+  };
+  const MUTE_KEY = 'math-princess-muted';
+  let currentBgmKey = null;
+
+  function isMuted() {
+    try {
+      return localStorage.getItem(MUTE_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function playBgm(key) {
+    const src = BGM_TRACKS[key] || BGM_TRACKS.default;
+    if (currentBgmKey !== key) {
+      currentBgmKey = key;
+      el.bgmPlayer.src = src;
+    }
+    el.bgmPlayer.muted = isMuted();
+    // 브라우저 자동재생 정책으로 play()가 거부될 수 있는데(사용자 조작
+    // 전이라거나), 게임이 멈추지 않도록 조용히 무시한다.
+    el.bgmPlayer.play().catch(() => {});
+  }
+
+  function updateMuteButton() {
+    const muted = isMuted();
+    el.btnMuteToggle.textContent = muted ? '🔇' : '🔊';
+    el.bgmPlayer.muted = muted;
+  }
+
+  el.btnMuteToggle.addEventListener('click', () => {
+    const nextMuted = !isMuted();
+    try {
+      localStorage.setItem(MUTE_KEY, nextMuted ? '1' : '0');
+    } catch (e) {
+      // no-op
+    }
+    updateMuteButton();
+    if (!nextMuted) el.bgmPlayer.play().catch(() => {});
+  });
+
+  updateMuteButton();
 
   function randInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -560,6 +616,7 @@
   }
 
   function renderMain() {
+    playBgm('default');
     el.turnLabel.textContent = yearMonthLabel(state.turn);
     el.goldLabel.textContent = `💰 ${state.gold}G`;
     el.characterName.textContent = state.characterName;
@@ -1283,6 +1340,7 @@
   }
 
   function runScenario(scenario) {
+    if (BGM_TRACKS[scenario.id]) playBgm(scenario.id);
     if (scenario.type === 'quiz') startScenarioQuiz(scenario);
     else if (scenario.type === 'branching') openBranchingScreen(scenario);
     else resolveNarrativeScenario(scenario);
