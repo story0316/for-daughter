@@ -159,7 +159,7 @@
       garden: { emoji: '🌾', name: '텃밭 가꾸기' },
       friend: { emoji: '🎡', name: '친구 만나기' },
       banquet: { emoji: '💃', name: '연회 참석' },
-      competition: { emoji: '🏆', name: '수학 경시대회' },
+      competition: { emoji: '🏆', name: '왕국 수학경시대회' },
     };
 
     const ASSUMED_CORRECT_RATE = 0.75;
@@ -301,6 +301,17 @@
     function generateNextProblem(state, session) { return Question.generateNextProblem(state.stats.intelligence, session); }
     function typicalStudyLevel(state) { return Question.typicalStudyLevel(state.stats.intelligence); }
 
+    // 왕국 수학경시대회에서 쓸 난이도 사다리를 만든다. 덧셈뺄셈(레벨 1)부터
+    // 시작해 현재 해금된 최고 레벨까지 count개 문제에 걸쳐 고르게 올라간다.
+    function competitionLevelRamp(maxLevel, count) {
+      const levels = [];
+      for (let i = 0; i < count; i++) {
+        const raw = count === 1 ? maxLevel : 1 + (i * (maxLevel - 1)) / (count - 1);
+        levels.push(Math.max(1, Math.min(maxLevel, Math.round(raw))));
+      }
+      return levels;
+    }
+
     /* ---------------- 세션(문제 풀이) 생성 ---------------- */
 
     function makeSession(type, extra) {
@@ -326,9 +337,11 @@
     function startRestSession() { return makeSession('rest-bonus', { count: 1 }); }
     function startLaundrySession() { return makeSession('laundry-bonus', { count: 1 }); }
     function startGardenSession() { return makeSession('garden-bonus', { count: 1 }); }
-    // 현재 해금된 최고 수학 레벨로만 출제한다(다른 과목과 안 섞임 — "수학" 경시대회이므로).
+    // 덧셈뺄셈(레벨 1)부터 시작해 현재 해금된 최고 레벨까지 점점 어려워지는
+    // 수학 문제로만 출제한다(다른 과목과 안 섞임 — "수학" 경시대회이므로).
     function startCompetitionSession(state) {
-      return makeSession('competition', { level: typicalStudyLevel(state), count: QUESTIONS_PER_COMPETITION });
+      const levels = competitionLevelRamp(typicalStudyLevel(state), QUESTIONS_PER_COMPETITION);
+      return makeSession('competition', { levels, count: QUESTIONS_PER_COMPETITION });
     }
     // 관련 인물과 친할수록(NPC_HINT_AFFECTION 이상) 문제에 힌트가 붙고,
     // 아주 친하면(NPC_LENIENT_AFFECTION 이상) 통과 기준이 1개 낮아진다.
@@ -423,11 +436,19 @@
       return { bonus };
     }
 
+    // 문제마다 상금은 applyCorrect가 이미 즉시 반영했으므로(session.goldEarned에
+    // 누적됨), 여기서는 만점 보너스만 추가로 얹는다.
     function finishCompetitionOutcome(state, session) {
-      const reward = Reward.competitionReward(session.correctCount, session.count, session.level);
-      applyDelta(state, reward);
+      const perfect = session.correctCount === session.count;
+      let bonusGold = 0;
+      if (perfect) {
+        const topLevel = session.levels[session.levels.length - 1];
+        const bonus = Reward.competitionPerfectBonus(topLevel);
+        bonusGold = bonus.gold;
+        applyDelta(state, bonus);
+      }
       clampStats(state);
-      return { correctCount: session.correctCount, count: session.count, goldEarned: reward.gold, perfect: session.correctCount === session.count };
+      return { correctCount: session.correctCount, count: session.count, goldEarned: session.goldEarned + bonusGold, perfect };
     }
 
     // chance 확률로 무작위 이벤트를 골라 효과를 적용하고 이벤트 정보를 돌려준다.
@@ -682,12 +703,14 @@
         d.charm += QUESTIONS_PER_BANQUET * r * (4 + itemBonusSum(state, 'charmBonus'));
         d.stress += QUESTIONS_PER_BANQUET * (1 - r) * 2;
       } else if (activityId === 'competition') {
-        const compLevel = typicalStudyLevel(state);
-        const perCorrect = 10 + compLevel * 3;
-        const expectedCorrect = QUESTIONS_PER_COMPETITION * r;
-        d.gold += Math.round(expectedCorrect * perCorrect);
-        d.intelligence += expectedCorrect * 1.5;
-        d.stress += 8;
+        const levels = competitionLevelRamp(typicalStudyLevel(state), QUESTIONS_PER_COMPETITION);
+        let expectedGold = 0;
+        levels.forEach((lvl) => { expectedGold += r * (10 + lvl * 3); });
+        const perfectChance = Math.pow(r, QUESTIONS_PER_COMPETITION);
+        expectedGold += perfectChance * (20 + levels[levels.length - 1] * 4);
+        d.gold += Math.round(expectedGold);
+        d.intelligence += QUESTIONS_PER_COMPETITION * r * 1.5;
+        d.stress += QUESTIONS_PER_COMPETITION * (1 - r) * 3;
       }
       return d;
     }

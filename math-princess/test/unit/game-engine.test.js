@@ -379,22 +379,30 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
 }
 {
   const state = Engine.makeInitialState();
-  state.stats.intelligence = 60;
+  state.stats.intelligence = 90;
   const session = Engine.startCompetitionSession(state);
   eq(session.type, 'competition', '경시대회 세션 타입');
   eq(session.count, Engine.QUESTIONS_PER_COMPETITION, '경시대회 문제 수');
-  ok(session.level >= 1, '경시대회는 현재 해금된 수학 레벨로 출제되어야 함');
+  eq(session.levels.length, Engine.QUESTIONS_PER_COMPETITION, '문제 수만큼 난이도가 정해져 있어야 함');
+  eq(session.levels[0], 1, '첫 문제는 항상 덧셈뺄셈(레벨 1)부터 시작해야 함');
+  for (let i = 1; i < session.levels.length; i++) {
+    ok(session.levels[i] >= session.levels[i - 1], '난이도는 뒤로 갈수록 낮아지지 않고 점점 올라가야 함');
+  }
 
   const beforeGold = state.gold;
   for (let i = 0; i < session.count; i++) {
+    session.index = i;
     const problem = Engine.generateNextProblem(state, session);
+    eq(problem.level, session.levels[i], `${i}번째 문제는 미리 정해둔 난이도 사다리를 따라야 함`);
+    const beforeThisGold = state.gold;
     Engine.applyCorrect(state, session, problem);
+    ok(state.gold > beforeThisGold, '왕국 수학경시대회는 정답을 맞힐 때마다 바로 상금이 들어와야 함');
   }
-  eq(state.gold, beforeGold, '문제를 푸는 도중에는 골드가 바로 반영되지 않아야 함(세션 종료 시 한 번에 지급)');
+  const goldAfterAllQuestions = state.gold;
   const outcome = Engine.finishCompetitionOutcome(state, session);
   ok(outcome.perfect, '전부 맞혔으면 만점 처리되어야 함');
-  ok(state.gold > beforeGold, '경시대회를 마치면 그제서야 상금이 한 번에 지급되어야 함');
-  eq(outcome.goldEarned, state.gold - beforeGold, 'outcome.goldEarned이 실제로 늘어난 골드와 일치해야 함');
+  ok(state.gold > goldAfterAllQuestions, '만점이면 세션 종료 시 추가 보너스가 한 번 더 붙어야 함');
+  eq(outcome.goldEarned, state.gold - beforeGold, 'outcome.goldEarned이 세션 전체(문제별 상금+만점 보너스)로 늘어난 골드와 일치해야 함');
 }
 
 summary('game-engine.js');

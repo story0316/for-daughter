@@ -115,6 +115,9 @@
     function generateNextProblem(intelligence, session) {
       if (session.type === 'banquet') return generateEtiquetteQuestion(session);
       if (session.type === 'scenario-quiz') return generateScenarioQuestion(session);
+      // 왕국 수학경시대회: 문제마다 미리 정해둔 난이도 사다리(session.levels)를
+      // 따라간다(덧셈뺄셈부터 점점 어려워짐), 다른 과목과 섞이지 않는다.
+      if (session.type === 'competition') return P.generateProblem(session.levels[session.index]);
       if (MULTI_SUBJECT_TYPES.includes(session.type)) {
         let picked;
         if (session.type === 'job') picked = pickRandomSubjectLevel1();

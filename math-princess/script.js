@@ -479,7 +479,7 @@
                   : session.type === 'garden-bonus'
                     ? `🌾 텃밭 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
                     : session.type === 'competition'
-                      ? '🏆 수학 경시대회'
+                      ? '🏆 왕국 수학경시대회'
                       : `${session.scenario.entryEmoji} ${session.scenario.title}`;
     el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
@@ -614,7 +614,7 @@
     const outcome = Engine.finishCompetitionOutcome(state, session);
     announceStatLevelUps(beforeTiers);
     el.summaryEmoji.textContent = outcome.perfect ? '🏆' : '🥈';
-    el.summaryTitle.textContent = outcome.perfect ? '경시대회에서 만점을 받았어요!' : '경시대회를 마쳤어요';
+    el.summaryTitle.textContent = outcome.perfect ? '왕국 수학경시대회에서 만점을 받았어요!' : '왕국 수학경시대회를 마쳤어요';
     el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
     el.summaryGold.textContent = outcome.goldEarned;
     el.summaryCombo.textContent = session.sessionBestCombo;
@@ -990,7 +990,7 @@
     else if (activity === 'banquet') tryStartBanquet();
     else if (activity === 'competition') {
       if (!Engine.competitionUnlocked(state)) {
-        showLevelToast(`🏆 지능 ${Engine.COMPETITION_MIN_INTELLIGENCE} 이상이어야 경시대회에 도전할 수 있어요`);
+        showLevelToast(`🏆 지능 ${Engine.COMPETITION_MIN_INTELLIGENCE} 이상이어야 왕국 수학경시대회에 도전할 수 있어요`);
         advanceWeekOrTurn();
         return;
       }
@@ -1053,7 +1053,7 @@
       const unlocked = Engine.competitionUnlocked(state);
       competitionBtn.classList.toggle('locked', !unlocked);
       competitionBtn.querySelector('.level-desc').textContent = unlocked
-        ? '어려운 수학 문제 5개에 도전해요. 성적에 따라 큰 상금을 받아요'
+        ? '덧셈뺄셈부터 시작해 점점 어려워지는 문제 5개에 도전해요. 어려워질수록 상금도 커져요'
         : `🔒 지능 ${Engine.COMPETITION_MIN_INTELLIGENCE} 이상 필요 (현재 ${Math.round(state.stats.intelligence)})`;
     }
   }

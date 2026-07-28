@@ -113,21 +113,20 @@ eq(Reward.wrongAnswerPenalty('banquet').stress, 2, '연회 오답은 스트레�
   ok(withBonus.luck > withoutBonus.luck, '보너스 문제까지 맞히면 행운도 더 많아야 함');
 }
 
-/* ---------------- 수학 경시대회 상금 ---------------- */
+/* ---------------- 왕국 수학경시대회 상금 ---------------- */
 
 {
-  eq(Reward.competitionReward(0, 5, 5).gold, 0, '한 문제도 못 맞히면 상금이 0이어야 함');
-  const partial = Reward.competitionReward(3, 5, 5);
-  const perfect = Reward.competitionReward(5, 5, 5);
-  ok(perfect.gold > partial.gold, '더 많이 맞힐수록 상금이 커져야 함');
-  ok(perfect.gold > partial.gold * 5 / 3, '만점이면 추가 보너스가 붙어 비례 이상으로 커져야 함');
-
-  const lowLevel = Reward.competitionReward(3, 5, 1);
-  const highLevel = Reward.competitionReward(3, 5, 8);
+  const lowLevel = Reward.competitionQuestionReward(1);
+  const highLevel = Reward.competitionQuestionReward(8);
   ok(highLevel.gold > lowLevel.gold, '더 높은 레벨(더 어려운 문제)일수록 문제당 상금이 커져야 함');
+  ok(lowLevel.gold > 0, '가장 쉬운 덧셈뺄셈 문제도 상금을 줘야 함');
+  ok(lowLevel.intelligence > 0, '정답을 맞히면 지능도 올라야 함');
 
-  ok(partial.stress > 0, '경시대회는 스트레스가 쌓이는 활동이어야 함');
-  ok(partial.intelligence > 0, '맞힌 문제 수만큼 지능도 올라야 함');
+  const lowBonus = Reward.competitionPerfectBonus(1);
+  const highBonus = Reward.competitionPerfectBonus(8);
+  ok(highBonus.gold > lowBonus.gold, '만점 보너스도 가장 어려웠던 문제의 레벨이 높을수록 커져야 함');
+
+  ok(Reward.wrongAnswerPenalty('competition').stress > 0, '경시대회 오답은 스트레스가 쌓여야 함');
 }
 
 /* ---------------- 호감도 증가량 ---------------- */

@@ -17,7 +17,7 @@
     // 세션 도중에는 콤보만 쌓고, 정답/오답 보상은 세션이 끝날 때 한 번에
     // 반영하는 유형(보너스 미니게임들). 연회/공부/알바처럼 문제마다 바로
     // 보상을 주는 유형과 구분하기 위한 목록이다.
-    const DEFERRED_REWARD_TYPES = ['scenario-quiz', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus', 'competition'];
+    const DEFERRED_REWARD_TYPES = ['scenario-quiz', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
 
     function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
@@ -40,6 +40,9 @@
       if (sessionType === 'banquet') {
         return { charm: 4 + itemBonusSum(items, 'charmBonus') };
       }
+      if (sessionType === 'competition') {
+        return competitionQuestionReward(problem.level);
+      }
       if (DEFERRED_REWARD_TYPES.includes(sessionType)) {
         return {};
       }
@@ -56,6 +59,7 @@
     // 오답 하나에 대한 스탯 페널티. 형태는 correctAnswerReward와 동일.
     function wrongAnswerPenalty(sessionType) {
       if (sessionType === 'banquet') return { stress: 2 };
+      if (sessionType === 'competition') return { stress: 3 };
       if (DEFERRED_REWARD_TYPES.includes(sessionType)) return {};
       if (sessionType === 'study') return { stress: 6, stamina: -4 };
       return { stamina: -3 };
@@ -95,15 +99,18 @@
       return d;
     }
 
-    // 수학 경시대회 상금. 맞힌 문제 수에 비례해 커지고(레벨이 높을수록
-    // 문제당 상금도 커짐), 만점이면 보너스가 붙는다. 일반 알바보다 훨씬
-    // 큰 목돈을 한 번에 벌 수 있어(대신 스트레스가 꽤 쌓임) 옷을 사기 위한
-    // 지름길이 되지만, 전체 경제를 무너뜨리지 않도록 알바 대비 3~5배 수준으로만 크게 잡았다.
-    function competitionReward(correctCount, count, level) {
-      const perCorrect = 10 + level * 3;
-      let gold = correctCount * perCorrect;
-      if (correctCount === count) gold += 40;
-      return { gold, intelligence: correctCount * 1.5, stress: 8 };
+    // 왕국 수학경시대회: 문제마다 난이도(레벨)가 덧셈뺄셈(레벨 1)부터 점점
+    // 올라가므로, 정답 하나의 상금도 그 문제의 레벨에 비례해 커진다(일반
+    // 알바보다 훨씬 큰 목돈을 벌 수 있지만, 전체 경제를 무너뜨리지 않도록
+    // 알바 대비 3~5배 수준으로만 크게 잡았다).
+    function competitionQuestionReward(level) {
+      return { gold: 10 + level * 3, intelligence: 1.5 };
+    }
+
+    // 5문제를 전부 맞히면(만점) 붙는 보너스. 가장 어려웠던 마지막 문제의
+    // 레벨에 비례해 커진다.
+    function competitionPerfectBonus(topLevel) {
+      return { gold: 20 + topLevel * 4 };
     }
 
     // 인물 호감도 증가량. rangeOrValue는 [최소,최대] 배열이거나 고정값.
@@ -118,7 +125,7 @@
       itemBonusSum, comboMultiplier,
       correctAnswerReward, wrongAnswerPenalty,
       exerciseBonusReward, restBonusReward, laundryBonusReward, gardenBonusReward,
-      competitionReward, affectionGain,
+      competitionQuestionReward, competitionPerfectBonus, affectionGain,
     };
   }
 
