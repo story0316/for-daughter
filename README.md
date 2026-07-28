@@ -66,13 +66,14 @@
 - `math-princess/endings.js` — 최종 능력치 기반 엔딩 판정 로직(DOM 비의존)
 - `math-princess/portrait.js` — 품위 단계별 캐릭터 SVG 초상화 생성기(DOM 비의존, 실제 일러스트가 없을 때의 대체용, 0~5 총 6단계)
 - `math-princess/scenarios.js` — 시나리오(quiz/narrative/branching) 콘텐츠용 표준 자료구조와 검증 함수(DOM 비의존). 실제 플레이 가능한 시나리오 14편 포함(새 예고편이 추가되면 상태 화면 "다가오는 이야기" 섹션에 잠금 카드로 미리 보여준다)
+- `math-princess/game-engine.js` — 스케줄/세션/상점/옷장/시나리오/엔딩 등 게임 상태가 바뀌는 모든 로직을 모은 순수 엔진(DOM 비의존). `createEngine({P,SUBJ,SC,E})`로 만들며, script.js(브라우저 UI)와 밸런스 시뮬레이터(Node)가 완전히 같은 코드를 공유한다
 - `math-princess/assets/scenarios/{id}/*.png` — 시나리오별 실제 일러스트 장면 이미지
 - `math-princess/assets/portraits/tier0~5.png` — 품위 단계별 실제 일러스트 초상화(6단계 전부)
 - `math-princess/assets/wardrobe/tier0~5.png` — 옷장 탭에 쓰이는 옷 썸네일 이미지(6단계 전부)
 - `math-princess/assets/npcs/{id}.png` — 인물별 초상화(친구/라이벌/선생님/사교계 친구/왕자님/왕실 스승 6명 전부 적용됨)
-- `math-princess/script.js` — 스케줄/실행 메뉴, 활동별 능력치/골드 반영, 콤보, 랜덤 이벤트, 능력치 레벨업, 옷장/상점, 상태 화면(다가오는 이야기 포함), 로컬 저장/이어하기
+- `math-princess/script.js` — game-engine.js를 호출해 화면을 그리는 UI 레이어. 스케줄/실행 메뉴, 옷장/상점, 상태 화면(다가오는 이야기 포함), 로컬 저장/이어하기, 배경음악 재생
 
-`problems.js`와 `endings.js`는 DOM에 의존하지 않는 순수 로직이라 Node.js에서 바로 불러와 유닛 테스트할 수 있습니다(레벨 1~10 문제 수백 개 자동 채점, 엔딩 판정 케이스 검증 완료).
+`problems.js`/`subjects.js`/`endings.js`/`scenarios.js`/`game-engine.js`는 DOM에 의존하지 않는 순수 로직이라 Node.js에서 바로 불러와 유닛 테스트할 수 있습니다.
 
 `math-princess/test/`에 회귀 테스트 스위트가 있습니다(순수 로직 유닛 테스트, 48개월 x 4주 밸런스/엔딩 도달 가능성 시뮬레이션, Playwright 기반 e2e 테스트). 기능을 추가·수정한 뒤 `bash math-princess/test/run-all.sh`로 전부 돌려볼 수 있습니다. 자세한 내용은 `math-princess/test/README.md` 참고.
 
