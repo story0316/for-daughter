@@ -229,23 +229,58 @@
     return `${year}년차 ${month}월 · 턴 ${turn}/${TOTAL_TURNS}`;
   }
 
+  // 스탯 패널을 그린다. 이전에 이 컨테이너에 그렸던 값을 기억해두고(같은
+  // 화면을 다시 그릴 때) 값이 달라진 스탯만 게이지바가 부드럽게 채워지는
+  // 애니메이션과 "+N"/"-N" 팝업으로 강조해서, 방금 한 행동으로 무엇이
+  // 얼마나 좋아졌는지(스트레스는 줄어드는 게 좋은 변화) 눈에 띄게 보여준다.
+  const statPanelPrevValues = new WeakMap();
+
   function renderStatPanel(container, stats) {
-    container.innerHTML = '';
+    const prev = statPanelPrevValues.get(container);
+    const isFirstRender = !prev || container.children.length === 0;
+    if (isFirstRender) container.innerHTML = '';
+
     STAT_KEYS.forEach((key) => {
-      const row = document.createElement('div');
-      row.className = 'stat-row';
       const value = Math.round(stats[key]);
       const isGrowth = key !== 'stress';
       const tier = isGrowth ? Engine.statTierIndex(value) : 0;
       const fillColor = isGrowth ? Engine.STAT_TIER_COLORS[tier] : '';
-      const fillStyle = `width:${value}%${fillColor ? `;background:${fillColor}` : ''}`;
-      row.innerHTML = `
-        <span class="stat-row-label">${STAT_LABELS[key]}</span>
-        <span class="stat-row-track"><span class="stat-row-fill${key === 'stress' ? ' stress-fill' : ''}" style="${fillStyle}"></span></span>
-        <span class="stat-row-value">${value}${isGrowth ? ` <span class="stat-row-tier">Lv${tier + 1}</span>` : ''}</span>
-      `;
-      container.appendChild(row);
+      const tierLabel = isGrowth ? ` <span class="stat-row-tier">Lv${tier + 1}</span>` : '';
+
+      if (isFirstRender) {
+        const row = document.createElement('div');
+        row.className = 'stat-row';
+        row.dataset.statKey = key;
+        const fillStyle = `width:${value}%${fillColor ? `;background:${fillColor}` : ''}`;
+        row.innerHTML = `
+          <span class="stat-row-label">${STAT_LABELS[key]}</span>
+          <span class="stat-row-track"><span class="stat-row-fill${key === 'stress' ? ' stress-fill' : ''}" style="${fillStyle}"></span></span>
+          <span class="stat-row-value">${value}${tierLabel}<span class="stat-row-delta"></span></span>
+        `;
+        container.appendChild(row);
+        return;
+      }
+
+      const row = container.querySelector(`.stat-row[data-stat-key="${key}"]`);
+      if (!row) return;
+      const fillEl = row.querySelector('.stat-row-fill');
+      fillEl.style.width = `${value}%`;
+      if (fillColor) fillEl.style.background = fillColor;
+      row.querySelector('.stat-row-value').innerHTML = `${value}${tierLabel}<span class="stat-row-delta"></span>`;
+
+      const delta = value - Math.round(prev[key]);
+      if (delta !== 0) {
+        const improved = key === 'stress' ? delta < 0 : delta > 0;
+        fillEl.classList.remove('pulse');
+        void fillEl.offsetWidth; // 리플로우를 강제해 pulse 애니메이션이 다시 재생되게 함
+        fillEl.classList.add('pulse');
+        const deltaEl = row.querySelector('.stat-row-delta');
+        deltaEl.textContent = `${delta > 0 ? '+' : ''}${delta}`;
+        deltaEl.className = `stat-row-delta show ${improved ? 'positive' : 'negative'}`;
+      }
     });
+
+    statPanelPrevValues.set(container, Object.assign({}, stats));
   }
 
   // 단계별로 그려둔 일러스트(assets/portraits/tierN.png)가 있으면 그것을 쓰고,
