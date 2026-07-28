@@ -31,12 +31,15 @@
       branching: document.getElementById('screen-branching'),
       ending: document.getElementById('screen-ending'),
       endingGallery: document.getElementById('screen-ending-gallery'),
+      confirmNewGame: document.getElementById('screen-confirm-new-game'),
     },
     totalTurnsLabel: document.getElementById('total-turns-label'),
     totalYearsLabel: document.getElementById('total-years-label'),
     btnNewGame: document.getElementById('btn-new-game'),
     btnContinue: document.getElementById('btn-continue'),
     characterNameInput: document.getElementById('character-name-input'),
+    btnConfirmNewGame: document.getElementById('btn-confirm-new-game'),
+    btnCancelNewGame: document.getElementById('btn-cancel-new-game'),
 
     btnOpenEndingGallery: document.getElementById('btn-open-ending-gallery'),
     btnEndingGalleryBack: document.getElementById('btn-ending-gallery-back'),
@@ -1410,13 +1413,30 @@
 
   /* ---------------- 시작 화면 ---------------- */
 
-  el.btnNewGame.addEventListener('click', () => {
+  function startNewGame() {
     state = Engine.makeInitialState(el.characterNameInput.value);
     clearSave();
     saveGame();
     gameStarted = true;
     showScreen('main');
     renderMain();
+  }
+
+  el.btnNewGame.addEventListener('click', () => {
+    // 진행 중이던 저장 데이터가 있으면 실수로 지우지 않도록 먼저 확인을 받는다.
+    if (localStorage.getItem(SAVE_KEY)) {
+      showScreen('confirmNewGame');
+      return;
+    }
+    startNewGame();
+  });
+
+  el.btnConfirmNewGame.addEventListener('click', () => {
+    startNewGame();
+  });
+
+  el.btnCancelNewGame.addEventListener('click', () => {
+    showScreen('start');
   });
 
   el.btnContinue.addEventListener('click', () => {

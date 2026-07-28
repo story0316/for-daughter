@@ -35,6 +35,19 @@
       </div>
     </section>
 
+    <!-- 새로 시작 전 확인: 진행 중인 저장 데이터가 있으면 정말 지우고 새로 시작할지 물어본다 -->
+    <section id="screen-confirm-new-game" class="screen overlay-screen">
+      <div class="card">
+        <div class="title-emoji">⚠️</div>
+        <h2>정말 새로 시작할까요?</h2>
+        <p>진행 중인 게임이 있어요. 새로 시작하면 지금까지의 진행 상황이 사라지고 되돌릴 수 없어요.</p>
+        <div class="result-buttons">
+          <button id="btn-confirm-new-game" class="btn btn-primary">네, 새로 시작할게요</button>
+          <button id="btn-cancel-new-game" class="btn btn-secondary">아니요, 이어할래요</button>
+        </div>
+      </div>
+    </section>
+
     <!-- 엔딩 도감 화면: 지금까지 본 엔딩과 아직 못 본 엔딩을 모아 보여준다(여러 판에 걸쳐 누적) -->
     <section id="screen-ending-gallery" class="screen">
       <header class="hud">
