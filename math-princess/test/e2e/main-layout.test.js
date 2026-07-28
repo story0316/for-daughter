@@ -33,6 +33,16 @@ async function testViewport(viewport, label) {
       return { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight, overflowY: getComputedStyle(el).overflowY };
     });
     ok(planScroll.overflowY === 'auto' || planScroll.overflowY === 'scroll', `[${label}] 계획표 화면은 내용이 많아지면 스크롤되어야 함`);
+
+    // "이번 달 생활 계획표"처럼 긴 헤더 제목이 오른쪽 위에 떠 있는 음소거
+    // 버튼(고정 위치, absolute)과 겹쳐서 글자가 가려지면 안 된다.
+    const rects = await page.evaluate(() => {
+      const title = document.querySelector('#screen-schedule .turn-label');
+      const mute = document.getElementById('btn-mute-toggle');
+      return { title: title.getBoundingClientRect().toJSON(), mute: mute.getBoundingClientRect().toJSON() };
+    });
+    const overlaps = rects.title.right > rects.mute.left && rects.title.bottom > rects.mute.top && rects.title.left < rects.mute.right;
+    ok(!overlaps, `[${label}] 스케줄 화면 제목이 음소거 버튼과 겹치면 안 됨 (title=${JSON.stringify(rects.title)}, mute=${JSON.stringify(rects.mute)})`);
   }, viewport);
   ok(errors.length === 0, `[${label}] JS 에러 없어야 함: ${errors.join('\n')}`);
 }

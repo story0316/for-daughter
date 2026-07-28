@@ -652,6 +652,7 @@
     el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
     el.summaryGold.textContent = outcome.goldEarned;
     el.summaryCombo.textContent = outcome.bestCombo;
+    updateSummaryConfirmLabel();
     showScreen('sessionSummary');
   }
 
@@ -687,8 +688,16 @@
     el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
     el.summaryGold.textContent = outcome.goldEarned;
     el.summaryCombo.textContent = session.sessionBestCombo;
+    updateSummaryConfirmLabel();
     saveGame();
     showScreen('sessionSummary');
+  }
+
+  // 이번 주가 이번 달의 마지막 주(4주차)일 때만 실제로 달이 넘어가므로,
+  // 그렇지 않을 때 "다음 달로"라고 표시하면 오해를 준다.
+  function updateSummaryConfirmLabel() {
+    const isLastWeek = state.weekIndex === WEEKS_PER_MONTH - 1;
+    el.btnSummaryConfirm.textContent = isLastWeek ? '다음 달로' : '다음 주로';
   }
 
   el.btnSummaryConfirm.addEventListener('click', () => {

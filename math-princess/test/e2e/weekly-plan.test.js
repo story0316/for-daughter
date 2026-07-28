@@ -67,9 +67,35 @@ async function testEndingTriggersAtFinalWeek() {
   ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
 }
 
+async function testSummaryConfirmLabelMatchesWeekVsMonth() {
+  const errors = await withPage(async (page) => {
+    // 1주차(마지막 주가 아님)에 공부를 하면 "다음 주로"라고 떠야 한다
+    // ("다음 달로"라고 하면 실제로는 달이 안 넘어가는데 넘어간다고 오해를 줌).
+    await seedAndContinue(page, makeState({ weekPlan: ['study', null, null, null], weekIndex: 0 }));
+    await page.click('[data-menu="execute"]');
+    await page.waitForSelector('#screen-quiz.active');
+    await drainQuizSession(page);
+    await page.waitForSelector('#screen-session-summary.active');
+    eq((await page.textContent('#btn-summary-confirm')).trim(), '다음 주로', '마지막 주가 아니면 버튼은 "다음 주로"여야 함');
+    await page.click('#btn-summary-confirm');
+    await page.waitForSelector('#screen-main.active');
+
+    // 4주차(마지막 주)에 공부를 하면 실제로 달이 넘어가므로 "다음 달로"여야 한다
+    const state = makeState({ weekPlan: ['rest', 'rest', 'rest', 'study'], weekIndex: 3 });
+    await seedAndContinue(page, state);
+    await page.click('[data-menu="execute"]');
+    await page.waitForSelector('#screen-quiz.active');
+    await drainQuizSession(page);
+    await page.waitForSelector('#screen-session-summary.active');
+    eq((await page.textContent('#btn-summary-confirm')).trim(), '다음 달로', '마지막 주면 버튼은 "다음 달로"여야 함');
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
+}
+
 (async () => {
   console.log('weekly-plan e2e tests');
   await testPlanAndExecuteFourWeeks();
   await testEndingTriggersAtFinalWeek();
+  await testSummaryConfirmLabelMatchesWeekVsMonth();
   summary('weekly-plan.test.js');
 })();
