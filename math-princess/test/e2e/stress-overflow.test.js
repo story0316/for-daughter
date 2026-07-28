@@ -1,17 +1,13 @@
 // 스트레스가 임계값(STRESS_OVERFLOW_THRESHOLD)을 넘으면 계획했던 활동 대신
 // "몸살" 이벤트가 뜨고 그 주를 대신 소모하는 흐름을 검증한다.
 const { ok, eq, summary } = require('../helpers/assert');
-const { withPage, seedAndContinue, makeState, drainQuizSession, getSavedState, activeScreenId } = require('./helpers');
+const { withPage, seedAndContinue, makeState, drainQuizSession, getSavedState, activeScreenId, planWeekActivity } = require('./helpers');
 
 async function planFullMonth(page, activity) {
   await page.click('[data-menu="schedule"]');
   await page.waitForSelector('#screen-schedule.active');
   for (let i = 0; i < 4; i++) {
-    const cards = await page.$$('#week-plan-list .level-card');
-    await cards[i].click();
-    await page.waitForSelector('#screen-week-pick.active');
-    await page.click(`[data-activity="${activity}"]`);
-    await page.waitForSelector('#screen-schedule.active');
+    await planWeekActivity(page, i, activity);
   }
   await page.click('#btn-schedule-back');
   await page.waitForSelector('#screen-main.active');

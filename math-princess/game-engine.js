@@ -56,8 +56,40 @@
     const QUESTIONS_PER_STUDY = 4;
     const QUESTIONS_PER_JOB = 3;
     const QUESTIONS_PER_BANQUET = 3;
+    const QUESTIONS_PER_COMPETITION = 5;
     const BANQUET_PASS_COUNT = 3;
+    const COMPETITION_MIN_INTELLIGENCE = 50;
     const SAVE_KEY = 'math-princess-save-v1';
+
+    // 공부/알바/경시대회는 문제 수를 도전자가 직접 고를 수 있다(SESSION_LENGTH_MIN
+    // ~ SESSION_LENGTH_MAX). 각 활동의 기본값(QUESTIONS_PER_*)을 그대로 고르면
+    // 보상 배율이 1.0(기존 밸런스 그대로)이고, 문제 수를 더 많이 고를수록 문제당
+    // 보상이 최대 SESSION_LENGTH_MAX_BONUS(=1.5배)까지 커진다 — 대신 문제 수가
+    // 늘어난 만큼 체력/스트레스 비용도 그대로 늘어나므로, 짧게 여러 번보다 길게
+    // 한 번 도전하는 쪽이 더 효율적이 되도록(체감 보상 증가) 만든 장치다. 반대로
+    // 기본값보다 적게 고르면 그만큼 효율이 조금 떨어진다.
+    const SESSION_LENGTH_MIN = 3;
+    const SESSION_LENGTH_MAX = 15;
+    const SESSION_LENGTH_MAX_BONUS = 0.5;
+    const SESSION_LENGTH_MIN_PENALTY = 0.2;
+
+    function clampSessionLength(count) {
+      const n = Math.round(count);
+      return Math.max(SESSION_LENGTH_MIN, Math.min(SESSION_LENGTH_MAX, Number.isFinite(n) ? n : SESSION_LENGTH_MIN));
+    }
+
+    // count가 defaultCount와 같으면 1.0, SESSION_LENGTH_MAX까지 늘어나면
+    // 1+SESSION_LENGTH_MAX_BONUS, SESSION_LENGTH_MIN까지 줄어들면
+    // 1-SESSION_LENGTH_MIN_PENALTY가 되도록 선형 보간한다.
+    function sessionLengthMultiplier(count, defaultCount) {
+      const n = clampSessionLength(count);
+      if (n >= defaultCount) {
+        if (SESSION_LENGTH_MAX === defaultCount) return 1;
+        return 1 + SESSION_LENGTH_MAX_BONUS * (n - defaultCount) / (SESSION_LENGTH_MAX - defaultCount);
+      }
+      if (defaultCount === SESSION_LENGTH_MIN) return 1;
+      return 1 - SESSION_LENGTH_MIN_PENALTY * (defaultCount - n) / (defaultCount - SESSION_LENGTH_MIN);
+    }
 
     const EVENTS = [
       { emoji: '😄', title: '즐거운 시간', desc: '친구와 수다를 떨며 즐거운 시간을 보냈어요.', apply: (s) => { s.stats.charm += 3; } },
@@ -89,6 +121,28 @@
       { id: 'aiTutor', emoji: '🤖', name: 'AI 학습기', cost: 3500, desc: '문제 정답 시 골드 +25%, 지능 +2 추가', goldBonus: 0.25, intBonus: 2 },
       { id: 'orchestra', emoji: '🎻', name: '개인 오케스트라 레슨', cost: 4000, desc: '공부 정답 시 지능 +2 추가 획득', intBonus: 2 },
       { id: 'palace', emoji: '🏰', name: '별궁으로 이사', cost: 5000, desc: '휴식 효과 추가 +50% (총 150%)', restBonus: 0.5 },
+    ];
+
+    // 매주 문제를 풀어 돈을 버는 "알바"(ACTIVITY_DEFS.job)와는 별개로, 스탯
+    // 요건을 만족하면 지원할 수 있는 정식 직업. 한 번 취업하면 스케줄과
+    // 무관하게 매턴 자동으로 급여가 들어오고, 왕자님과의 관계에도 영향을
+    // 준다(급여가 높은 직업일수록 왕자님과 마주칠 기회 자체도 늘어난다).
+    const CAREER_DEFS = [
+      {
+        id: 'tutor', emoji: '📖', name: '동네 과외 선생님',
+        desc: '이웃 아이에게 공부를 가르쳐주는 시간제 과외예요. 매달 급여를 받아요.',
+        requirement: { intelligence: 30 }, monthlyGold: 60, princeAffectionBonus: 0, princeEncounterChance: 0,
+      },
+      {
+        id: 'librarian', emoji: '📚', name: '왕실 도서관 사서',
+        desc: '왕실 서고에서 책을 정리하는 정식 자리예요. 급여도 넉넉하고, 왕자님이 자주 들르는 곳이라 우연히 마주칠 일도 생겨요.',
+        requirement: { intelligence: 55, focus: 40 }, monthlyGold: 130, princeAffectionBonus: 1, princeEncounterChance: 0.12,
+      },
+      {
+        id: 'scribe', emoji: '🖋️', name: '왕실 서기관',
+        desc: '왕실 문서를 관리하는 정식 관직이에요. 급여가 가장 많고, 궁에 드나들 일이 많아 왕자님과 마주칠 확률도 확실히 높아져요.',
+        requirement: { intelligence: 75, charm: 50 }, monthlyGold: 220, princeAffectionBonus: 3, princeEncounterChance: 0.22,
+      },
     ];
 
     const BANQUET_ENTRY_FEE = 150;
@@ -135,6 +189,7 @@
       garden: { emoji: '🌾', name: '텃밭 가꾸기' },
       friend: { emoji: '🎡', name: '친구 만나기' },
       banquet: { emoji: '💃', name: '연회 참석' },
+      competition: { emoji: '🏆', name: '왕국 수학경시대회' },
     };
 
     const ASSUMED_CORRECT_RATE = 0.75;
@@ -230,9 +285,11 @@
         npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 })),
         wardrobe: { equipped: 0, owned: OUTFIT_TIERS.map((_, i) => i === 0), notifiedGraceTier: 0 },
         weekPlan: new Array(WEEKS_PER_MONTH).fill(null),
+        weekPlanCount: new Array(WEEKS_PER_MONTH).fill(null),
         weekIndex: 0,
         talkedThisTurn: false,
         completedScenarios: [],
+        career: null,
       };
     }
 
@@ -256,10 +313,14 @@
         loaded.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
         if (loaded.scheduledActivity) loaded.weekPlan[0] = loaded.scheduledActivity;
       }
+      if (!Array.isArray(loaded.weekPlanCount) || loaded.weekPlanCount.length !== WEEKS_PER_MONTH) {
+        loaded.weekPlanCount = new Array(WEEKS_PER_MONTH).fill(null);
+      }
       if (typeof loaded.weekIndex !== 'number' || loaded.weekIndex < 0 || loaded.weekIndex >= WEEKS_PER_MONTH) loaded.weekIndex = 0;
       delete loaded.scheduledActivity;
       if (typeof loaded.talkedThisTurn === 'undefined') loaded.talkedThisTurn = false;
       if (!Array.isArray(loaded.completedScenarios)) loaded.completedScenarios = [];
+      if (typeof loaded.career === 'undefined') loaded.career = null;
       return loaded;
     }
 
@@ -273,6 +334,17 @@
     function generateScenarioQuestion(session) { return Question.generateScenarioQuestion(session); }
     function generateNextProblem(state, session) { return Question.generateNextProblem(state.stats.intelligence, session); }
     function typicalStudyLevel(state) { return Question.typicalStudyLevel(state.stats.intelligence); }
+
+    // 왕국 수학경시대회에서 쓸 난이도 사다리를 만든다. 덧셈뺄셈(레벨 1)부터
+    // 시작해 현재 해금된 최고 레벨까지 count개 문제에 걸쳐 고르게 올라간다.
+    function competitionLevelRamp(maxLevel, count) {
+      const levels = [];
+      for (let i = 0; i < count; i++) {
+        const raw = count === 1 ? maxLevel : 1 + (i * (maxLevel - 1)) / (count - 1);
+        levels.push(Math.max(1, Math.min(maxLevel, Math.round(raw))));
+      }
+      return levels;
+    }
 
     /* ---------------- 세션(문제 풀이) 생성 ---------------- */
 
@@ -289,13 +361,33 @@
       }, extra);
     }
 
-    function startStudySession() { return makeSession('study', { count: QUESTIONS_PER_STUDY }); }
-    function startJobSession() { return makeSession('job', { count: QUESTIONS_PER_JOB }); }
+    // 이번 공부 세션 내내 한 과목만 다루도록(연계성) 세션 시작 시 과목을 하나 고정해둔다.
+    // count를 생략하면 기본 문제 수(QUESTIONS_PER_STUDY)를 쓴다.
+    function startStudySession(count) {
+      const n = clampSessionLength(count != null ? count : QUESTIONS_PER_STUDY);
+      return makeSession('study', {
+        count: n,
+        rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_STUDY),
+        fixedSubject: randChoice(Question.SUBJECT_KEYS),
+      });
+    }
+    function startJobSession(count) {
+      const n = clampSessionLength(count != null ? count : QUESTIONS_PER_JOB);
+      return makeSession('job', { count: n, rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_JOB) });
+    }
     function startBanquetSession() { return makeSession('banquet', { level: 1, count: QUESTIONS_PER_BANQUET, askedQuestions: [] }); }
     function startExerciseSession() { return makeSession('exercise-bonus', { count: 1 }); }
     function startRestSession() { return makeSession('rest-bonus', { count: 1 }); }
     function startLaundrySession() { return makeSession('laundry-bonus', { count: 1 }); }
     function startGardenSession() { return makeSession('garden-bonus', { count: 1 }); }
+    // 덧셈뺄셈(레벨 1)부터 시작해 현재 해금된 최고 레벨까지 점점 어려워지는
+    // 수학 문제로만 출제한다(다른 과목과 안 섞임 — "수학" 경시대회이므로).
+    // count를 생략하면 기본 문제 수(QUESTIONS_PER_COMPETITION)를 쓴다.
+    function startCompetitionSession(state, count) {
+      const n = clampSessionLength(count != null ? count : QUESTIONS_PER_COMPETITION);
+      const levels = competitionLevelRamp(typicalStudyLevel(state), n);
+      return makeSession('competition', { levels, count: n, rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_COMPETITION) });
+    }
     // 관련 인물과 친할수록(NPC_HINT_AFFECTION 이상) 문제에 힌트가 붙고,
     // 아주 친하면(NPC_LENIENT_AFFECTION 이상) 통과 기준이 1개 낮아진다.
     function startScenarioQuizSession(state, scenario) {
@@ -313,7 +405,7 @@
       state.bestCombo = Math.max(state.bestCombo, state.combo);
       session.sessionBestCombo = Math.max(session.sessionBestCombo, state.combo);
 
-      const reward = Reward.correctAnswerReward(session.type, problem, state.combo, state.items);
+      const reward = Reward.correctAnswerReward(session.type, problem, state.combo, state.items, session.rewardMultiplier);
       if (typeof reward.gold === 'number') session.goldEarned += reward.gold;
       applyDelta(state, reward);
 
@@ -349,7 +441,7 @@
       const dressedForPrince = state.wardrobe.equipped >= PRINCE_MIN_TIER;
       if (success && dressedForPrince) {
         const princeState = state.npcs.find((n) => n.id === 'prince');
-        princeState.affection += Reward.affectionGain([10, 16], state.items);
+        princeState.affection += Reward.affectionGain([10, 16], state.items) + careerPrinceBonus(state);
         princeState.lastMetTurn = state.turn;
         clampStats(state);
         return { result: 'met-prince', correctCount: session.correctCount, count: session.count, princeAffection: princeState.affection };
@@ -387,6 +479,21 @@
       applyDelta(state, Reward.gardenBonusReward(bonus));
       clampStats(state);
       return { bonus };
+    }
+
+    // 문제마다 상금은 applyCorrect가 이미 즉시 반영했으므로(session.goldEarned에
+    // 누적됨), 여기서는 만점 보너스만 추가로 얹는다.
+    function finishCompetitionOutcome(state, session) {
+      const perfect = session.correctCount === session.count;
+      let bonusGold = 0;
+      if (perfect) {
+        const topLevel = session.levels[session.levels.length - 1];
+        const bonus = Reward.competitionPerfectBonus(topLevel, session.rewardMultiplier);
+        bonusGold = bonus.gold;
+        applyDelta(state, bonus);
+      }
+      clampStats(state);
+      return { correctCount: session.correctCount, count: session.count, goldEarned: session.goldEarned + bonusGold, perfect };
     }
 
     // chance 확률로 무작위 이벤트를 골라 효과를 적용하고 이벤트 정보를 돌려준다.
@@ -445,7 +552,8 @@
         Object.keys(npcEffects).forEach((npcId) => {
           const npcState = state.npcs.find((n) => n.id === npcId);
           if (!npcState) return;
-          npcState.affection += Reward.affectionGain(npcEffects[npcId], state.items);
+          const bonus = npcId === 'prince' ? careerPrinceBonus(state) : 0;
+          npcState.affection += Reward.affectionGain(npcEffects[npcId], state.items) + bonus;
           npcState.lastMetTurn = state.turn;
         });
       }
@@ -464,7 +572,7 @@
       const def = NPC_DEFS.find((n) => n.id === npcId);
       const npcState = state.npcs.find((n) => n.id === npcId);
       def.apply(state);
-      npcState.affection += Reward.affectionGain([8, 14], state.items);
+      npcState.affection += Reward.affectionGain([8, 14], state.items) + (npcId === 'prince' ? careerPrinceBonus(state) : 0);
       npcState.lastMetTurn = state.turn;
       clampStats(state);
       return { kind: 'met', npcDef: def, npcState, line: randChoice(def.lines) };
@@ -534,6 +642,35 @@
       return null;
     }
 
+    /* ---------------- 직업(정식 취업) ---------------- */
+
+    function careerRequirementMet(stats, career) {
+      return Object.keys(career.requirement).every((key) => stats[key] >= career.requirement[key]);
+    }
+
+    function unlockedCareers(state) {
+      return CAREER_DEFS.filter((c) => careerRequirementMet(state.stats, c));
+    }
+
+    // 직업에 지원한다. 요건을 만족 못 하면 false. 이미 요건을 만족한 다른
+    // 직업으로 갈아타는 것도 언제든 가능하다(이직).
+    function applyForCareer(state, careerId) {
+      const career = CAREER_DEFS.find((c) => c.id === careerId);
+      if (!career || !careerRequirementMet(state.stats, career)) return false;
+      state.career = careerId;
+      return true;
+    }
+
+    function resignCareer(state) {
+      state.career = null;
+    }
+
+    function careerPrinceBonus(state) {
+      if (!state.career) return 0;
+      const career = CAREER_DEFS.find((c) => c.id === state.career);
+      return career ? career.princeAffectionBonus : 0;
+    }
+
     /* ---------------- 스케줄/활동 게이트 ---------------- */
 
     function currentWeekActivity(state) {
@@ -553,6 +690,10 @@
       return { ok: true };
     }
 
+    function competitionUnlocked(state) {
+      return state.stats.intelligence >= COMPETITION_MIN_INTELLIGENCE;
+    }
+
     function talkToDaughter(state) {
       if (state.talkedThisTurn) return { alreadyTalked: true };
       state.talkedThisTurn = true;
@@ -569,21 +710,25 @@
     // (정답률 ASSUMED_CORRECT_RATE 가정, 대략적인 예상치). 실제 보상 계산은
     // reward-engine.js가 담당하므로, 여기서 밸런스 수치를 바꿔도 이 미리보기가
     // 자동으로 맞아떨어지지는 않는다는 점에 유의(순수 예상치 근사이기 때문).
-    function estimateActivityDelta(state, activityId) {
+    function estimateActivityDelta(state, activityId, count) {
       const d = { gold: 0, intelligence: 0, focus: 0, stamina: 0, charm: 0, creativity: 0, stress: 0, luck: 0 };
       const level = typicalStudyLevel(state);
       const rewardGold = 8 + level * 4;
       const r = ASSUMED_CORRECT_RATE;
       if (activityId === 'study') {
-        d.gold += Math.round(QUESTIONS_PER_STUDY * r * rewardGold * EXPECTED_COMBO_MULTIPLIER * (1 + itemBonusSum(state, 'goldBonus')));
-        d.intelligence += QUESTIONS_PER_STUDY * r * (level + itemBonusSum(state, 'intBonus'));
-        d.creativity += QUESTIONS_PER_STUDY * r * level * 0.2;
-        d.stress += QUESTIONS_PER_STUDY * (1 - r) * 6;
-        d.stamina += -QUESTIONS_PER_STUDY * (1 - r) * 4 - QUESTIONS_PER_STUDY * r * 2;
+        const n = clampSessionLength(count != null ? count : QUESTIONS_PER_STUDY);
+        const lm = sessionLengthMultiplier(n, QUESTIONS_PER_STUDY);
+        d.gold += Math.round(n * r * rewardGold * EXPECTED_COMBO_MULTIPLIER * (1 + itemBonusSum(state, 'goldBonus')) * lm);
+        d.intelligence += n * r * (level + itemBonusSum(state, 'intBonus'));
+        d.creativity += n * r * level * 0.2;
+        d.stress += n * (1 - r) * 6;
+        d.stamina += -n * (1 - r) * 4 - n * r * 2;
       } else if (activityId === 'job') {
+        const n = clampSessionLength(count != null ? count : QUESTIONS_PER_JOB);
+        const lm = sessionLengthMultiplier(n, QUESTIONS_PER_JOB);
         const level1Reward = 8 + 1 * 4;
-        d.gold += Math.round(QUESTIONS_PER_JOB * r * level1Reward * EXPECTED_COMBO_MULTIPLIER * 1.5 * (1 + itemBonusSum(state, 'goldBonus')));
-        d.stamina += -QUESTIONS_PER_JOB * r * 2 - QUESTIONS_PER_JOB * (1 - r) * 3;
+        d.gold += Math.round(n * r * level1Reward * EXPECTED_COMBO_MULTIPLIER * 1.5 * (1 + itemBonusSum(state, 'goldBonus')) * lm);
+        d.stamina += -n * r * 2 - n * (1 - r) * 3;
       } else if (activityId === 'exercise') {
         d.stamina += 8 + 2 * r;
         d.focus += 4 + 3 * r;
@@ -606,6 +751,17 @@
         d.gold += -BANQUET_ENTRY_FEE;
         d.charm += QUESTIONS_PER_BANQUET * r * (4 + itemBonusSum(state, 'charmBonus'));
         d.stress += QUESTIONS_PER_BANQUET * (1 - r) * 2;
+      } else if (activityId === 'competition') {
+        const n = clampSessionLength(count != null ? count : QUESTIONS_PER_COMPETITION);
+        const lm = sessionLengthMultiplier(n, QUESTIONS_PER_COMPETITION);
+        const levels = competitionLevelRamp(typicalStudyLevel(state), n);
+        let expectedGold = 0;
+        levels.forEach((lvl) => { expectedGold += r * (10 + lvl * 3) * lm; });
+        const perfectChance = Math.pow(r, n);
+        expectedGold += perfectChance * (20 + levels[levels.length - 1] * 4) * lm;
+        d.gold += Math.round(expectedGold);
+        d.intelligence += n * r * 1.5;
+        d.stress += n * (1 - r) * 3;
       }
       return d;
     }
@@ -618,7 +774,7 @@
         const activity = state.weekPlan[i];
         if (!activity) continue;
         planned++;
-        const d = estimateActivityDelta(state, activity);
+        const d = estimateActivityDelta(state, activity, state.weekPlanCount[i]);
         DELTA_STAT_KEYS.forEach((k) => { total[k] += d[k]; });
       }
       return { total, planned };
@@ -635,9 +791,26 @@
       });
     }
 
+    // 매턴 자동으로 적용되는 효과(고용인 + 직업 급여/우연한 만남). 왕자님과
+    // 우연히 마주쳤으면 { princeEncounter: true }를 돌려줘 UI가 알려줄 수 있게 한다.
     function applyServantEffects(state) {
       if (state.items.maid) state.stats.stress = Math.max(0, state.stats.stress - 2);
       if (state.items.gardener) { state.gold += 10; state.stats.luck += 1; }
+
+      let princeEncounter = false;
+      if (state.career) {
+        const career = CAREER_DEFS.find((c) => c.id === state.career);
+        if (career) {
+          state.gold += career.monthlyGold;
+          const princeState = state.npcs.find((n) => n.id === 'prince');
+          if (career.princeEncounterChance && princeState && graceScore(state.stats) >= 55 && Math.random() < career.princeEncounterChance) {
+            princeState.affection = Math.min(100, princeState.affection + randInt(3, 6));
+            princeState.lastMetTurn = state.turn;
+            princeEncounter = true;
+          }
+        }
+      }
+      return { princeEncounter };
     }
 
     // 달(턴)을 실제로 넘긴다. { ended: true }면 TOTAL_TURNS를 넘긴 것이라
@@ -645,23 +818,24 @@
     function advanceTurn(state, totalTurns) {
       state.turn++;
       state.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
+      state.weekPlanCount = new Array(WEEKS_PER_MONTH).fill(null);
       state.weekIndex = 0;
       state.talkedThisTurn = false;
-      applyServantEffects(state);
+      const { princeEncounter } = applyServantEffects(state);
       applyAffectionDecay(state);
-      return { ended: state.turn > totalTurns };
+      return { ended: state.turn > totalTurns, princeEncounter };
     }
 
     // 한 주의 활동을 마쳤을 때 호출한다. 남은 주가 있으면 주만 넘기고
     // { monthAdvanced: false }, 이번 달의 마지막 주였다면 advanceTurn을
-    // 호출해 실제로 달을 넘긴다({ monthAdvanced: true, ended }).
+    // 호출해 실제로 달을 넘긴다({ monthAdvanced: true, ended, princeEncounter }).
     function advanceWeekOrTurn(state, totalTurns) {
       if (state.weekIndex < WEEKS_PER_MONTH - 1) {
         state.weekIndex++;
-        return { monthAdvanced: false, ended: false };
+        return { monthAdvanced: false, ended: false, princeEncounter: false };
       }
-      const { ended } = advanceTurn(state, totalTurns);
-      return { monthAdvanced: true, ended };
+      const { ended, princeEncounter } = advanceTurn(state, totalTurns);
+      return { monthAdvanced: true, ended, princeEncounter };
     }
 
     /* ---------------- 엔딩 ---------------- */
@@ -683,9 +857,11 @@
       SUBJECTS: Question.SUBJECTS, SUBJECT_KEYS: Question.SUBJECT_KEYS,
       STAT_KEYS, STAT_LABELS, GROWTH_STAT_KEYS, STAT_TIER_THRESHOLDS, STAT_TIER_COLORS,
       WEEKS_PER_MONTH, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT,
+      QUESTIONS_PER_COMPETITION, COMPETITION_MIN_INTELLIGENCE,
+      SESSION_LENGTH_MIN, SESSION_LENGTH_MAX, sessionLengthMultiplier,
       SAVE_KEY, EVENTS, ETIQUETTE_QUESTIONS: Question.ETIQUETTE_QUESTIONS, TALK_LINES, ITEMS,
       BANQUET_ENTRY_FEE, BANQUET_MIN_TIER, PRINCE_MIN_TIER,
-      STRESS_OVERFLOW_THRESHOLD, NPC_HINT_AFFECTION, NPC_LENIENT_AFFECTION,
+      STRESS_OVERFLOW_THRESHOLD, NPC_HINT_AFFECTION, NPC_LENIENT_AFFECTION, CAREER_DEFS,
       AFFECTION_TIERS, AFFECTION_DECAY_GRACE_TURNS, AFFECTION_DECAY_AMOUNT, OUTFIT_TIERS, NPC_DEFS, ACTIVITY_DEFS,
       MULTI_SUBJECT_TYPES: Question.MULTI_SUBJECT_TYPES, BONUS_QUIZ_TYPES: Reward.DEFERRED_REWARD_TYPES,
       ASSUMED_CORRECT_RATE, EXPECTED_COMBO_MULTIPLIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS,
@@ -699,17 +875,19 @@
       generateEtiquetteQuestion, generateScenarioQuestion, generateNextProblem,
       // 세션
       startStudySession, startJobSession, startBanquetSession, startExerciseSession, startRestSession,
-      startLaundrySession, startGardenSession, startScenarioQuizSession,
+      startLaundrySession, startGardenSession, startScenarioQuizSession, startCompetitionSession,
       applyCorrect, applyWrong,
       finishStudyOrJobOutcome, finishBanquetOutcome, finishExerciseBonusOutcome, finishRestBonusOutcome,
-      finishLaundryBonusOutcome, finishGardenBonusOutcome, rollRandomEvent, checkStressOverflow,
+      finishLaundryBonusOutcome, finishGardenBonusOutcome, finishCompetitionOutcome, rollRandomEvent, checkStressOverflow,
       // 인물/시나리오
       scenarioUnlocked, findActiveScenario, applyStatNpcEffects, meetNpcAttempt,
       resolveScenarioOutcome, resolveBranchingOption, resolveNarrativeScenario, finishScenarioQuizOutcome,
       // 상점/옷장
       buyItem, equipOutfit, buyOutfit, checkWardrobeGraceNotification,
+      // 직업
+      careerRequirementMet, unlockedCareers, applyForCareer, resignCareer,
       // 스케줄/활동
-      currentWeekActivity, tryStartBanquet, talkToDaughter,
+      currentWeekActivity, tryStartBanquet, competitionUnlocked, talkToDaughter,
       // 계획 미리보기
       typicalStudyLevel, estimateActivityDelta, estimateRemainingWeeksDelta,
       // 턴 진행

@@ -64,14 +64,18 @@
       return unlocked.length ? unlocked[unlocked.length - 1] : 1;
     }
 
-    // 과목은 무작위로, 레벨은 방금 해금된 것 위주(최근 3개)로 뽑아 너무 쉬운
-    // 문제만 반복되지 않게 한다.
-    function pickRandomSubjectAndLevel(intelligence) {
-      const subjectKey = randChoice(SUBJECT_KEYS);
+    // 레벨은 방금 해금된 것 위주(최근 3개)로 뽑아 너무 쉬운 문제만
+    // 반복되지 않게 한다.
+    function pickLevelForSubject(intelligence, subjectKey) {
       const unlocked = unlockedLevelsFor(intelligence, subjectKey);
       const recentBand = unlocked.slice(-3);
-      const level = randChoice(recentBand.length ? recentBand : [1]);
-      return { subject: subjectKey, level };
+      return randChoice(recentBand.length ? recentBand : [1]);
+    }
+
+    // 과목은 무작위로, 레벨은 방금 해금된 것 위주로 뽑는다.
+    function pickRandomSubjectAndLevel(intelligence) {
+      const subjectKey = randChoice(SUBJECT_KEYS);
+      return { subject: subjectKey, level: pickLevelForSubject(intelligence, subjectKey) };
     }
 
     function pickRandomSubjectLevel1() {
@@ -106,11 +110,19 @@
 
     // 세션 유형에 맞는 다음 문제를 만든다(UI는 이 결과로 화면만 그리면 된다).
     // 필요하면 session.currentSubject를 채워준다(표시용 과목 이름을 UI가 알 수 있도록).
+    // session.fixedSubject가 있으면(공부 세션) 매 문제 과목을 다시 뽑지 않고
+    // 세션 내내 그 과목으로 통일해, "이번엔 수학을 공부한다"처럼 연계성을 준다.
     function generateNextProblem(intelligence, session) {
       if (session.type === 'banquet') return generateEtiquetteQuestion(session);
       if (session.type === 'scenario-quiz') return generateScenarioQuestion(session);
+      // 왕국 수학경시대회: 문제마다 미리 정해둔 난이도 사다리(session.levels)를
+      // 따라간다(덧셈뺄셈부터 점점 어려워짐), 다른 과목과 섞이지 않는다.
+      if (session.type === 'competition') return P.generateProblem(session.levels[session.index]);
       if (MULTI_SUBJECT_TYPES.includes(session.type)) {
-        const picked = session.type === 'job' ? pickRandomSubjectLevel1() : pickRandomSubjectAndLevel(intelligence);
+        let picked;
+        if (session.type === 'job') picked = pickRandomSubjectLevel1();
+        else if (session.fixedSubject) picked = { subject: session.fixedSubject, level: pickLevelForSubject(intelligence, session.fixedSubject) };
+        else picked = pickRandomSubjectAndLevel(intelligence);
         session.currentSubject = picked.subject;
         return SUBJECTS[picked.subject].generateProblem(picked.level);
       }

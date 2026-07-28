@@ -30,8 +30,21 @@
         <div class="start-buttons">
           <button id="btn-new-game" class="btn btn-primary">새로 시작하기</button>
           <button id="btn-continue" class="btn btn-secondary" style="display:none">이어하기</button>
+          <button id="btn-open-ending-gallery" class="btn btn-secondary">📖 엔딩 도감</button>
         </div>
       </div>
+    </section>
+
+    <!-- 엔딩 도감 화면: 지금까지 본 엔딩과 아직 못 본 엔딩을 모아 보여준다(여러 판에 걸쳐 누적) -->
+    <section id="screen-ending-gallery" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-ending-gallery-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label">엔딩 도감</div>
+        </div>
+      </header>
+      <div id="ending-gallery-summary" class="ending-gallery-summary"></div>
+      <div id="ending-gallery-list" class="ending-gallery-list"></div>
     </section>
 
     <!-- 메인 허브 화면 -->
@@ -176,6 +189,29 @@
           </span>
           <span class="level-lock-icon">›</span>
         </button>
+        <button class="level-card" data-activity="competition">
+          <span class="level-badge-num">🏆</span>
+          <span class="level-info">
+            <span class="level-title">왕국 수학경시대회</span>
+            <span class="level-desc">덧셈뺄셈부터 시작해 점점 어려워지는 문제 5개에 도전해요. 어려워질수록 상금도 커져요</span>
+          </span>
+          <span class="level-lock-icon">›</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 문제 수 선택 화면(공부/알바/경시대회) -->
+    <section id="screen-question-count-pick" class="screen overlay-screen">
+      <div class="card">
+        <div id="count-pick-title" class="subtitle">문제 수를 골라주세요</div>
+        <div class="count-pick-value" id="count-pick-value">4문제</div>
+        <input type="range" id="count-pick-slider" class="count-pick-slider" min="3" max="15" step="1" value="4">
+        <div class="count-pick-hint">문제 수가 많을수록 문제당 보상이 커져요(대신 체력·스트레스도 그만큼 더 들어요)</div>
+        <div class="count-pick-multiplier" id="count-pick-multiplier">기본 보상</div>
+        <div class="count-pick-actions">
+          <button id="btn-count-pick-back" class="btn btn-secondary">‹ 뒤로</button>
+          <button id="btn-count-pick-confirm" class="btn btn-primary">이 문제 수로 도전</button>
+        </div>
       </div>
     </section>
 
@@ -194,6 +230,7 @@
             <div id="status-portrait" class="character-portrait"></div>
           </div>
           <div id="status-outfit-badge" class="outfit-badge">👕 평범한 옷</div>
+          <div id="status-career-badge" class="outfit-badge" style="display:none"></div>
         </div>
         <div class="status-section-title">능력치</div>
         <div id="status-stat-panel" class="stat-panel status-stat-panel"></div>
@@ -217,10 +254,12 @@
         <div class="hud-row shop-tabs">
           <button class="shop-tab-btn active" data-tab="items">🛠️ 장비</button>
           <button class="shop-tab-btn" data-tab="wardrobe">👗 옷장</button>
+          <button class="shop-tab-btn" data-tab="career">💼 직업</button>
         </div>
       </header>
       <div id="shop-list" class="level-list shop-tab-panel"></div>
       <div id="wardrobe-list" class="wardrobe-list shop-tab-panel" style="display:none"></div>
+      <div id="career-list" class="level-list shop-tab-panel" style="display:none"></div>
     </section>
 
     <!-- 친구 만나기: 상대 선택 -->
@@ -317,6 +356,7 @@
       <div class="card">
         <div id="ending-emoji" class="title-emoji">🏅</div>
         <h2 id="ending-title">엔딩 타이틀</h2>
+        <div id="ending-new-badge" class="ending-new-badge" style="display:none">🆕 새로운 엔딩을 발견했어요!</div>
         <p id="ending-desc">엔딩 설명</p>
         <p id="ending-npc-line" class="ending-npc-line"></p>
         <div class="portrait-frame portrait-frame-small">

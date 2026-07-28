@@ -3,7 +3,7 @@
 // 항상 무언가(골드+지능+창의력 또는 스트레스+체력)를 바꾸므로 결과와
 // 상관없이 최소 하나의 변화 팝업이 떠야 한다.
 const { ok, eq, summary } = require('../helpers/assert');
-const { withPage, seedAndContinue, makeState, drainQuizSession, activeScreenId } = require('./helpers');
+const { withPage, seedAndContinue, makeState, drainQuizSession, activeScreenId, planWeekActivity } = require('./helpers');
 
 (async () => {
   console.log('stat-delta-animation e2e tests');
@@ -22,11 +22,7 @@ const { withPage, seedAndContinue, makeState, drainQuizSession, activeScreenId }
 
     await page.click('[data-menu="schedule"]');
     await page.waitForSelector('#screen-schedule.active');
-    const cards = await page.$$('#week-plan-list .level-card');
-    await cards[0].click();
-    await page.waitForSelector('#screen-week-pick.active');
-    await page.click('[data-activity="study"]');
-    await page.waitForSelector('#screen-schedule.active');
+    await planWeekActivity(page, 0, 'study');
     await page.click('#btn-schedule-back');
     await page.waitForSelector('#screen-main.active');
 

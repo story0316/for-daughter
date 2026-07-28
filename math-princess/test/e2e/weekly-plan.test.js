@@ -1,7 +1,7 @@
 // 이번 달 생활 계획표(주간 스케줄) 흐름: 4주를 계획 -> 순차 실행 -> 달 전환이
 // 정확히 한 번만 일어나는지, 마지막 달의 마지막 주에서 엔딩이 트리거되는지.
 const { ok, eq, summary } = require('../helpers/assert');
-const { withPage, seedAndContinue, makeState, drainQuizSession, getSavedState, activeScreenId } = require('./helpers');
+const { withPage, seedAndContinue, makeState, drainQuizSession, getSavedState, activeScreenId, planWeekActivity } = require('./helpers');
 
 async function testPlanAndExecuteFourWeeks() {
   const errors = await withPage(async (page) => {
@@ -13,11 +13,7 @@ async function testPlanAndExecuteFourWeeks() {
 
     const plan = ['study', 'job', 'exercise', 'rest'];
     for (let i = 0; i < 4; i++) {
-      const cards = await page.$$('#week-plan-list .level-card');
-      await cards[i].click();
-      await page.waitForSelector('#screen-week-pick.active');
-      await page.click(`[data-activity="${plan[i]}"]`);
-      await page.waitForSelector('#screen-schedule.active');
+      await planWeekActivity(page, i, plan[i]);
     }
     const titles = await page.$$eval('#week-plan-list .level-title', (els) => els.map((e) => e.textContent));
     ok(titles[0].includes('공부') && titles[1].includes('알바') && titles[2].includes('운동') && titles[3].includes('휴식'), `계획한 활동이 카드에 반영되어야 함 (got ${titles.join(', ')})`);

@@ -77,6 +77,13 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   const session = Engine.startStudySession();
   eq(session.type, 'study', '공부 세션 타입');
   eq(session.count, Engine.QUESTIONS_PER_STUDY, '공부 세션 문제 수');
+  ok(Engine.SUBJECT_KEYS.includes(session.fixedSubject), '공부 세션은 시작할 때 과목이 하나 고정되어야 함');
+
+  const fixedSubject = session.fixedSubject;
+  for (let i = 0; i < 10; i++) {
+    Engine.generateNextProblem(state, session);
+    eq(session.currentSubject, fixedSubject, '공부 세션은 문제마다 과목이 바뀌지 않고 고정 과목으로 통일되어야 함');
+  }
 
   const beforeInt = state.stats.intelligence;
   const beforeGold = state.gold;
@@ -290,6 +297,112 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   const session = { scenario, correctCount: 2, passCount: 2 };
   const result = Engine.finishScenarioQuizOutcome(state, session);
   eq(result.title, '성공', '완화된 통과 기준(passCount=2)을 만족하면 성공 처리되어야 함');
+}
+
+/* ---------------- 직업(정식 취업) ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  eq(state.career, null, '초기 상태는 무직이어야 함');
+  eq(Engine.unlockedCareers(state).length, 0, '초기 스탯으로는 지원 가능한 직업이 없어야 함');
+  ok(!Engine.applyForCareer(state, 'tutor'), '요건 미달이면 지원에 실패해야 함');
+  eq(state.career, null, '지원 실패 시 무직 상태가 유지되어야 함');
+}
+{
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = 30;
+  ok(Engine.unlockedCareers(state).some((c) => c.id === 'tutor'), '지능 30이면 과외 선생님 지원 가능해야 함');
+  ok(Engine.applyForCareer(state, 'tutor'), '요건을 만족하면 지원에 성공해야 함');
+  eq(state.career, 'tutor', '지원에 성공하면 그 직업으로 취업되어야 함');
+  ok(!Engine.applyForCareer(state, 'scribe'), '더 높은 요건의 직업은 여전히 지원 실패해야 함');
+  eq(state.career, 'tutor', '지원 실패해도 기존 직업은 유지되어야 함(이직 안 됨)');
+
+  Engine.resignCareer(state);
+  eq(state.career, null, 'resignCareer 호출 시 무직으로 돌아가야 함');
+}
+{
+  // 매턴 급여가 자동으로 들어와야 함
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = 30;
+  Engine.applyForCareer(state, 'tutor');
+  const beforeGold = state.gold;
+  const result = Engine.applyServantEffects(state);
+  ok(state.gold > beforeGold, '취업 중이면 매턴 급여가 자동으로 들어와야 함');
+  eq(typeof result.princeEncounter, 'boolean', 'applyServantEffects는 princeEncounter 플래그를 돌려줘야 함');
+}
+{
+  // 왕자님 관련 애정도 보너스: 서기관(scribe)이면 만날 때 애정도 보너스가 추가로 붙어야 함
+  const state = Engine.makeInitialState();
+  state.wardrobe.equipped = Engine.PRINCE_MIN_TIER;
+  state.stats.intelligence = 75;
+  state.stats.charm = 50;
+  Engine.applyForCareer(state, 'scribe');
+
+  const withCareerState = Engine.makeInitialState();
+  withCareerState.wardrobe.equipped = Engine.PRINCE_MIN_TIER;
+  withCareerState.stats.intelligence = 75;
+  withCareerState.stats.charm = 50;
+  Engine.applyForCareer(withCareerState, 'scribe');
+
+  const withoutCareerState = Engine.makeInitialState();
+  withoutCareerState.wardrobe.equipped = Engine.PRINCE_MIN_TIER;
+
+  // 둘 다 동일한 애정도에서 시작하도록 맞춘 뒤 meetNpcAttempt 결과를 비교(랜덤 폭을 감안해 여러 번 평균)
+  let withCareerSum = 0, withoutCareerSum = 0;
+  const N = 40;
+  for (let i = 0; i < N; i++) {
+    const s1 = Engine.makeInitialState();
+    s1.wardrobe.equipped = Engine.PRINCE_MIN_TIER;
+    s1.stats.intelligence = 75; s1.stats.charm = 50;
+    Engine.applyForCareer(s1, 'scribe');
+    s1.npcs.find((n) => n.id === 'prince').affection = 0;
+    Engine.meetNpcAttempt(s1, 'prince');
+    withCareerSum += s1.npcs.find((n) => n.id === 'prince').affection;
+
+    const s2 = Engine.makeInitialState();
+    s2.wardrobe.equipped = Engine.PRINCE_MIN_TIER;
+    s2.npcs.find((n) => n.id === 'prince').affection = 0;
+    Engine.meetNpcAttempt(s2, 'prince');
+    withoutCareerSum += s2.npcs.find((n) => n.id === 'prince').affection;
+  }
+  ok(withCareerSum / N > withoutCareerSum / N, '서기관으로 취업하면 왕자님을 만날 때 애정도 보너스가 더 붙어야 함');
+}
+
+/* ---------------- 수학 경시대회 ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = Engine.COMPETITION_MIN_INTELLIGENCE - 1;
+  ok(!Engine.competitionUnlocked(state), '지능 요건 미달이면 경시대회에 도전할 수 없어야 함');
+  state.stats.intelligence = Engine.COMPETITION_MIN_INTELLIGENCE;
+  ok(Engine.competitionUnlocked(state), '지능 요건을 만족하면 도전 가능해야 함');
+}
+{
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = 90;
+  const session = Engine.startCompetitionSession(state);
+  eq(session.type, 'competition', '경시대회 세션 타입');
+  eq(session.count, Engine.QUESTIONS_PER_COMPETITION, '경시대회 문제 수');
+  eq(session.levels.length, Engine.QUESTIONS_PER_COMPETITION, '문제 수만큼 난이도가 정해져 있어야 함');
+  eq(session.levels[0], 1, '첫 문제는 항상 덧셈뺄셈(레벨 1)부터 시작해야 함');
+  for (let i = 1; i < session.levels.length; i++) {
+    ok(session.levels[i] >= session.levels[i - 1], '난이도는 뒤로 갈수록 낮아지지 않고 점점 올라가야 함');
+  }
+
+  const beforeGold = state.gold;
+  for (let i = 0; i < session.count; i++) {
+    session.index = i;
+    const problem = Engine.generateNextProblem(state, session);
+    eq(problem.level, session.levels[i], `${i}번째 문제는 미리 정해둔 난이도 사다리를 따라야 함`);
+    const beforeThisGold = state.gold;
+    Engine.applyCorrect(state, session, problem);
+    ok(state.gold > beforeThisGold, '왕국 수학경시대회는 정답을 맞힐 때마다 바로 상금이 들어와야 함');
+  }
+  const goldAfterAllQuestions = state.gold;
+  const outcome = Engine.finishCompetitionOutcome(state, session);
+  ok(outcome.perfect, '전부 맞혔으면 만점 처리되어야 함');
+  ok(state.gold > goldAfterAllQuestions, '만점이면 세션 종료 시 추가 보너스가 한 번 더 붙어야 함');
+  eq(outcome.goldEarned, state.gold - beforeGold, 'outcome.goldEarned이 세션 전체(문제별 상금+만점 보너스)로 늘어난 골드와 일치해야 함');
 }
 
 summary('game-engine.js');
