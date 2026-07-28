@@ -74,6 +74,8 @@
 
 `problems.js`와 `endings.js`는 DOM에 의존하지 않는 순수 로직이라 Node.js에서 바로 불러와 유닛 테스트할 수 있습니다(레벨 1~10 문제 수백 개 자동 채점, 엔딩 판정 케이스 검증 완료).
 
+`math-princess/test/`에 회귀 테스트 스위트가 있습니다(순수 로직 유닛 테스트, 48개월 x 4주 밸런스/엔딩 도달 가능성 시뮬레이션, Playwright 기반 e2e 테스트). 기능을 추가·수정한 뒤 `bash math-princess/test/run-all.sh`로 전부 돌려볼 수 있습니다. 자세한 내용은 `math-princess/test/README.md` 참고.
+
 각 게임 화면 왼쪽 위의 "🏠 홈으로" 버튼을 누르면 다시 게임 선택 화면으로 돌아옵니다.
 
 ## 실행 방법
