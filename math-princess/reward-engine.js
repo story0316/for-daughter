@@ -82,9 +82,12 @@
       return d;
     }
 
+    // 텃밭을 가꾸다 보면 가끔 네잎클로버를 발견한다 — 다른 스탯과 달리
+    // 행운(luck)을 꾸준히 키울 수 있는 유일한 활동이라, 행운이 필요한
+    // 엔딩(올림피아드/스타트업 CEO/여행가)을 노리는 플레이어의 주력 활동이 된다.
     function gardenBonusReward(bonus) {
-      const d = { stamina: -4, gold: 25 };
-      if (bonus) d.gold += 15;
+      const d = { stamina: -4, gold: 25, luck: 1 };
+      if (bonus) { d.gold += 15; d.luck += 1; }
       return d;
     }
 

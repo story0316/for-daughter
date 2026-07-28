@@ -575,6 +575,7 @@
       } else if (activityId === 'garden') {
         d.stamina += -4;
         d.gold += 25 + 15 * r;
+        d.luck += 1 + r;
       } else if (activityId === 'friend') {
         d.charm += 3; // 실제로는 만나는 인물마다 다르며, 만날 때 정해진다
       } else if (activityId === 'banquet') {
@@ -612,7 +613,7 @@
 
     function applyServantEffects(state) {
       if (state.items.maid) state.stats.stress = Math.max(0, state.stats.stress - 2);
-      if (state.items.gardener) state.gold += 10;
+      if (state.items.gardener) { state.gold += 10; state.stats.luck += 1; }
     }
 
     // 달(턴)을 실제로 넘긴다. { ended: true }면 TOTAL_TURNS를 넘긴 것이라

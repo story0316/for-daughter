@@ -106,6 +106,8 @@ eq(Reward.wrongAnswerPenalty('banquet').stress, 2, '연회 오답은 스트레�
   const withBonus = Reward.gardenBonusReward(true);
   eq(withoutBonus.gold, 25, '텃밭 기본 골드 +25');
   ok(withBonus.gold > withoutBonus.gold, '보너스 문제까지 맞히면 골드가 더 많아야 함');
+  eq(withoutBonus.luck, 1, '텃밭은 기본으로도 행운 +1을 줘야 함(행운을 키울 수 있는 유일한 활동)');
+  ok(withBonus.luck > withoutBonus.luck, '보너스 문제까지 맞히면 행운도 더 많아야 함');
 }
 
 /* ---------------- 호감도 증가량 ---------------- */

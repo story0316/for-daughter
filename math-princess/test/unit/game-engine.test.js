@@ -220,8 +220,10 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   const state = Engine.makeInitialState();
   state.items.gardener = true;
   const beforeGold = state.gold;
+  const beforeLuck = state.stats.luck;
   Engine.applyServantEffects(state);
   eq(state.gold, beforeGold + 10, '정원사를 고용하면 매턴 골드 +10');
+  eq(state.stats.luck, beforeLuck + 1, '정원사를 고용해도 직접 텃밭을 가꾸는 것과 비슷하게 매턴 행운 +1을 줘야 함');
 }
 
 summary('game-engine.js');
