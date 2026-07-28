@@ -158,8 +158,28 @@
     ];
     const CERT_SUBJECT_KEYS = ['math', 'english', 'science'];
 
-    const BANQUET_ENTRY_FEE = 150;
-    const BANQUET_MIN_TIER = 1;
+    // 사교모임 3단계. 등급이 높을수록 입장 조건(옷차림·품위)이 까다롭고,
+    // 가장 높은 등급(고급 사교 모임)에서만 왕자님을 만나는 특별 이벤트가
+    // 열린다(그 아래 등급은 예절 연습·매력 획득용). 최고 등급은 품위 점수뿐
+    // 아니라 영어 인증(은메달 이상)도 요구해서, "교양"과 "실력" 둘 다
+    // 갖춰야 들어갈 수 있게 했다.
+    const BANQUET_TIERS = [
+      {
+        id: 'tea-party', emoji: '🫖', name: '작은 다과회',
+        desc: '가볍게 예절을 익히는 다과회예요.',
+        entryFee: 100, minOutfitTier: 0, minGraceScore: 0, requiredEnglishMedal: null,
+      },
+      {
+        id: 'social', emoji: '💃', name: '사교 모임',
+        desc: '또래 귀족 자제들이 모이는 정식 사교 모임이에요.',
+        entryFee: 200, minOutfitTier: 1, minGraceScore: 35, requiredEnglishMedal: null,
+      },
+      {
+        id: 'grand-social', emoji: '👑', name: '고급 사교 모임',
+        desc: '왕실 인사들도 참석하는 고급 사교 모임이에요. 영어로 대화할 일이 많아 영어 인증(은메달 이상)이 있어야 초대받을 수 있고, 왕자님도 이 모임에서만 만날 수 있어요.',
+        entryFee: 400, minOutfitTier: 2, minGraceScore: 70, requiredEnglishMedal: 'silver',
+      },
+    ];
     const PRINCE_MIN_TIER = 2;
     const STRESS_OVERFLOW_THRESHOLD = 70;
     const NPC_HINT_AFFECTION = 50;
@@ -299,6 +319,7 @@
         wardrobe: { equipped: 0, owned: OUTFIT_TIERS.map((_, i) => i === 0), notifiedGraceTier: 0 },
         weekPlan: new Array(WEEKS_PER_MONTH).fill(null),
         weekPlanCount: new Array(WEEKS_PER_MONTH).fill(null),
+        weekPlanBanquetTier: new Array(WEEKS_PER_MONTH).fill(null),
         weekIndex: 0,
         talkedThisTurn: false,
         completedScenarios: [],
@@ -329,6 +350,9 @@
       }
       if (!Array.isArray(loaded.weekPlanCount) || loaded.weekPlanCount.length !== WEEKS_PER_MONTH) {
         loaded.weekPlanCount = new Array(WEEKS_PER_MONTH).fill(null);
+      }
+      if (!Array.isArray(loaded.weekPlanBanquetTier) || loaded.weekPlanBanquetTier.length !== WEEKS_PER_MONTH) {
+        loaded.weekPlanBanquetTier = new Array(WEEKS_PER_MONTH).fill(null);
       }
       if (typeof loaded.weekIndex !== 'number' || loaded.weekIndex < 0 || loaded.weekIndex >= WEEKS_PER_MONTH) loaded.weekIndex = 0;
       delete loaded.scheduledActivity;
@@ -397,7 +421,7 @@
       const n = clampSessionLength(count != null ? count : QUESTIONS_PER_JOB);
       return makeSession('job', { count: n, rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_JOB) });
     }
-    function startBanquetSession() { return makeSession('banquet', { level: 1, count: QUESTIONS_PER_BANQUET, askedQuestions: [] }); }
+    function startBanquetSession(tierId) { return makeSession('banquet', { level: 1, count: QUESTIONS_PER_BANQUET, askedQuestions: [], tierId }); }
     function startExerciseSession() { return makeSession('exercise-bonus', { count: 1 }); }
     function startRestSession() { return makeSession('rest-bonus', { count: 1 }); }
     function startLaundrySession() { return makeSession('laundry-bonus', { count: 1 }); }
@@ -458,21 +482,28 @@
     }
 
     // 연회 결과에 따라 왕자님을 만날 수 있는 특별한 이벤트로 이어진다.
+    // 왕자님은 최고 등급(고급 사교 모임)에서만 만날 수 있다 - 그 아래
+    // 등급은 예절 연습/매력 획득이 목적이라 옷차림이 아무리 좋아도 만날 수 없다.
     function finishBanquetOutcome(state, session) {
+      const tier = BANQUET_TIERS.find((t) => t.id === session.tierId) || BANQUET_TIERS[0];
+      const isTopTier = tier.id === BANQUET_TIERS[BANQUET_TIERS.length - 1].id;
       const success = session.correctCount >= BANQUET_PASS_COUNT;
       const dressedForPrince = state.wardrobe.equipped >= PRINCE_MIN_TIER;
-      if (success && dressedForPrince) {
+      if (success && dressedForPrince && isTopTier) {
         const princeState = state.npcs.find((n) => n.id === 'prince');
         princeState.affection += Reward.affectionGain([10, 16], state.items) + careerPrinceBonus(state);
         princeState.lastMetTurn = state.turn;
         clampStats(state);
-        return { result: 'met-prince', correctCount: session.correctCount, count: session.count, princeAffection: princeState.affection };
+        return { result: 'met-prince', tier, correctCount: session.correctCount, count: session.count, princeAffection: princeState.affection };
       }
       clampStats(state);
-      if (success && !dressedForPrince) {
-        return { result: 'success-underdressed', correctCount: session.correctCount, count: session.count, requiredTierName: OUTFIT_TIERS[PRINCE_MIN_TIER].name };
+      if (success && isTopTier && !dressedForPrince) {
+        return { result: 'success-underdressed', tier, correctCount: session.correctCount, count: session.count, requiredTierName: OUTFIT_TIERS[PRINCE_MIN_TIER].name };
       }
-      return { result: 'incomplete', correctCount: session.correctCount, count: session.count };
+      if (success && !isTopTier) {
+        return { result: 'success-lower-tier', tier, correctCount: session.correctCount, count: session.count };
+      }
+      return { result: 'incomplete', tier, correctCount: session.correctCount, count: session.count };
     }
 
     function finishExerciseBonusOutcome(state, session) {
@@ -755,14 +786,29 @@
 
     // 사교모임(연회) 입장 시도: 옷차림/골드 조건을 확인하고, 통과하면 입장료를
     // 즉시 차감한다(state 변경). ok=false면 이유(reason)를 함께 돌려준다.
-    function tryStartBanquet(state) {
-      if (state.wardrobe.equipped < BANQUET_MIN_TIER) {
-        return { ok: false, reason: 'outfit', requiredTierName: OUTFIT_TIERS[BANQUET_MIN_TIER].name };
+    function banquetTierRequirementMet(state, tier) {
+      if (state.wardrobe.equipped < tier.minOutfitTier) return false;
+      if (graceScore(state.stats) < tier.minGraceScore) return false;
+      if (tier.requiredEnglishMedal && medalTierIndex(state.certifications.english) < medalTierIndex(tier.requiredEnglishMedal)) return false;
+      return true;
+    }
+
+    function tryStartBanquet(state, tierId) {
+      const tier = BANQUET_TIERS.find((t) => t.id === tierId);
+      if (state.wardrobe.equipped < tier.minOutfitTier) {
+        return { ok: false, reason: 'outfit', requiredTierName: OUTFIT_TIERS[tier.minOutfitTier].name };
       }
-      if (state.gold < BANQUET_ENTRY_FEE) {
-        return { ok: false, reason: 'gold', fee: BANQUET_ENTRY_FEE };
+      if (graceScore(state.stats) < tier.minGraceScore) {
+        return { ok: false, reason: 'grace', requiredGrace: tier.minGraceScore };
       }
-      state.gold -= BANQUET_ENTRY_FEE;
+      if (tier.requiredEnglishMedal && medalTierIndex(state.certifications.english) < medalTierIndex(tier.requiredEnglishMedal)) {
+        const requiredMedal = MEDAL_TIERS.find((m) => m.id === tier.requiredEnglishMedal);
+        return { ok: false, reason: 'english-cert', requiredMedal };
+      }
+      if (state.gold < tier.entryFee) {
+        return { ok: false, reason: 'gold', fee: tier.entryFee };
+      }
+      state.gold -= tier.entryFee;
       return { ok: true };
     }
 
@@ -786,7 +832,7 @@
     // (정답률 ASSUMED_CORRECT_RATE 가정, 대략적인 예상치). 실제 보상 계산은
     // reward-engine.js가 담당하므로, 여기서 밸런스 수치를 바꿔도 이 미리보기가
     // 자동으로 맞아떨어지지는 않는다는 점에 유의(순수 예상치 근사이기 때문).
-    function estimateActivityDelta(state, activityId, count) {
+    function estimateActivityDelta(state, activityId, count, banquetTierId) {
       const d = { gold: 0, intelligence: 0, focus: 0, stamina: 0, charm: 0, creativity: 0, stress: 0, luck: 0 };
       const level = typicalStudyLevel(state);
       const rewardGold = 8 + level * 4;
@@ -824,7 +870,8 @@
       } else if (activityId === 'friend') {
         d.charm += 3; // 실제로는 만나는 인물마다 다르며, 만날 때 정해진다
       } else if (activityId === 'banquet') {
-        d.gold += -BANQUET_ENTRY_FEE;
+        const tier = BANQUET_TIERS.find((t) => t.id === banquetTierId) || BANQUET_TIERS[0];
+        d.gold += -tier.entryFee;
         d.charm += QUESTIONS_PER_BANQUET * r * (4 + itemBonusSum(state, 'charmBonus'));
         d.stress += QUESTIONS_PER_BANQUET * (1 - r) * 2;
       } else if (activityId === 'competition') {
@@ -850,7 +897,7 @@
         const activity = state.weekPlan[i];
         if (!activity) continue;
         planned++;
-        const d = estimateActivityDelta(state, activity, state.weekPlanCount[i]);
+        const d = estimateActivityDelta(state, activity, state.weekPlanCount[i], state.weekPlanBanquetTier[i]);
         DELTA_STAT_KEYS.forEach((k) => { total[k] += d[k]; });
       }
       return { total, planned };
@@ -895,6 +942,7 @@
       state.turn++;
       state.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
       state.weekPlanCount = new Array(WEEKS_PER_MONTH).fill(null);
+      state.weekPlanBanquetTier = new Array(WEEKS_PER_MONTH).fill(null);
       state.weekIndex = 0;
       state.talkedThisTurn = false;
       const { princeEncounter } = applyServantEffects(state);
@@ -937,7 +985,7 @@
       QUESTIONS_PER_COMPETITION, COMPETITION_MIN_INTELLIGENCE,
       SESSION_LENGTH_MIN, SESSION_LENGTH_MAX, sessionLengthMultiplier,
       SAVE_KEY, EVENTS, ETIQUETTE_QUESTIONS: Question.ETIQUETTE_QUESTIONS, TALK_LINES, ITEMS,
-      BANQUET_ENTRY_FEE, BANQUET_MIN_TIER, PRINCE_MIN_TIER,
+      BANQUET_TIERS, PRINCE_MIN_TIER,
       STRESS_OVERFLOW_THRESHOLD, NPC_HINT_AFFECTION, NPC_LENIENT_AFFECTION, CAREER_DEFS,
       MEDAL_TIERS, CERT_SUBJECT_KEYS,
       AFFECTION_TIERS, AFFECTION_DECAY_GRACE_TURNS, AFFECTION_DECAY_AMOUNT, OUTFIT_TIERS, NPC_DEFS, ACTIVITY_DEFS,
@@ -967,7 +1015,7 @@
       // 기초 과목 등급 인증
       nextMedalTier, certExamEligible, certTierContentExists, startCertExamSession, finishCertExamOutcome,
       // 스케줄/활동
-      currentWeekActivity, tryStartBanquet, competitionUnlocked, talkToDaughter,
+      currentWeekActivity, tryStartBanquet, banquetTierRequirementMet, competitionUnlocked, talkToDaughter,
       // 계획 미리보기
       typicalStudyLevel, estimateActivityDelta, estimateRemainingWeeksDelta,
       // 턴 진행

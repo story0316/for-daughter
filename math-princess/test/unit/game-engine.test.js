@@ -110,29 +110,30 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
 
 {
   // 은행: 세션 도중이 아니라 세션이 끝날 때 한 번에 매력치를 반영(finishBanquetOutcome)
+  // 왕자님은 최고 등급(고급 사교 모임)에서만 만날 수 있음
   const state = Engine.makeInitialState();
   state.wardrobe.equipped = Engine.PRINCE_MIN_TIER;
-  const session = Engine.startBanquetSession();
+  const session = Engine.startBanquetSession('grand-social');
   for (let i = 0; i < Engine.BANQUET_PASS_COUNT; i++) {
     Engine.applyCorrect(state, session, { rewardGold: 0 });
   }
   const outcome = Engine.finishBanquetOutcome(state, session);
-  eq(outcome.result, 'met-prince', '입장 조건(옷차림)을 갖추고 통과 기준을 채우면 왕자님을 만남');
+  eq(outcome.result, 'met-prince', '최고 등급에서 입장 조건(옷차림)을 갖추고 통과 기준을 채우면 왕자님을 만남');
 
   const princeState = state.npcs.find((n) => n.id === 'prince');
   ok(princeState.affection > 0, '왕자님과 만나면 호감도가 오름');
 }
 
 {
-  // 옷차림 미달이면 통과해도 왕자님을 만나지 못함
+  // 옷차림 미달이면 최고 등급에서 통과해도 왕자님을 만나지 못함
   const state = Engine.makeInitialState();
   state.wardrobe.equipped = 0;
-  const session = Engine.startBanquetSession();
+  const session = Engine.startBanquetSession('grand-social');
   for (let i = 0; i < Engine.BANQUET_PASS_COUNT; i++) {
     Engine.applyCorrect(state, session, { rewardGold: 0 });
   }
   const outcome = Engine.finishBanquetOutcome(state, session);
-  eq(outcome.result, 'success-underdressed', '통과해도 옷차림이 부족하면 왕자님을 만나지 못함');
+  eq(outcome.result, 'success-underdressed', '최고 등급에서 통과해도 옷차림이 부족하면 왕자님을 만나지 못함');
 }
 
 /* ---------------- 상점/옷장 ---------------- */
@@ -162,27 +163,76 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   ok(!Engine.equipOutfit(state, 3), '소유하지 않은 옷은 입을 수 없음');
 }
 
-/* ---------------- 연회 입장 게이트 ---------------- */
+/* ---------------- 연회 입장 게이트(사교모임 3단계) ---------------- */
 
 {
+  eq(Engine.BANQUET_TIERS.length, 3, '사교모임은 작은 다과회/사교 모임/고급 사교 모임 3단계여야 함');
+  const [teaParty, social, grandSocial] = Engine.BANQUET_TIERS;
+  eq(grandSocial.requiredEnglishMedal, 'silver', '고급 사교 모임은 영어 은메달 이상을 요구해야 함');
+  eq(teaParty.requiredEnglishMedal, null, '작은 다과회는 영어 인증을 요구하지 않아야 함');
+  eq(social.requiredEnglishMedal, null, '사교 모임은 영어 인증을 요구하지 않아야 함');
+}
+{
+  // 가장 낮은 등급(작은 다과회)은 옷차림/품위 요건이 없어서 골드만 있으면 바로 입장 가능
   const state = Engine.makeInitialState();
-  state.wardrobe.equipped = 0;
   state.gold = 1000;
-  const blocked = Engine.tryStartBanquet(state);
-  eq(blocked.ok, false, '옷차림이 부족하면 연회에 입장할 수 없음');
-  eq(blocked.reason, 'outfit', '입장 실패 이유는 outfit');
-  eq(state.gold, 1000, '입장 실패 시 골드는 차감되지 않음');
+  const result = Engine.tryStartBanquet(state, 'tea-party');
+  eq(result.ok, true, '작은 다과회는 초기 상태에서도 골드만 있으면 입장 가능해야 함');
+  eq(state.gold, 1000 - Engine.BANQUET_TIERS[0].entryFee, '입장하면 그 등급의 입장료가 차감되어야 함');
+}
+{
+  // 중간 등급(사교 모임)은 옷차림/품위 요건이 있어야 함
+  const state = Engine.makeInitialState();
+  state.gold = 1000;
+  const blocked = Engine.tryStartBanquet(state, 'social');
+  eq(blocked.ok, false, '옷차림/품위가 부족하면 사교 모임에 입장할 수 없어야 함');
+  ok(blocked.reason === 'outfit' || blocked.reason === 'grace', '입장 실패 이유는 outfit 또는 grace여야 함');
+  eq(state.gold, 1000, '입장 실패 시 골드는 차감되지 않아야 함');
+}
+{
+  // 최고 등급(고급 사교 모임)은 옷차림/품위를 갖춰도 영어 인증(은메달)이 없으면 막혀야 함
+  const state = Engine.makeInitialState();
+  state.gold = 1000;
+  state.wardrobe.equipped = 2;
+  state.stats.charm = 90;
+  state.stats.creativity = 90;
+  state.stats.intelligence = 90;
+  ok(Engine.graceScore(state.stats) >= 70, '테스트 세팅으로 품위 70 이상을 만들어야 함');
+  const blockedByCert = Engine.tryStartBanquet(state, 'grand-social');
+  eq(blockedByCert.ok, false, '옷차림/품위를 갖춰도 영어 인증이 없으면 고급 사교 모임에 입장할 수 없어야 함');
+  eq(blockedByCert.reason, 'english-cert', '입장 실패 이유는 english-cert여야 함');
+  eq(blockedByCert.requiredMedal.id, 'silver', '요구되는 인증은 은메달이어야 함');
 
-  state.wardrobe.equipped = Engine.BANQUET_MIN_TIER;
-  state.gold = 0;
-  const noGold = Engine.tryStartBanquet(state);
-  eq(noGold.ok, false, '골드가 부족하면 연회에 입장할 수 없음');
-  eq(noGold.reason, 'gold', '입장 실패 이유는 gold');
+  state.certifications.english = 'silver';
+  const ok1 = Engine.tryStartBanquet(state, 'grand-social');
+  eq(ok1.ok, true, '옷차림/품위/영어 인증을 모두 갖추면 고급 사교 모임에 입장할 수 있어야 함');
+  eq(state.gold, 1000 - Engine.BANQUET_TIERS[2].entryFee, '입장하면 고급 사교 모임의 입장료가 차감되어야 함');
+}
+{
+  // banquetTierRequirementMet은 tryStartBanquet과 같은 판정을 미리 보여줄 수 있어야 함(골드 소모 없이)
+  const state = Engine.makeInitialState();
+  const grandSocial = Engine.BANQUET_TIERS[2];
+  ok(!Engine.banquetTierRequirementMet(state, grandSocial), '요건 미달이면 false여야 함');
+  state.wardrobe.equipped = 2;
+  state.stats.charm = 90; state.stats.creativity = 90; state.stats.intelligence = 90;
+  state.certifications.english = 'gold';
+  ok(Engine.banquetTierRequirementMet(state, grandSocial), '요건(옷차림/품위/영어 인증)을 모두 갖추면 true여야 함');
+  eq(state.gold, 0, 'banquetTierRequirementMet은 상태를 바꾸면(골드 차감 등) 안 됨');
+}
+{
+  // 왕자님은 최고 등급(고급 사교 모임)에서만 만날 수 있고, 그 아래 등급은
+  // 예절 시험을 만점으로 통과해도 왕자님을 만날 수 없어야 한다.
+  const state = Engine.makeInitialState();
+  state.wardrobe.equipped = 2;
+  const lowerTierSession = Engine.startBanquetSession('social');
+  for (let i = 0; i < lowerTierSession.count; i++) Engine.applyCorrect(state, lowerTierSession, {});
+  const lowerOutcome = Engine.finishBanquetOutcome(state, lowerTierSession);
+  eq(lowerOutcome.result, 'success-lower-tier', '낮은 등급에서 만점을 받아도 왕자님을 만날 수 없어야 함(success-lower-tier)');
 
-  state.gold = Engine.BANQUET_ENTRY_FEE;
-  const ok1 = Engine.tryStartBanquet(state);
-  eq(ok1.ok, true, '옷차림과 골드를 모두 갖추면 입장 성공');
-  eq(state.gold, 0, '입장하면 입장료가 차감됨');
+  const topTierSession = Engine.startBanquetSession('grand-social');
+  for (let i = 0; i < topTierSession.count; i++) Engine.applyCorrect(state, topTierSession, {});
+  const topOutcome = Engine.finishBanquetOutcome(state, topTierSession);
+  eq(topOutcome.result, 'met-prince', '최고 등급에서 만점을 받고 옷차림도 갖췄으면 왕자님을 만나야 함');
 }
 
 {
