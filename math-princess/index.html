@@ -10,6 +10,8 @@
 <body>
   <div id="app">
     <div id="level-toast" class="level-toast"></div>
+    <audio id="bgm-player" loop preload="auto"></audio>
+    <button id="btn-mute-toggle" class="btn-mute-toggle" aria-label="배경음악 켜기/끄기">🔊</button>
 
     <!-- 시작 화면 -->
     <section id="screen-start" class="screen active">
@@ -19,6 +21,11 @@
         <h1>프린세스 메이커</h1>
         <p class="subtitle">문제를 풀어 돈을 벌고 교양을 쌓으면<br/>평범한 옷이 예쁜 드레스로 바뀌어요!</p>
         <p class="subtitle-sub">품위가 오를수록 만날 수 있는 사람도 늘어나요.<br/>한 턴은 한 달, 총 <span id="total-turns-label">48</span>개월(<span id="total-years-label">4</span>년) 동안<br/>공주가 되는 그날까지 키워보세요.</p>
+
+        <div class="name-input-wrap">
+          <label for="character-name-input" class="name-input-label">주인공 이름을 지어주세요</label>
+          <input type="text" id="character-name-input" class="name-input" placeholder="예: 서연" maxlength="10" autocomplete="off" />
+        </div>
 
         <div class="start-buttons">
           <button id="btn-new-game" class="btn btn-primary">새로 시작하기</button>
@@ -48,7 +55,7 @@
       <div id="main-stat-panel" class="stat-panel main-stat-panel"></div>
 
       <div id="schedule-banner" class="schedule-banner" style="display:none">
-        이번 달 예정: <span id="schedule-banner-text">-</span>
+        <span id="schedule-banner-text">-</span>
       </div>
 
       <div class="main-menu-grid" id="main-menu-grid">
@@ -79,15 +86,32 @@
       </div>
     </section>
 
-    <!-- 스케줄 선택 화면 -->
+    <!-- 이번 달 계획표 화면 -->
     <section id="screen-schedule" class="screen">
       <header class="hud">
         <div class="hud-row">
           <button id="btn-schedule-back" class="btn-back">‹ 뒤로</button>
-          <div class="turn-label">이번 달 예정을 골라주세요</div>
+          <div class="turn-label">이번 달 생활 계획표</div>
         </div>
       </header>
-      <div class="level-list" id="schedule-list">
+      <div class="week-plan-scroll">
+        <div class="level-list" id="week-plan-list"></div>
+        <div class="week-plan-preview-wrap">
+          <div class="week-plan-preview-title">📈 남은 주 예상 변화 <span class="week-plan-preview-sub">(정답률 75% 가정, 대략적인 예상치)</span></div>
+          <div id="week-plan-preview" class="stat-panel week-plan-preview"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 주간 활동 선택 화면 -->
+    <section id="screen-week-pick" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-week-pick-back" class="btn-back">‹ 뒤로</button>
+          <div class="turn-label" id="week-pick-title">몇 주차에 할 일을 골라주세요</div>
+        </div>
+      </header>
+      <div class="level-list" id="week-pick-list">
         <button class="level-card" data-activity="study">
           <span class="level-badge-num">📖</span>
           <span class="level-info">
@@ -120,6 +144,22 @@
           </span>
           <span class="level-lock-icon">›</span>
         </button>
+        <button class="level-card" data-activity="laundry">
+          <span class="level-badge-num">🧺</span>
+          <span class="level-info">
+            <span class="level-title">빨래하기</span>
+            <span class="level-desc">문제를 풀며 빨래를 해요. 하녀를 고용하면 자동화돼요</span>
+          </span>
+          <span class="level-lock-icon">›</span>
+        </button>
+        <button class="level-card" data-activity="garden">
+          <span class="level-badge-num">🌾</span>
+          <span class="level-info">
+            <span class="level-title">텃밭 가꾸기</span>
+            <span class="level-desc">문제를 풀며 텃밭을 가꿔 골드를 벌어요. 정원사를 고용하면 자동화돼요</span>
+          </span>
+          <span class="level-lock-icon">›</span>
+        </button>
         <button class="level-card" data-activity="friend">
           <span class="level-badge-num">🎡</span>
           <span class="level-info">
@@ -132,7 +172,7 @@
           <span class="level-badge-num">💃</span>
           <span class="level-info">
             <span class="level-title">연회 참석</span>
-            <span class="level-desc">예절 문제를 잘 맞히면 왕자님을 만날 수 있어요</span>
+            <span class="level-desc">입장료 150G · 단정한 옷 이상 필요. 예절 문제를 다 맞히고 예쁜 드레스 이상을 입으면 왕자님을 만날 수 있어요</span>
           </span>
           <span class="level-lock-icon">›</span>
         </button>

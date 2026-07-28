@@ -51,6 +51,8 @@
   }
 
   const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 48;
+  // 한 달(턴)은 생활 계획표처럼 4주로 나뉘어, 매주 서로 다른 활동을 배치할 수 있다.
+  const WEEKS_PER_MONTH = 4;
   const QUESTIONS_PER_STUDY = 4;
   const QUESTIONS_PER_JOB = 3;
   const SAVE_KEY = 'math-princess-save-v1';
@@ -145,8 +147,10 @@
   const ITEMS = [
     { id: 'sharp', emoji: '✏️', name: '샤프', cost: 300, desc: '문제 정답 시 골드 +10%', goldBonus: 0.1 },
     { id: 'tablet', emoji: '📱', name: '태블릿', cost: 600, desc: '공부 정답 시 지능 +1 추가 획득', intBonus: 1 },
+    { id: 'maid', emoji: '🧹', name: '하녀 고용', cost: 700, desc: '빨래를 대신 해줘요. 매턴 자동으로 스트레스 -2', servant: 'laundry' },
     { id: 'apartment', emoji: '🏢', name: '아파트로 이사', cost: 1000, desc: '휴식 효과 +50%', restBonus: 0.5 },
     { id: 'laptop', emoji: '💻', name: '노트북', cost: 1200, desc: '콤보 보상 배율 +0.2', comboBonus: 0.2 },
+    { id: 'gardener', emoji: '🌾', name: '정원사 고용', cost: 1300, desc: '텃밭을 대신 가꿔줘요. 매턴 자동으로 골드 +10', servant: 'garden' },
     { id: 'tiara', emoji: '👑', name: '작은 티아라', cost: 1500, desc: '연회에서 정답 맞힐 때 매력 +1 추가 획득', charmBonus: 1 },
     { id: 'invitation', emoji: '✉️', name: '왕실 초대장', cost: 2000, desc: '인물을 만날 때 호감도 +2 추가 획득', affectionBonus: 2 },
     { id: 'house', emoji: '🏡', name: '단독주택으로 이사', cost: 2500, desc: '휴식 효과 추가 +50% (총 100%)', restBonus: 0.5 },
@@ -154,6 +158,12 @@
     { id: 'orchestra', emoji: '🎻', name: '개인 오케스트라 레슨', cost: 4000, desc: '공부 정답 시 지능 +2 추가 획득', intBonus: 2 },
     { id: 'palace', emoji: '🏰', name: '별궁으로 이사', cost: 5000, desc: '휴식 효과 추가 +50% (총 150%)', restBonus: 0.5 },
   ];
+
+  // 사교모임(연회) 입장료와, 연회·왕자님을 만나는 데 필요한 최소 옷 단계(OUTFIT_TIERS 인덱스).
+  // 품위 점수로 해금만 해둔 옷이 아니라 "지금 입고 있는" 옷 기준으로 판정한다.
+  const BANQUET_ENTRY_FEE = 150;
+  const BANQUET_MIN_TIER = 1; // 단정한 옷 이상
+  const PRINCE_MIN_TIER = 2; // 예쁜 드레스 이상
 
   // 품위(교양) 점수: 매력·창의력·지능을 섞어 계산한다. 이 점수가 오를수록
   // 입는 옷이 화려해지고, 만날 수 있는 사람의 폭도 넓어진다.
@@ -187,13 +197,15 @@
   const AFFECTION_DECAY_GRACE_TURNS = 3;
   const AFFECTION_DECAY_AMOUNT = 1;
 
+  // min: 이 옷을 "살 수 있게" 되는 품위 점수 기준. 품위가 충분해도 옷은
+  // 자동으로 생기지 않고, 옷장에서 cost만큼 골드를 내고 직접 사야 입을 수 있다.
   const OUTFIT_TIERS = [
-    { min: 0, emoji: '👕', name: '평범한 옷', wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
-    { min: 25, emoji: '👚', name: '단정한 옷', wardrobeDesc: '품위 25 이상에서 해금' },
-    { min: 50, emoji: '👗', name: '예쁜 드레스', wardrobeDesc: '품위 50 이상에서 해금' },
-    { min: 75, emoji: '👑', name: '공주 드레스', wardrobeDesc: '품위 75 이상에서 해금' },
-    { min: 90, emoji: '💐', name: '무도회 드레스', wardrobeDesc: '품위 90 이상에서 해금' },
-    { min: 100, emoji: '✨', name: '대관식 드레스', wardrobeDesc: '품위 100(만점)에서만 해금되는 전설의 옷' },
+    { min: 0, cost: 0, emoji: '👕', name: '평범한 옷', wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
+    { min: 25, cost: 400, emoji: '👚', name: '단정한 옷', wardrobeDesc: '품위 25 이상에서 구매 가능' },
+    { min: 50, cost: 900, emoji: '👗', name: '예쁜 드레스', wardrobeDesc: '품위 50 이상에서 구매 가능' },
+    { min: 75, cost: 1800, emoji: '👑', name: '공주 드레스', wardrobeDesc: '품위 75 이상에서 구매 가능' },
+    { min: 90, cost: 3200, emoji: '💐', name: '무도회 드레스', wardrobeDesc: '품위 90 이상에서 구매 가능' },
+    { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', wardrobeDesc: '품위 100(만점)에서만 구매 가능한 전설의 옷' },
   ];
 
   function currentOutfit(stats) {
@@ -274,6 +286,7 @@
       start: document.getElementById('screen-start'),
       main: document.getElementById('screen-main'),
       schedule: document.getElementById('screen-schedule'),
+      weekPick: document.getElementById('screen-week-pick'),
       status: document.getElementById('screen-status'),
       shop: document.getElementById('screen-shop'),
       npcSelect: document.getElementById('screen-npc-select'),
@@ -287,10 +300,12 @@
     totalYearsLabel: document.getElementById('total-years-label'),
     btnNewGame: document.getElementById('btn-new-game'),
     btnContinue: document.getElementById('btn-continue'),
+    characterNameInput: document.getElementById('character-name-input'),
 
     turnLabel: document.getElementById('turn-label'),
     goldLabel: document.getElementById('gold-label'),
     characterPortrait: document.getElementById('character-portrait'),
+    characterName: document.getElementById('character-name'),
     outfitBadge: document.getElementById('outfit-badge'),
     mainMenuGrid: document.getElementById('main-menu-grid'),
     scheduleBanner: document.getElementById('schedule-banner'),
@@ -298,7 +313,12 @@
     mainStatPanel: document.getElementById('main-stat-panel'),
 
     btnScheduleBack: document.getElementById('btn-schedule-back'),
-    scheduleList: document.getElementById('schedule-list'),
+    weekPlanList: document.getElementById('week-plan-list'),
+    weekPlanPreview: document.getElementById('week-plan-preview'),
+
+    btnWeekPickBack: document.getElementById('btn-week-pick-back'),
+    weekPickTitle: document.getElementById('week-pick-title'),
+    weekPickList: document.getElementById('week-pick-list'),
 
     btnStatusBack: document.getElementById('btn-status-back'),
     statusPortrait: document.getElementById('status-portrait'),
@@ -315,6 +335,8 @@
     wardrobeList: document.getElementById('wardrobe-list'),
 
     levelToast: document.getElementById('level-toast'),
+    bgmPlayer: document.getElementById('bgm-player'),
+    btnMuteToggle: document.getElementById('btn-mute-toggle'),
 
     btnNpcBack: document.getElementById('btn-npc-back'),
     npcList: document.getElementById('npc-list'),
@@ -365,6 +387,60 @@
   el.totalTurnsLabel.textContent = TOTAL_TURNS;
   el.totalYearsLabel.textContent = Math.round(TOTAL_TURNS / 12);
 
+  /* ---------------- 배경음악 ---------------- */
+
+  // 시나리오별로 다른 배경음악을 쓰고 싶을 때만 여기에 매핑을 추가한다.
+  // 매핑이 없는 시나리오/화면은 계속 'default' 트랙을 이어서 재생한다.
+  const BGM_TRACKS = {
+    default: 'assets/audio/bgm-default.mp3',
+    'garden-walk-prince': 'assets/audio/bgm-garden-walk-prince.mp3',
+    'friend-birthday': 'assets/audio/bgm-birthday.mp3',
+    'coronation-ball': 'assets/audio/bgm-coronation.mp3',
+    'noble-tea-party-invitation': 'assets/audio/bgm-tea-party.mp3',
+    'tea-party-manners': 'assets/audio/bgm-tea-party.mp3',
+  };
+  const MUTE_KEY = 'math-princess-muted';
+  let currentBgmKey = null;
+
+  function isMuted() {
+    try {
+      return localStorage.getItem(MUTE_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function playBgm(key) {
+    const src = BGM_TRACKS[key] || BGM_TRACKS.default;
+    if (currentBgmKey !== key) {
+      currentBgmKey = key;
+      el.bgmPlayer.src = src;
+    }
+    el.bgmPlayer.muted = isMuted();
+    // 브라우저 자동재생 정책으로 play()가 거부될 수 있는데(사용자 조작
+    // 전이라거나), 게임이 멈추지 않도록 조용히 무시한다.
+    el.bgmPlayer.play().catch(() => {});
+  }
+
+  function updateMuteButton() {
+    const muted = isMuted();
+    el.btnMuteToggle.textContent = muted ? '🔇' : '🔊';
+    el.bgmPlayer.muted = muted;
+  }
+
+  el.btnMuteToggle.addEventListener('click', () => {
+    const nextMuted = !isMuted();
+    try {
+      localStorage.setItem(MUTE_KEY, nextMuted ? '1' : '0');
+    } catch (e) {
+      // no-op
+    }
+    updateMuteButton();
+    if (!nextMuted) el.bgmPlayer.play().catch(() => {});
+  });
+
+  updateMuteButton();
+
   function randInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
@@ -373,10 +449,11 @@
     return arr[randInt(0, arr.length - 1)];
   }
 
-  function makeInitialState() {
+  function makeInitialState(characterName) {
     return {
       turn: 1,
       gold: 0,
+      characterName: (characterName && characterName.trim()) || '우리 딸',
       stats: {
         intelligence: 20,
         focus: 20,
@@ -391,8 +468,9 @@
       bestCombo: 0,
       items: {},
       npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 })),
-      wardrobe: { unlockedMax: 0, equipped: 0 },
-      scheduledActivity: null,
+      wardrobe: { equipped: 0, owned: OUTFIT_TIERS.map((_, i) => i === 0), notifiedGraceTier: 0 },
+      weekPlan: new Array(WEEKS_PER_MONTH).fill(null),
+      weekIndex: 0,
       talkedThisTurn: false,
       completedScenarios: [],
     };
@@ -454,8 +532,23 @@
       loaded.npcs.forEach((n) => {
         if (typeof n.lastMetTurn !== 'number') n.lastMetTurn = 0;
       });
-      loaded.wardrobe = loaded.wardrobe || { unlockedMax: 0, equipped: 0 };
-      if (typeof loaded.scheduledActivity === 'undefined') loaded.scheduledActivity = null;
+      loaded.wardrobe = loaded.wardrobe || { equipped: 0 };
+      if (!Array.isArray(loaded.wardrobe.owned)) {
+        // 옛 저장 데이터(옷을 무료로 자동 해금하던 시절)의 unlockedMax까지는
+        // 이미 입고 있었던 것으로 쳐서 그대로 소유한 것으로 이관해준다.
+        const grandfatheredMax = typeof loaded.wardrobe.unlockedMax === 'number' ? loaded.wardrobe.unlockedMax : 0;
+        loaded.wardrobe.owned = OUTFIT_TIERS.map((_, i) => i <= grandfatheredMax);
+      }
+      delete loaded.wardrobe.unlockedMax;
+      if (typeof loaded.wardrobe.notifiedGraceTier !== 'number') loaded.wardrobe.notifiedGraceTier = 0;
+      if (typeof loaded.characterName !== 'string' || !loaded.characterName.trim()) loaded.characterName = '우리 딸';
+      if (!Array.isArray(loaded.weekPlan) || loaded.weekPlan.length !== WEEKS_PER_MONTH) {
+        loaded.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
+        // 옛 저장 데이터(주간 계획표 이전)에 골라둔 활동이 있었다면 1주차로 옮겨준다.
+        if (loaded.scheduledActivity) loaded.weekPlan[0] = loaded.scheduledActivity;
+      }
+      if (typeof loaded.weekIndex !== 'number' || loaded.weekIndex < 0 || loaded.weekIndex >= WEEKS_PER_MONTH) loaded.weekIndex = 0;
+      delete loaded.scheduledActivity;
       if (typeof loaded.talkedThisTurn === 'undefined') loaded.talkedThisTurn = false;
       if (!Array.isArray(loaded.completedScenarios)) loaded.completedScenarios = [];
       state = loaded;
@@ -523,8 +616,10 @@
   }
 
   function renderMain() {
+    playBgm('default');
     el.turnLabel.textContent = yearMonthLabel(state.turn);
     el.goldLabel.textContent = `💰 ${state.gold}G`;
+    el.characterName.textContent = state.characterName;
     updateWardrobeUnlocks();
     const equippedTier = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.characterPortrait, state.wardrobe.equipped, 'main');
@@ -631,7 +726,9 @@
   // "공부/알바/운동 보너스/휴식 보너스"는 수학·영어·과학이 매 문제마다
   // 무작위로 섞여 나온다. 알바는 항상 가장 쉬운 레벨만, 나머지는 지능에
   // 맞는 레벨 범위에서 고른다.
-  const MULTI_SUBJECT_TYPES = ['study', 'job', 'exercise-bonus', 'rest-bonus'];
+  const MULTI_SUBJECT_TYPES = ['study', 'job', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
+  // 정답/오답 즉시 보상 대신, 세션이 끝난 뒤 한 번에 보너스 효과를 적용하는 유형들.
+  const BONUS_QUIZ_TYPES = ['exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
 
   function nextQuizQuestion() {
     if (session.index >= session.count) {
@@ -664,7 +761,11 @@
               ? `🏃 운동 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
               : session.type === 'rest-bonus'
                 ? `🛌 휴식 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
-                : `${session.scenario.entryEmoji} ${session.scenario.title}`;
+                : session.type === 'laundry-bonus'
+                  ? `🧺 빨래 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
+                  : session.type === 'garden-bonus'
+                    ? `🌾 텃밭 보너스 문제 · ${SUBJECTS[session.currentSubject].name}`
+                    : `${session.scenario.entryEmoji} ${session.scenario.title}`;
     el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
     el.quizLevelBadge.textContent = session.type === 'banquet' ? '예절' : session.type === 'scenario-quiz' ? session.scenario.arc : `Lv.${problem.level}`;
@@ -762,9 +863,9 @@
     } else if (session.type === 'scenario-quiz') {
       // 시나리오 퀴즈는 문제마다 즉시 보상을 주지 않고, 세션이 끝난 뒤
       // scenario.outcomes.success/fail 효과를 한 번에 적용한다.
-    } else if (session.type === 'exercise-bonus' || session.type === 'rest-bonus') {
-      // 운동/휴식 보너스 문제도 세션 종료 시(finishExerciseBonusSession/
-      // finishRestBonusSession) 한 번에 보너스 효과를 적용한다.
+    } else if (BONUS_QUIZ_TYPES.includes(session.type)) {
+      // 운동/휴식/빨래/텃밭 보너스 문제도 세션 종료 시(finishXBonusSession)
+      // 한 번에 보너스 효과를 적용한다.
     } else {
       const multiplier = comboMultiplier(state.combo) + itemBonusSum('comboBonus');
       const jobBonus = session.type === 'job' ? 1.5 : 1;
@@ -795,8 +896,8 @@
       state.stats.stress += 2;
     } else if (session.type === 'scenario-quiz') {
       // 시나리오 퀴즈는 outcomes.fail 효과가 세션 종료 시 한 번에 적용된다.
-    } else if (session.type === 'exercise-bonus' || session.type === 'rest-bonus') {
-      // 틀려도 페널티 없이 원래 운동/휴식 효과만 그대로 받는다.
+    } else if (BONUS_QUIZ_TYPES.includes(session.type)) {
+      // 틀려도 페널티 없이 원래 보너스 활동 효과만 그대로 받는다.
     } else if (session.type === 'study') {
       state.stats.stress += 6;
       state.stats.stamina -= 4;
@@ -823,6 +924,14 @@
       finishRestBonusSession();
       return;
     }
+    if (session.type === 'laundry-bonus') {
+      finishLaundryBonusSession();
+      return;
+    }
+    if (session.type === 'garden-bonus') {
+      finishGardenBonusSession();
+      return;
+    }
     el.summaryEmoji.textContent = session.correctCount === session.count ? '🌟' : '✅';
     el.summaryTitle.textContent = session.type === 'study' ? '공부를 마쳤어요!' : '알바를 마쳤어요!';
     el.summaryDesc.textContent = `${session.count}문제 중 ${session.correctCount}개를 맞혔어요`;
@@ -839,14 +948,22 @@
     const prince = NPC_DEFS.find((n) => n.id === 'prince');
     const princeState = state.npcs.find((n) => n.id === 'prince');
     const beforeTiers = snapshotGrowthTiers(state.stats);
+    const dressedForPrince = state.wardrobe.equipped >= PRINCE_MIN_TIER;
 
-    if (success) {
+    if (success && dressedForPrince) {
       princeState.affection += randInt(10, 16) + itemBonusSum('affectionBonus');
+      princeState.lastMetTurn = state.turn;
       clampStats();
       announceStatLevelUps(beforeTiers);
       el.eventEmoji.innerHTML = npcAvatarHTML(prince, 'npc-avatar-lg');
       el.eventTitle.textContent = '연회에서 왕자님을 만나다';
       el.eventDesc.textContent = `${session.count}문제 중 ${session.correctCount}개를 맞혀 예절을 뽐냈어요! 왕자님이 다가와 말을 걸어주었어요. (애정도 ${Math.round(princeState.affection)})`;
+    } else if (success && !dressedForPrince) {
+      clampStats();
+      announceStatLevelUps(beforeTiers);
+      el.eventEmoji.textContent = '💃';
+      el.eventTitle.textContent = '연회를 마쳤어요';
+      el.eventDesc.textContent = `${session.count}문제 중 ${session.correctCount}개를 맞혀 예절을 뽐냈어요! 하지만 지금 입은 옷으로는 왕자님 눈에 띄지 못했어요. ${OUTFIT_TIERS[PRINCE_MIN_TIER].name} 이상으로 갈아입어 보세요.`;
     } else {
       clampStats();
       announceStatLevelUps(beforeTiers);
@@ -860,7 +977,7 @@
 
   el.btnSummaryConfirm.addEventListener('click', () => {
     session = null;
-    advanceTurn();
+    advanceWeekOrTurn();
   });
 
   /* ---------------- 활동: 운동 / 휴식 / 친구 만나기 ---------------- */
@@ -933,9 +1050,75 @@
     maybeTriggerEvent(0.15);
   }
 
+  // 빨래하기: 하녀를 고용하면 매턴 자동으로 처리되어 더 이상 스케줄할 필요가 없다.
+  function doLaundry() {
+    session = {
+      type: 'laundry-bonus',
+      count: 1,
+      index: 0,
+      correctCount: 0,
+      sessionBestCombo: 0,
+      goldEarned: 0,
+      answered: false,
+      currentProblem: null,
+      currentSubject: null,
+    };
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
+  function finishLaundryBonusSession() {
+    const bonus = session.correctCount > 0;
+    const beforeTiers = snapshotGrowthTiers(state.stats);
+    state.stats.stress -= 6;
+    state.stats.stamina -= 2;
+    state.gold += 10;
+    if (bonus) {
+      state.stats.stress -= 3;
+      state.gold += 5;
+    }
+    clampStats();
+    announceStatLevelUps(beforeTiers);
+    saveGame();
+    if (bonus) showLevelToast('🧺 빨래하다 주머니에서 동전을 발견했어요!');
+    advanceWeekOrTurn();
+  }
+
+  // 텃밭 가꾸기: 정원사를 고용하면 매턴 자동으로 처리되어 더 이상 스케줄할 필요가 없다.
+  function doGarden() {
+    session = {
+      type: 'garden-bonus',
+      count: 1,
+      index: 0,
+      correctCount: 0,
+      sessionBestCombo: 0,
+      goldEarned: 0,
+      answered: false,
+      currentProblem: null,
+      currentSubject: null,
+    };
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
+  function finishGardenBonusSession() {
+    const bonus = session.correctCount > 0;
+    const beforeTiers = snapshotGrowthTiers(state.stats);
+    state.stats.stamina -= 4;
+    state.gold += 25;
+    if (bonus) {
+      state.gold += 15;
+    }
+    clampStats();
+    announceStatLevelUps(beforeTiers);
+    saveGame();
+    if (bonus) showLevelToast('🌾 튼실한 작물을 더 수확했어요!');
+    advanceWeekOrTurn();
+  }
+
   function maybeTriggerEvent(chance) {
     if (Math.random() > chance) {
-      advanceTurn();
+      advanceWeekOrTurn();
       return;
     }
     const pool = EVENTS.filter((ev) => !ev.requirement || ev.requirement(state));
@@ -953,7 +1136,7 @@
   }
 
   el.btnEventConfirm.addEventListener('click', () => {
-    advanceTurn();
+    advanceWeekOrTurn();
   });
 
   /* ---------------- 친구 만나기: 상대 선택 ---------------- */
@@ -962,6 +1145,7 @@
     el.npcList.innerHTML = '';
     NPC_DEFS.forEach((def) => {
       const unlocked = def.unlock(state.stats);
+      const needsDressUp = unlocked && def.id === 'prince' && state.wardrobe.equipped < PRINCE_MIN_TIER;
       const npcState = state.npcs.find((n) => n.id === def.id);
       const activeScenario = unlocked ? findActiveScenario(def.id) : null;
       const card = document.createElement('button');
@@ -970,7 +1154,7 @@
         ${unlocked ? npcAvatarHTML(def, 'npc-avatar-md') : '<span class="level-badge-num">🔒</span>'}
         <span class="level-info">
           <span class="level-title">${def.name}</span>
-          <span class="level-desc">${unlocked ? (activeScenario ? `<span class="npc-scenario-hint">✨ ${activeScenario.title}</span>` : def.desc) : def.unlockHint(state.stats)}</span>
+          <span class="level-desc">${needsDressUp ? `👗 ${OUTFIT_TIERS[PRINCE_MIN_TIER].name} 이상을 입어야 만날 수 있어요` : unlocked ? (activeScenario ? `<span class="npc-scenario-hint">✨ ${activeScenario.title}</span>` : def.desc) : def.unlockHint(state.stats)}</span>
           ${unlocked ? `<span class="npc-affection-track"><span class="npc-affection-fill" style="width:${npcState.affection}%"></span></span><span class="npc-affection-label">${affectionTierName(npcState.affection)} · ${Math.round(npcState.affection)}</span>` : ''}
         </span>
         <span class="level-lock-icon">${unlocked ? '›' : '🔒'}</span>
@@ -986,6 +1170,10 @@
   el.btnNpcBack.addEventListener('click', () => showScreen('main'));
 
   function meetNpc(npcId) {
+    if (npcId === 'prince' && state.wardrobe.equipped < PRINCE_MIN_TIER) {
+      showLevelToast(`👑 ${OUTFIT_TIERS[PRINCE_MIN_TIER].name} 이상을 입어야 왕자님을 뵐 수 있어요`);
+      return;
+    }
     const activeScenario = findActiveScenario(npcId);
     if (activeScenario) {
       runScenario(activeScenario);
@@ -1152,6 +1340,7 @@
   }
 
   function runScenario(scenario) {
+    if (BGM_TRACKS[scenario.id]) playBgm(scenario.id);
     if (scenario.type === 'quiz') startScenarioQuiz(scenario);
     else if (scenario.type === 'branching') openBranchingScreen(scenario);
     else resolveNarrativeScenario(scenario);
@@ -1220,11 +1409,14 @@
 
   function renderWardrobeList() {
     el.wardrobeList.innerHTML = '';
+    const graceTier = currentOutfit(state.stats).tierIndex;
     OUTFIT_TIERS.forEach((tier, tierIndex) => {
-      const unlocked = tierIndex <= state.wardrobe.unlockedMax;
+      const owned = state.wardrobe.owned[tierIndex];
+      const purchasable = !owned && tierIndex <= graceTier;
       const equipped = tierIndex === state.wardrobe.equipped;
-      const card = document.createElement('button');
-      card.className = `wardrobe-card${unlocked ? '' : ' locked'}${equipped ? ' equipped' : ''}`;
+      const canAfford = state.gold >= tier.cost;
+      const card = document.createElement('div');
+      card.className = `wardrobe-card${owned ? '' : purchasable ? ' purchasable' : ' locked'}${equipped ? ' equipped' : ''}`;
       card.innerHTML = `
         ${equipped ? '<span class="wardrobe-card-badge">착용 중</span>' : ''}
         <span class="wardrobe-card-img-wrap">
@@ -1232,9 +1424,15 @@
           <span class="wardrobe-card-emoji-fallback">${tier.emoji}</span>
         </span>
         <span class="wardrobe-card-label">${tier.emoji} ${tier.name}</span>
+        ${purchasable ? `<button class="wardrobe-buy-btn" ${canAfford ? '' : 'disabled'}>💰 ${tier.cost}G 구매</button>` : ''}
       `;
-      if (unlocked) {
+      if (owned) {
         card.addEventListener('click', () => equipOutfit(tierIndex));
+      } else if (purchasable) {
+        card.querySelector('.wardrobe-card-label').textContent = tier.name;
+        if (canAfford) {
+          card.querySelector('.wardrobe-buy-btn').addEventListener('click', () => buyOutfit(tierIndex));
+        }
       } else {
         card.querySelector('.wardrobe-card-label').textContent = tier.wardrobeDesc;
       }
@@ -1243,22 +1441,33 @@
   }
 
   function equipOutfit(tierIndex) {
-    if (tierIndex > state.wardrobe.unlockedMax) return;
+    if (!state.wardrobe.owned[tierIndex]) return;
     state.wardrobe.equipped = tierIndex;
     saveGame();
     renderWardrobeList();
     renderMain();
   }
 
-  // 품위가 새 단계에 닿으면 그 옷을 영구 해금하고 자동으로 갈아입힌다.
-  // (옷장에서는 이후 이미 해금한 옷들 중 원하는 것으로 자유롭게 갈아입을 수 있다)
+  function buyOutfit(tierIndex) {
+    const tier = OUTFIT_TIERS[tierIndex];
+    if (state.wardrobe.owned[tierIndex] || state.gold < tier.cost) return;
+    state.gold -= tier.cost;
+    state.wardrobe.owned[tierIndex] = true;
+    state.wardrobe.equipped = tierIndex;
+    showLevelToast(`✨ 새 옷을 샀어요: ${tier.name}!`);
+    saveGame();
+    renderWardrobeList();
+    renderMain();
+  }
+
+  // 품위가 새 단계에 닿으면 그 옷을 "구매할 수 있게" 알려준다(자동으로 사거나
+  // 입혀주지는 않으며, 옷장에서 직접 돈을 내고 사야 실제로 입을 수 있다).
   function updateWardrobeUnlocks() {
     const tierIndex = currentOutfit(state.stats).tierIndex;
-    if (tierIndex > state.wardrobe.unlockedMax) {
-      state.wardrobe.unlockedMax = tierIndex;
-      state.wardrobe.equipped = tierIndex;
+    if (tierIndex > state.wardrobe.notifiedGraceTier) {
+      state.wardrobe.notifiedGraceTier = tierIndex;
       const tier = OUTFIT_TIERS[tierIndex];
-      showLevelToast(`✨ 새 옷 해금: ${tier.name}!`);
+      showLevelToast(`👗 ${tier.name} 구매 가능! 옷장에서 ${tier.cost}G에 살 수 있어요`);
       saveGame();
     }
   }
@@ -1296,6 +1505,8 @@
     job: { emoji: '💼', name: '알바' },
     exercise: { emoji: '🏃', name: '운동' },
     rest: { emoji: '🛌', name: '휴식' },
+    laundry: { emoji: '🧺', name: '빨래하기' },
+    garden: { emoji: '🌾', name: '텃밭 가꾸기' },
     friend: { emoji: '🎡', name: '친구 만나기' },
     banquet: { emoji: '💃', name: '연회 참석' },
   };
@@ -1305,41 +1516,226 @@
     else if (activity === 'job') startJobSession();
     else if (activity === 'exercise') doExercise();
     else if (activity === 'rest') doRest();
-    else if (activity === 'friend') openNpcSelect();
-    else if (activity === 'banquet') startBanquetSession();
+    else if (activity === 'laundry') {
+      if (state.items.maid) {
+        showLevelToast('🧹 하녀가 이미 빨래를 도맡아 하고 있어요');
+        advanceWeekOrTurn();
+        return;
+      }
+      doLaundry();
+    } else if (activity === 'garden') {
+      if (state.items.gardener) {
+        showLevelToast('🌾 정원사가 이미 텃밭을 돌보고 있어요');
+        advanceWeekOrTurn();
+        return;
+      }
+      doGarden();
+    } else if (activity === 'friend') openNpcSelect();
+    else if (activity === 'banquet') tryStartBanquet();
   }
 
+  // 사교모임(연회)은 입장료를 내야 하고, 일정 옷 단계 이상을 입고 있어야 들어갈 수 있다.
+  function tryStartBanquet() {
+    if (state.wardrobe.equipped < BANQUET_MIN_TIER) {
+      showLevelToast(`💃 ${OUTFIT_TIERS[BANQUET_MIN_TIER].name} 이상을 입어야 연회에 입장할 수 있어요`);
+      advanceWeekOrTurn();
+      return;
+    }
+    if (state.gold < BANQUET_ENTRY_FEE) {
+      showLevelToast(`💰 연회 입장료 ${BANQUET_ENTRY_FEE}G가 부족해요`);
+      advanceWeekOrTurn();
+      return;
+    }
+    state.gold -= BANQUET_ENTRY_FEE;
+    saveGame();
+    startBanquetSession();
+  }
+
+  function currentWeekActivity() {
+    return state.weekPlan[state.weekIndex] || null;
+  }
+
+  // 메인 화면 배너: 이번 달 몇 주째인지, 이번 주에 무엇을 하기로 했는지 보여준다.
   function updateScheduleBanner() {
-    if (state.scheduledActivity && ACTIVITY_DEFS[state.scheduledActivity]) {
-      const def = ACTIVITY_DEFS[state.scheduledActivity];
-      el.scheduleBannerText.textContent = `${def.emoji} ${def.name}`;
+    const activity = currentWeekActivity();
+    const weekLabel = `${state.weekIndex + 1}/${WEEKS_PER_MONTH}주`;
+    if (activity && ACTIVITY_DEFS[activity]) {
+      const def = ACTIVITY_DEFS[activity];
+      el.scheduleBannerText.textContent = `🗓️ ${weekLabel} · 다음: ${def.emoji} ${def.name}`;
       el.scheduleBanner.style.display = 'block';
     } else {
-      el.scheduleBanner.style.display = 'none';
+      el.scheduleBannerText.textContent = `🗓️ ${weekLabel} · 이번 주 계획을 세워보세요`;
+      el.scheduleBanner.style.display = 'block';
     }
   }
 
+  // 하녀/정원사를 고용한 뒤에는 그 집안일을 더 이상 직접 스케줄할 필요가
+  // 없다는 것을 잠금 카드 스타일로 보여준다(자동으로 처리되는 중).
+  function updateWeekPickListLocks() {
+    const laundryBtn = el.weekPickList.querySelector('[data-activity="laundry"]');
+    const gardenBtn = el.weekPickList.querySelector('[data-activity="garden"]');
+    if (laundryBtn) {
+      laundryBtn.classList.toggle('locked', !!state.items.maid);
+      laundryBtn.querySelector('.level-desc').textContent = state.items.maid
+        ? '🧹 하녀가 대신 처리하고 있어요'
+        : '문제를 풀며 빨래를 해요. 하녀를 고용하면 자동화돼요';
+    }
+    if (gardenBtn) {
+      gardenBtn.classList.toggle('locked', !!state.items.gardener);
+      gardenBtn.querySelector('.level-desc').textContent = state.items.gardener
+        ? '🌾 정원사가 대신 돌보고 있어요'
+        : '문제를 풀며 텃밭을 가꿔 골드를 벌어요. 정원사를 고용하면 자동화돼요';
+    }
+  }
+
+  /* ---------------- 이번 달 생활 계획표 ---------------- */
+
+  const ASSUMED_CORRECT_RATE = 0.75;
+  const EXPECTED_COMBO_MULTIPLIER = 1.3;
+  const DELTA_STAT_KEYS = ['gold', 'intelligence', 'focus', 'stamina', 'charm', 'creativity', 'stress', 'luck'];
+  const DELTA_STAT_LABELS = { gold: '골드', intelligence: '지능', focus: '집중력', stamina: '체력', charm: '매력', creativity: '창의력', stress: '스트레스', luck: '행운' };
+
+  // 지금 지능으로 도달한 가장 높은 수학 레벨을 "평균적으로 나올 문제 난이도"로 삼아
+  // 보상을 어림잡는다(실제로는 매 문제 과목·레벨이 무작위라 정확한 값은 아니다).
+  function typicalStudyLevel() {
+    const unlocked = unlockedLevelsFor('math');
+    return unlocked.length ? unlocked[unlocked.length - 1] : 1;
+  }
+
+  // 활동 하나를 한 주 동안 했을 때 예상되는 스탯/골드 변화를 어림잡아 계산한다.
+  // 정답률 75%를 가정한 대략적인 예상치이며, 실제 결과는 문제 운·콤보에 따라 달라진다.
+  function estimateActivityDelta(activityId) {
+    const d = { gold: 0, intelligence: 0, focus: 0, stamina: 0, charm: 0, creativity: 0, stress: 0, luck: 0 };
+    const level = typicalStudyLevel();
+    const rewardGold = 8 + level * 4;
+    const r = ASSUMED_CORRECT_RATE;
+    if (activityId === 'study') {
+      d.gold += Math.round(QUESTIONS_PER_STUDY * r * rewardGold * EXPECTED_COMBO_MULTIPLIER * (1 + itemBonusSum('goldBonus')));
+      d.intelligence += QUESTIONS_PER_STUDY * r * (level + itemBonusSum('intBonus'));
+      d.creativity += QUESTIONS_PER_STUDY * r * level * 0.2;
+      d.stress += QUESTIONS_PER_STUDY * (1 - r) * 6;
+      d.stamina += -QUESTIONS_PER_STUDY * (1 - r) * 4 - QUESTIONS_PER_STUDY * r * 2;
+    } else if (activityId === 'job') {
+      const level1Reward = 8 + 1 * 4;
+      d.gold += Math.round(QUESTIONS_PER_JOB * r * level1Reward * EXPECTED_COMBO_MULTIPLIER * 1.5 * (1 + itemBonusSum('goldBonus')));
+      d.stamina += -QUESTIONS_PER_JOB * r * 2 - QUESTIONS_PER_JOB * (1 - r) * 3;
+    } else if (activityId === 'exercise') {
+      d.stamina += 8 + 2 * r;
+      d.focus += 4 + 3 * r;
+      d.stress += 3;
+    } else if (activityId === 'rest') {
+      const rm = 1 + itemBonusSum('restBonus');
+      d.stress += -12 * rm - 5 * r;
+      d.stamina += 10 * rm + 3 * r;
+    } else if (activityId === 'laundry') {
+      d.stress += -6 - 3 * r;
+      d.stamina += -2;
+      d.gold += 10 + 5 * r;
+    } else if (activityId === 'garden') {
+      d.stamina += -4;
+      d.gold += 25 + 15 * r;
+    } else if (activityId === 'friend') {
+      d.charm += 3; // 실제로는 만나는 인물마다 다르며, 만날 때 정해진다
+    } else if (activityId === 'banquet') {
+      d.gold += -BANQUET_ENTRY_FEE;
+      d.charm += QUESTIONS_PER_BANQUET * r * (4 + itemBonusSum('charmBonus'));
+      d.stress += QUESTIONS_PER_BANQUET * (1 - r) * 2;
+    }
+    return d;
+  }
+
+  function renderWeekPlanPreview() {
+    const total = { gold: 0, intelligence: 0, focus: 0, stamina: 0, charm: 0, creativity: 0, stress: 0, luck: 0 };
+    let planned = 0;
+    for (let i = state.weekIndex; i < WEEKS_PER_MONTH; i++) {
+      const activity = state.weekPlan[i];
+      if (!activity) continue;
+      planned++;
+      const d = estimateActivityDelta(activity);
+      DELTA_STAT_KEYS.forEach((k) => { total[k] += d[k]; });
+    }
+    el.weekPlanPreview.innerHTML = '';
+    if (planned === 0) {
+      el.weekPlanPreview.innerHTML = '<div class="status-empty">남은 주에 활동을 배치하면 예상 변화가 보여요</div>';
+      return;
+    }
+    DELTA_STAT_KEYS.forEach((k) => {
+      const v = total[k];
+      if (Math.abs(v) < 0.05) return;
+      const rounded = k === 'gold' ? Math.round(v) : Math.round(v * 10) / 10;
+      const row = document.createElement('div');
+      row.className = 'delta-row';
+      const sign = rounded > 0 ? '+' : '';
+      row.innerHTML = `<span class="delta-row-label">${DELTA_STAT_LABELS[k]}</span><span class="delta-row-value ${rounded >= 0 ? 'positive' : 'negative'}">${sign}${rounded}</span>`;
+      el.weekPlanPreview.appendChild(row);
+    });
+  }
+
+  function renderWeekPlanScreen() {
+    el.weekPlanList.innerHTML = '';
+    for (let i = 0; i < WEEKS_PER_MONTH; i++) {
+      const activityId = state.weekPlan[i];
+      const def = activityId ? ACTIVITY_DEFS[activityId] : null;
+      const done = i < state.weekIndex;
+      const isCurrent = i === state.weekIndex;
+      const card = document.createElement('button');
+      card.className = `level-card week-plan-card${done ? ' locked' : ''}${isCurrent ? ' current' : ''}`;
+      card.innerHTML = `
+        <span class="level-badge-num">${i + 1}주</span>
+        <span class="level-info">
+          <span class="level-title">${def ? `${def.emoji} ${def.name}` : '무엇을 할까요?'}</span>
+          <span class="level-desc">${done ? '이미 지나간 주예요' : isCurrent ? '이번 주 (다음 실행)' : '탭해서 계획하기'}</span>
+        </span>
+        <span class="level-lock-icon">${done ? '✔️' : '›'}</span>
+      `;
+      if (!done) {
+        card.addEventListener('click', () => openWeekActivityPicker(i));
+      }
+      el.weekPlanList.appendChild(card);
+    }
+    renderWeekPlanPreview();
+  }
+
   function openSchedule() {
+    renderWeekPlanScreen();
     showScreen('schedule');
   }
 
-  el.scheduleList.addEventListener('click', (e) => {
+  let editingWeekIndex = 0;
+
+  function openWeekActivityPicker(weekIdx) {
+    editingWeekIndex = weekIdx;
+    el.weekPickTitle.textContent = `${weekIdx + 1}주차에 할 일을 골라주세요`;
+    updateWeekPickListLocks();
+    showScreen('weekPick');
+  }
+
+  el.weekPickList.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-activity]');
-    if (!btn) return;
-    state.scheduledActivity = btn.dataset.activity;
+    if (!btn || btn.classList.contains('locked')) return;
+    state.weekPlan[editingWeekIndex] = btn.dataset.activity;
     saveGame();
+    showScreen('schedule');
+    renderWeekPlanScreen();
+  });
+
+  el.btnWeekPickBack.addEventListener('click', () => {
+    showScreen('schedule');
+    renderWeekPlanScreen();
+  });
+
+  el.btnScheduleBack.addEventListener('click', () => {
     updateScheduleBanner();
     showScreen('main');
   });
 
-  el.btnScheduleBack.addEventListener('click', () => showScreen('main'));
-
   function executeSchedule() {
-    if (!state.scheduledActivity) {
+    const activity = currentWeekActivity();
+    if (!activity) {
       openSchedule();
       return;
     }
-    runActivity(state.scheduledActivity);
+    runActivity(activity);
   }
 
   function talkToDaughter() {
@@ -1465,10 +1861,19 @@
     });
   }
 
+  // 하녀/정원사를 고용하면 그 뒤로는 직접 스케줄하지 않아도 매턴 자동으로
+  // 집안일 효과를 받는다(하녀 고용에 든 돈이 결국 시간을 벌어주는 구조).
+  function applyServantEffects() {
+    if (state.items.maid) state.stats.stress = Math.max(0, state.stats.stress - 2);
+    if (state.items.gardener) state.gold += 10;
+  }
+
   function advanceTurn() {
     state.turn++;
-    state.scheduledActivity = null;
+    state.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
+    state.weekIndex = 0;
     state.talkedThisTurn = false;
+    applyServantEffects();
     applyAffectionDecay();
     if (state.turn > TOTAL_TURNS) {
       showEnding();
@@ -1477,6 +1882,20 @@
     saveGame();
     showScreen('main');
     renderMain();
+  }
+
+  // 한 주(週)의 활동을 마쳤을 때 호출한다. 이번 달(턴) 안에 남은 주가 있으면
+  // 다음 주로 넘어가 메인 화면으로 돌아가고(다시 "실행"을 눌러 이어감),
+  // 이번 달의 마지막 주였다면 실제로 달(턴)을 넘긴다.
+  function advanceWeekOrTurn() {
+    if (state.weekIndex < WEEKS_PER_MONTH - 1) {
+      state.weekIndex++;
+      saveGame();
+      showScreen('main');
+      renderMain();
+    } else {
+      advanceTurn();
+    }
   }
 
   function showEnding() {
@@ -1508,7 +1927,8 @@
   }
 
   el.btnEndingRestart.addEventListener('click', () => {
-    state = makeInitialState();
+    const prevName = state.characterName;
+    state = makeInitialState(prevName);
     clearSave();
     saveGame();
     gameStarted = true;
@@ -1519,7 +1939,7 @@
   /* ---------------- 시작 화면 ---------------- */
 
   el.btnNewGame.addEventListener('click', () => {
-    state = makeInitialState();
+    state = makeInitialState(el.characterNameInput.value);
     clearSave();
     saveGame();
     gameStarted = true;
