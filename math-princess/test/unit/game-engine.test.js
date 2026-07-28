@@ -25,10 +25,51 @@ eq(Engine.comboMultiplier(5), 1.6, '콤보 5부터 배율 1.6');
 eq(Engine.comboMultiplier(10), 2.2, '콤보 10부터 배율 2.2');
 eq(Engine.comboMultiplier(20), 3.0, '콤보 20부터 배율 3.0');
 
-eq(Engine.statTierIndex(0), 0, '스탯 0은 티어 0');
-eq(Engine.statTierIndex(19), 0, '스탯 19는 아직 티어 0');
-eq(Engine.statTierIndex(20), 1, '스탯 20부터 티어 1');
-eq(Engine.statTierIndex(80), 4, '스탯 80부터 티어 4(최고)');
+eq(Engine.statTierIndex(0), 0, '스탯 0은 티어 0(Lv1)');
+eq(Engine.statTierIndex(9), 0, '스탯 9는 아직 티어 0(Lv1)');
+eq(Engine.statTierIndex(10), 1, '스탯 10부터 티어 1(Lv2)');
+eq(Engine.statTierIndex(49), 4, '스탯 49는 아직 티어 4(Lv5)');
+eq(Engine.statTierIndex(50), 5, '스탯 50부터 티어 5(Lv6)');
+eq(Engine.statTierIndex(90), 9, '스탯 90부터 티어 9(Lv10, 최고)');
+eq(Engine.statTierIndex(100), 9, '스탯 100(만점)도 티어 9(Lv10)');
+
+/* ---------------- 평민 → 귀족 신분 상승(작위 수여) ---------------- */
+
+{
+  // 6개 성장 능력치가 전부 Lv5를 다 채워야(값 50) 승급 자격이 생긴다.
+  const state = Engine.makeInitialState();
+  ok(!Engine.noblePromotionEligible(state), '초기 상태(모든 능력치 50 미만)에서는 승급 자격이 없어야 함');
+
+  ['intelligence', 'focus', 'stamina', 'charm', 'creativity'].forEach((k) => { state.stats[k] = 50; });
+  ok(!Engine.noblePromotionEligible(state), '한 능력치(luck)만 50 미만이어도 승급 자격이 없어야 함');
+
+  state.stats.luck = 50;
+  ok(Engine.noblePromotionEligible(state), '성장 능력치 6개가 모두 50 이상이면 승급 자격이 생겨야 함');
+}
+{
+  // 이미 작위를 받았으면 조건을 다시 만족해도 재승급 자격이 생기면 안 된다.
+  const state = Engine.makeInitialState();
+  ['intelligence', 'focus', 'stamina', 'charm', 'creativity', 'luck'].forEach((k) => { state.stats[k] = 90; });
+  state.nobleTitle = '은빛 백작';
+  ok(!Engine.noblePromotionEligible(state), '이미 작위를 받았으면 다시 승급 자격이 생기면 안 됨');
+}
+{
+  const state = Engine.makeInitialState();
+  ok(Engine.grantNobleTitle(state, '  은빛 백작  '), '유효한 작위명이면 승급이 성공해야 함');
+  eq(state.nobleTitle, '은빛 백작', '작위명은 앞뒤 공백이 제거되어 저장되어야 함');
+  ok(!Engine.grantNobleTitle(state, '다른 작위'), '이미 작위가 있으면 다시 승급할 수 없어야 함(중복 방지)');
+  eq(state.nobleTitle, '은빛 백작', '중복 승급 시도는 기존 작위를 덮어쓰면 안 됨');
+}
+{
+  const state = Engine.makeInitialState();
+  ok(!Engine.grantNobleTitle(state, ''), '빈 문자열은 작위로 인정되면 안 됨');
+  ok(!Engine.grantNobleTitle(state, '   '), '공백만 있는 문자열도 작위로 인정되면 안 됨');
+  eq(state.nobleTitle, null, '유효하지 않은 시도 후에는 nobleTitle이 그대로 null이어야 함');
+
+  const tooLong = '가'.repeat(30);
+  Engine.grantNobleTitle(state, tooLong);
+  eq(state.nobleTitle.length, 20, '작위명은 너무 길면 20자로 잘려야 함');
+}
 
 approx(Engine.graceScore({ charm: 100, creativity: 0, intelligence: 0 }), 40, 0.01, '품위 점수는 매력 가중치 0.4');
 approx(Engine.graceScore({ charm: 0, creativity: 100, intelligence: 0 }), 30, 0.01, '품위 점수는 창의력 가중치 0.3');
@@ -635,6 +676,77 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   ok(outcome.perfect, '전부 맞혔으면 만점 처리되어야 함');
   ok(state.gold > goldAfterAllQuestions, '만점이면 세션 종료 시 추가 보너스가 한 번 더 붙어야 함');
   eq(outcome.goldEarned, state.gold - beforeGold, 'outcome.goldEarned이 세션 전체(문제별 상금+만점 보너스)로 늘어난 골드와 일치해야 함');
+}
+
+/* ---------------- 창의력 올림피아드 ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  state.stats.creativity = Engine.CREATIVITY_MIN_CREATIVITY - 1;
+  ok(!Engine.creativityOlympiadUnlocked(state), '창의력 요건 미달이면 창의력 올림피아드에 도전할 수 없어야 함');
+  state.stats.creativity = Engine.CREATIVITY_MIN_CREATIVITY;
+  ok(Engine.creativityOlympiadUnlocked(state), '창의력 요건을 만족하면 도전 가능해야 함');
+}
+{
+  const state = Engine.makeInitialState();
+  state.stats.creativity = 50;
+  const session = Engine.startCreativitySession();
+  eq(session.type, 'creativity', '창의력 올림피아드 세션 타입');
+  eq(session.count, Engine.QUESTIONS_PER_CREATIVITY, '창의력 올림피아드 기본 문제 수');
+
+  const beforeGold = state.gold;
+  const beforeCreativity = state.stats.creativity;
+  for (let i = 0; i < session.count; i++) {
+    session.index = i;
+    const problem = Engine.generateNextProblem(state, session);
+    const beforeThisGold = state.gold;
+    Engine.applyCorrect(state, session, problem);
+    ok(state.gold > beforeThisGold, '창의력 올림피아드는 정답을 맞힐 때마다 바로 상금이 들어와야 함');
+  }
+  ok(state.stats.creativity > beforeCreativity, '창의력 올림피아드 정답은 창의력을 올려야 함');
+  const goldAfterAllQuestions = state.gold;
+  const outcome = Engine.finishCreativityOutcome(state, session);
+  ok(outcome.perfect, '전부 맞혔으면 만점 처리되어야 함');
+  ok(state.gold > goldAfterAllQuestions, '만점이면 세션 종료 시 추가 보너스가 한 번 더 붙어야 함');
+  eq(outcome.goldEarned, state.gold - beforeGold, 'outcome.goldEarned이 세션 전체(문제별 상금+만점 보너스)로 늘어난 골드와 일치해야 함');
+}
+{
+  // 문제 수를 직접 고를 수 있어야 함(공부/알바/경시대회와 동일한 방식)
+  const session = Engine.startCreativitySession(10);
+  eq(session.count, 10, '문제 수를 직접 지정하면 그 값을 따라야 함');
+}
+
+/* ---------------- 기도와 선행 ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  const session = Engine.startFaithSession();
+  eq(session.type, 'faith', '기도와 선행 세션 타입');
+  eq(session.count, Engine.QUESTIONS_PER_FAITH, '기도와 선행 문제 수는 항상 고정');
+
+  const beforeLuck = state.stats.luck;
+  const beforeStress = state.stats.stress;
+  for (let i = 0; i < session.count; i++) {
+    session.index = i;
+    const problem = Engine.generateNextProblem(state, session);
+    Engine.applyCorrect(state, session, problem);
+  }
+  ok(state.stats.luck > beforeLuck, '기도와 선행 정답은 행운을 올려야 함');
+  ok(state.stats.stress < beforeStress, '기도와 선행 정답은 스트레스를 내려야 함(차분해지는 시간)');
+  eq(state.gold, Engine.makeInitialState().gold, '기도와 선행은 골드를 주지 않는 활동이어야 함');
+
+  const outcome = Engine.finishFaithOutcome(session);
+  eq(outcome.correctCount, session.count, '전부 맞혔으면 correctCount가 count와 같아야 함');
+  ok(outcome.perfect, '전부 맞혔으면 만점 처리되어야 함');
+}
+{
+  // 틀려도 벌점이 없어야 한다(지식을 겨루는 활동이 아니라 마음가짐을 돌아보는 시간)
+  const state = Engine.makeInitialState();
+  const session = Engine.startFaithSession();
+  const beforeStats = JSON.parse(JSON.stringify(state.stats));
+  Engine.applyWrong(state, session);
+  eq(state.stats.stamina, beforeStats.stamina, '기도와 선행은 오답이어도 체력이 깎이면 안 됨');
+  eq(state.stats.stress, beforeStats.stress, '기도와 선행은 오답이어도 스트레스가 오르면 안 됨');
 }
 
 summary('game-engine.js');

@@ -30,6 +30,7 @@
       quiz: document.getElementById('screen-quiz'),
       sessionSummary: document.getElementById('screen-session-summary'),
       event: document.getElementById('screen-event'),
+      noblePromotion: document.getElementById('screen-noble-promotion'),
       branching: document.getElementById('screen-branching'),
       ending: document.getElementById('screen-ending'),
       endingGallery: document.getElementById('screen-ending-gallery'),
@@ -54,6 +55,9 @@
     characterPortrait: document.getElementById('character-portrait'),
     characterName: document.getElementById('character-name'),
     outfitBadge: document.getElementById('outfit-badge'),
+    portraitExpRingFill: document.getElementById('portrait-exp-ring-fill'),
+    portraitProgressLabel: document.getElementById('portrait-progress-label'),
+    nobleTitleBadge: document.getElementById('noble-title-badge'),
     mainMenuGrid: document.getElementById('main-menu-grid'),
     scheduleBanner: document.getElementById('schedule-banner'),
     scheduleBannerText: document.getElementById('schedule-banner-text'),
@@ -127,6 +131,10 @@
     eventTitle: document.getElementById('event-title'),
     eventDesc: document.getElementById('event-desc'),
     btnEventConfirm: document.getElementById('btn-event-confirm'),
+
+    nobleTitleInput: document.getElementById('noble-title-input'),
+    nobleTitleError: document.getElementById('noble-title-error'),
+    btnNobleTitleConfirm: document.getElementById('btn-noble-title-confirm'),
 
     branchingEmoji: document.getElementById('branching-emoji'),
     branchingPrompt: document.getElementById('branching-prompt'),
@@ -437,6 +445,25 @@
     `;
   }
 
+  // 옷 단계(평범한 옷 → 대관식 드레스)와 같은 순서로, 능력치 막대와 톤을
+  // 맞춘 회색→파랑→보라→핑크→금색 팔레트에 만점(품위 100) 전용 밝은 금색을
+  // 하나 더한 6단계 색상표. 초상화 EXP 링이 지금 품위 단계에 맞는 색으로 보이게 한다.
+  const PORTRAIT_RING_COLORS = ['#8a93b8', '#6fa8ff', '#b48fff', '#ff8fb3', '#ffd873', '#fff6c9'];
+  const PORTRAIT_RING_CIRCUMFERENCE = 2 * Math.PI * 46;
+
+  // 메인 화면 초상화 테두리에 "평민 → 공주" 여정을 경험치 링으로 보여준다.
+  // 진행도는 옷을 실제로 갈아입었는지가 아니라 그 근거가 되는 품위 점수
+  // 자체(0~100)를 기준으로 하여, 성장 그 자체를 보여주는 지표로 삼는다.
+  function updatePortraitProgressRing() {
+    const grace = Engine.graceScore(state.stats);
+    const percent = Math.max(0, Math.min(100, grace));
+    const outfit = Engine.currentOutfit(state.stats);
+    const offset = PORTRAIT_RING_CIRCUMFERENCE * (1 - percent / 100);
+    el.portraitExpRingFill.style.strokeDashoffset = String(offset);
+    el.portraitExpRingFill.style.stroke = PORTRAIT_RING_COLORS[outfit.tierIndex];
+    el.portraitProgressLabel.textContent = `평민 → 공주 ${Math.round(percent)}%`;
+  }
+
   function renderMain() {
     playBgm('default');
     el.turnLabel.textContent = yearMonthLabel(state.turn);
@@ -450,9 +477,70 @@
     const equippedTier = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.characterPortrait, state.wardrobe.equipped, 'main');
     el.outfitBadge.textContent = `${equippedTier.emoji} ${equippedTier.name}`;
+    updatePortraitProgressRing();
+    if (state.nobleTitle) {
+      el.nobleTitleBadge.textContent = `👑 ${state.nobleTitle}`;
+      el.nobleTitleBadge.style.display = 'inline-block';
+    } else {
+      el.nobleTitleBadge.style.display = 'none';
+    }
     const { total: projectedDeltas } = Engine.estimateRemainingWeeksDelta(state);
     renderStatPanel(el.mainStatPanel, state.stats, projectedDeltas);
     updateScheduleBanner();
+  }
+
+  // 성장 능력치 6개가 전부 Lv5를 다 채우면(값 50), 메인 화면으로 돌아가는
+  // 대신 왕실 작위 수여 이벤트를 먼저 보여준다. 그 외의 경우엔 평소처럼
+  // 메인 화면을 그린다. onArrived는 실제로 메인 화면에 도착했을 때만
+  // 실행할 후속 작업(예: 왕자님과 우연히 마주치는 토스트)을 위한 콜백이다.
+  function goToMainScreen(onArrived) {
+    if (Engine.noblePromotionEligible(state)) {
+      showNoblePromotionCeremony(() => {
+        renderMain();
+        showScreen('main');
+        if (onArrived) onArrived();
+      });
+      return;
+    }
+    renderMain();
+    showScreen('main');
+    if (onArrived) onArrived();
+  }
+
+  // 작위 수여 확인 뒤 무엇을 할지는 상황에 따라 다르다(보통은 메인 화면으로,
+  // 하지만 마지막 턴에 조건을 채운 경우엔 엔딩으로 이어져야 한다). 그래서
+  // "메인으로 가기"를 하드코딩하지 않고 호출부가 넘겨준 콜백을 그대로 실행한다.
+  let afterNoblePromotionConfirm = null;
+
+  function showNoblePromotionCeremony(afterConfirm) {
+    afterNoblePromotionConfirm = afterConfirm || (() => { renderMain(); showScreen('main'); });
+    el.nobleTitleInput.value = '';
+    el.nobleTitleError.textContent = '';
+    showScreen('noblePromotion');
+  }
+
+  el.btnNobleTitleConfirm.addEventListener('click', () => {
+    if (!Engine.grantNobleTitle(state, el.nobleTitleInput.value)) {
+      el.nobleTitleError.textContent = '작위명을 입력해주세요';
+      return;
+    }
+    saveGame();
+    showLevelToast(`👑 ${state.nobleTitle} 작위를 받아 귀족이 되었어요!`);
+    const next = afterNoblePromotionConfirm || (() => { renderMain(); showScreen('main'); });
+    afterNoblePromotionConfirm = null;
+    next();
+  });
+
+  // 게임이 끝나는 턴(마지막 달)에 마침 승급 조건도 함께 채웠다면, 엔딩으로
+  // 곧장 넘어가기 전에 작위 수여 이벤트를 먼저 보여주고 그 다음 엔딩으로
+  // 이어간다(그렇지 않으면 승급 기회가 영영 사라짐 — 엔딩 화면은 저장을
+  // 지우고 처음부터 다시 시작하게 만들기 때문).
+  function showEndingOrNoblePromotionFirst() {
+    if (Engine.noblePromotionEligible(state)) {
+      showNoblePromotionCeremony(() => showEnding());
+      return;
+    }
+    showEnding();
   }
 
   /* ---------------- 레벨업 토스트 ---------------- */
@@ -501,6 +589,18 @@
     nextQuizQuestion();
   }
 
+  function startCreativitySession(count) {
+    session = Engine.startCreativitySession(count);
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
+  function startFaithSession() {
+    session = Engine.startFaithSession();
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
   // 세션 내내 같은 선생님/왕실 학자가 도움을 주는 느낌을 주기 위해, 도움 캐릭터를
   // 세션 시작 시(첫 문제에서) 한 번만 무작위로 고르고 계속 재사용한다.
   const HINT_HELPER_NPC_IDS = ['teacher', 'sage'];
@@ -537,12 +637,24 @@
                     ? `🌾 텃밭 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
                     : session.type === 'competition'
                       ? '🏆 왕국 수학경시대회'
-                      : session.type === 'cert-exam'
-                        ? `📜 ${Engine.subjectName(session.subject)} ${session.tier.name} 인증 시험`
-                        : `${session.scenario.entryEmoji} ${session.scenario.title}`;
+                      : session.type === 'creativity'
+                        ? '🎨 창의력 올림피아드'
+                        : session.type === 'faith'
+                          ? '🙏 기도와 선행'
+                          : session.type === 'cert-exam'
+                            ? `📜 ${Engine.subjectName(session.subject)} ${session.tier.name} 인증 시험`
+                            : `${session.scenario.entryEmoji} ${session.scenario.title}`;
     el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
-    el.quizLevelBadge.textContent = session.type === 'banquet' ? '예절' : session.type === 'scenario-quiz' ? session.scenario.arc : `Lv.${problem.level}`;
+    el.quizLevelBadge.textContent = session.type === 'banquet'
+      ? '예절'
+      : session.type === 'creativity'
+        ? '창의력'
+        : session.type === 'faith'
+          ? '선행'
+          : session.type === 'scenario-quiz'
+            ? session.scenario.arc
+            : `Lv.${problem.level}`;
     el.quizQuestion.textContent = problem.question;
     el.quizFeedback.textContent = '';
 
@@ -653,6 +765,8 @@
     if (session.type === 'laundry-bonus') { finishLaundryBonusSession(); return; }
     if (session.type === 'garden-bonus') { finishGardenBonusSession(); return; }
     if (session.type === 'competition') { finishCompetitionSession(); return; }
+    if (session.type === 'creativity') { finishCreativitySession(); return; }
+    if (session.type === 'faith') { finishFaithSession(); return; }
     if (session.type === 'cert-exam') { finishCertExamSession(); return; }
 
     const outcome = Engine.finishStudyOrJobOutcome(session);
@@ -701,6 +815,34 @@
     el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
     el.summaryGold.textContent = outcome.goldEarned;
     el.summaryCombo.textContent = session.sessionBestCombo;
+    updateSummaryConfirmLabel();
+    saveGame();
+    showScreen('sessionSummary');
+  }
+
+  function finishCreativitySession() {
+    const beforeTiers = Engine.snapshotGrowthTiers(state.stats);
+    const outcome = Engine.finishCreativityOutcome(state, session);
+    announceStatLevelUps(beforeTiers);
+    el.summaryEmoji.textContent = outcome.perfect ? '🎨' : '✅';
+    el.summaryTitle.textContent = outcome.perfect ? '창의력 올림피아드에서 만점을 받았어요!' : '창의력 올림피아드를 마쳤어요';
+    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
+    el.summaryGold.textContent = outcome.goldEarned;
+    el.summaryCombo.textContent = session.sessionBestCombo;
+    updateSummaryConfirmLabel();
+    saveGame();
+    showScreen('sessionSummary');
+  }
+
+  function finishFaithSession() {
+    const beforeTiers = Engine.snapshotGrowthTiers(state.stats);
+    const outcome = Engine.finishFaithOutcome(session);
+    announceStatLevelUps(beforeTiers);
+    el.summaryEmoji.textContent = outcome.perfect ? '🙏' : '✅';
+    el.summaryTitle.textContent = outcome.perfect ? '기도와 선행으로 마음이 가득 채워졌어요!' : '기도와 선행 시간을 마쳤어요';
+    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
+    el.summaryGold.textContent = session.goldEarned;
+    el.summaryCombo.textContent = outcome.bestCombo;
     updateSummaryConfirmLabel();
     saveGame();
     showScreen('sessionSummary');
@@ -837,7 +979,7 @@
     showScreen('npcSelect');
   }
 
-  el.btnNpcBack.addEventListener('click', () => showScreen('main'));
+  el.btnNpcBack.addEventListener('click', () => goToMainScreen());
 
   function meetNpc(npcId) {
     const beforeTiers = Engine.snapshotGrowthTiers(state.stats);
@@ -970,8 +1112,7 @@
   }
 
   el.btnShopBack.addEventListener('click', () => {
-    renderMain();
-    showScreen('main');
+    goToMainScreen();
   });
 
   el.shopTabBtns.forEach((btn) => {
@@ -1105,6 +1246,15 @@
         return;
       }
       startCompetitionSession(chosenCount);
+    } else if (activity === 'creativity') {
+      if (!Engine.creativityOlympiadUnlocked(state)) {
+        showLevelToast(`🎨 창의력 ${Engine.CREATIVITY_MIN_CREATIVITY} 이상이어야 창의력 올림피아드에 도전할 수 있어요`);
+        advanceWeekOrTurn();
+        return;
+      }
+      startCreativitySession(chosenCount);
+    } else if (activity === 'faith') {
+      startFaithSession();
     }
   }
 
@@ -1170,6 +1320,14 @@
         ? '덧셈뺄셈부터 시작해 점점 어려워지는 문제에 도전해요(문제 수는 직접 선택). 어려워질수록 상금도 커져요'
         : `🔒 지능 ${Engine.COMPETITION_MIN_INTELLIGENCE} 이상 필요 (현재 ${Math.round(state.stats.intelligence)})`;
     }
+    const creativityBtn = el.weekPickList.querySelector('[data-activity="creativity"]');
+    if (creativityBtn) {
+      const unlocked = Engine.creativityOlympiadUnlocked(state);
+      creativityBtn.classList.toggle('locked', !unlocked);
+      creativityBtn.querySelector('.level-desc').textContent = unlocked
+        ? '패턴 찾기, 유추, 공간지각, 창의적 사고 퀴즈에 도전해요(문제 수는 직접 선택). 창의력이 올라요'
+        : `🔒 창의력 ${Engine.CREATIVITY_MIN_CREATIVITY} 이상 필요 (현재 ${Math.round(state.stats.creativity)})`;
+    }
   }
 
   /* ---------------- 이번 달 생활 계획표 ---------------- */
@@ -1194,12 +1352,13 @@
   }
 
   // 공부/알바/왕국 수학경시대회는 문제 수를 도전자가 직접 고를 수 있다.
-  const COUNTABLE_ACTIVITIES = ['study', 'job', 'competition'];
+  const COUNTABLE_ACTIVITIES = ['study', 'job', 'competition', 'creativity'];
 
   function activityDefaultCount(activityId) {
     if (activityId === 'study') return Engine.QUESTIONS_PER_STUDY;
     if (activityId === 'job') return Engine.QUESTIONS_PER_JOB;
     if (activityId === 'competition') return Engine.QUESTIONS_PER_COMPETITION;
+    if (activityId === 'creativity') return Engine.QUESTIONS_PER_CREATIVITY;
     return null;
   }
 
@@ -1357,8 +1516,8 @@
   });
 
   el.btnScheduleBack.addEventListener('click', () => {
-    renderMain(); // 계획을 바꿨을 수 있으니 게이지바의 예상치(반투명 바)도 다시 계산해서 보여준다
-    showScreen('main');
+    // 계획을 바꿨을 수 있으니 게이지바의 예상치(반투명 바)도 다시 계산해서 보여준다
+    goToMainScreen();
   });
 
   function executeSchedule() {
@@ -1542,7 +1701,7 @@
       });
   }
 
-  el.btnStatusBack.addEventListener('click', () => showScreen('main'));
+  el.btnStatusBack.addEventListener('click', () => goToMainScreen());
 
   el.mainMenuGrid.addEventListener('click', (e) => {
     const btn = e.target.closest('.main-menu-btn');
@@ -1561,13 +1720,13 @@
   function advanceTurn() {
     const { ended, princeEncounter } = Engine.advanceTurn(state, TOTAL_TURNS);
     if (ended) {
-      showEnding();
+      showEndingOrNoblePromotionFirst();
       return;
     }
     saveGame();
-    showScreen('main');
-    renderMain();
-    if (princeEncounter) showLevelToast('🤴 궁에서 우연히 왕자님과 마주쳤어요! (호감도 상승)');
+    goToMainScreen(() => {
+      if (princeEncounter) showLevelToast('🤴 궁에서 우연히 왕자님과 마주쳤어요! (호감도 상승)');
+    });
   }
 
   // 한 주(週)의 활동을 마쳤을 때 호출한다. 이번 달(턴) 안에 남은 주가 있으면
@@ -1577,18 +1736,17 @@
     const { monthAdvanced, ended, princeEncounter } = Engine.advanceWeekOrTurn(state, TOTAL_TURNS);
     if (!monthAdvanced) {
       saveGame();
-      showScreen('main');
-      renderMain();
+      goToMainScreen();
       return;
     }
     if (ended) {
-      showEnding();
+      showEndingOrNoblePromotionFirst();
       return;
     }
     saveGame();
-    showScreen('main');
-    renderMain();
-    if (princeEncounter) showLevelToast('🤴 궁에서 우연히 왕자님과 마주쳤어요! (호감도 상승)');
+    goToMainScreen(() => {
+      if (princeEncounter) showLevelToast('🤴 궁에서 우연히 왕자님과 마주쳤어요! (호감도 상승)');
+    });
   }
 
   function showEnding() {
@@ -1626,8 +1784,7 @@
     clearSave();
     saveGame();
     gameStarted = true;
-    showScreen('main');
-    renderMain();
+    goToMainScreen();
   });
 
   el.btnEndingHome.addEventListener('click', () => showScreen('start'));
@@ -1639,8 +1796,7 @@
     clearSave();
     saveGame();
     gameStarted = true;
-    showScreen('main');
-    renderMain();
+    goToMainScreen();
   }
 
   el.btnNewGame.addEventListener('click', () => {
@@ -1663,8 +1819,7 @@
   el.btnContinue.addEventListener('click', () => {
     if (loadGame()) {
       gameStarted = true;
-      showScreen('main');
-      renderMain();
+      goToMainScreen();
     }
   });
 

@@ -79,6 +79,41 @@ eq(Question.SUBJECTS.science.maxLevel, SUBJ.SCIENCE_LEVELS.length, '과학 maxLe
 }
 
 {
+  // 창의력 올림피아드 문제 은행: 예절 문제 은행과 같은 규칙(반복 방지,
+  // 힌트 스포일러 방지)을 그대로 따라야 한다.
+  const session = { askedQuestions: [] };
+  const seen = new Set();
+  for (let i = 0; i < Question.CREATIVITY_PUZZLE_BANK.length; i++) {
+    const q = Question.generateCreativityQuestion(session);
+    ok(!seen.has(q.question), '문제 은행이 남아있는 동안은 같은 창의력 문제를 반복하지 않아야 함');
+    ok(q.choices.includes(q.answer), '창의력 문제 보기 안에 정답이 포함되어야 함');
+    seen.add(q.question);
+  }
+  eq(seen.size, Question.CREATIVITY_PUZZLE_BANK.length, '창의력 문제 은행 전체를 한 바퀴 돌면 모든 문제가 한 번씩 나와야 함');
+  Question.CREATIVITY_PUZZLE_BANK.forEach((q) => {
+    ok(typeof q.hint === 'string' && q.hint.length > 5, `창의력 문제에는 힌트가 있어야 함: "${q.question}"`);
+    ok(!q.hint.includes(q.answer), `창의력 문제 힌트는 정답을 그대로 담고 있으면 안 됨: "${q.question}"`);
+  });
+}
+
+{
+  // 기도와 선행 문제 은행도 마찬가지로 반복 방지/힌트 스포일러 방지 규칙을 따라야 한다.
+  const session = { askedQuestions: [] };
+  const seen = new Set();
+  for (let i = 0; i < Question.FAITH_QUESTIONS.length; i++) {
+    const q = Question.generateFaithQuestion(session);
+    ok(!seen.has(q.question), '문제 은행이 남아있는 동안은 같은 기도와 선행 문제를 반복하지 않아야 함');
+    ok(q.choices.includes(q.answer), '기도와 선행 문제 보기 안에 정답이 포함되어야 함');
+    seen.add(q.question);
+  }
+  eq(seen.size, Question.FAITH_QUESTIONS.length, '기도와 선행 문제 은행 전체를 한 바퀴 돌면 모든 문제가 한 번씩 나와야 함');
+  Question.FAITH_QUESTIONS.forEach((q) => {
+    ok(typeof q.hint === 'string' && q.hint.length > 5, `기도와 선행 문제에는 힌트가 있어야 함: "${q.question}"`);
+    ok(!q.hint.includes(q.answer), `기도와 선행 문제 힌트는 정답을 그대로 담고 있으면 안 됨: "${q.question}"`);
+  });
+}
+
+{
   const scenario = { quiz: { bank: [
     { question: 'Q1', choices: ['a', 'b'], answer: 'a', explanation: 'e1' },
     { question: 'Q2', choices: ['a', 'b'], answer: 'b', explanation: 'e2' },
@@ -118,6 +153,14 @@ eq(Question.SUBJECTS.science.maxLevel, SUBJ.SCIENCE_LEVELS.length, '과학 maxLe
   const jobSession = { type: 'job' };
   Question.generateNextProblem(50, jobSession);
   ok(Question.SUBJECT_KEYS.includes(jobSession.currentSubject), '알바 세션도 currentSubject를 채워야 함');
+
+  const creativitySession = { type: 'creativity', askedQuestions: [] };
+  const creativityQ = Question.generateNextProblem(50, creativitySession);
+  ok(Question.CREATIVITY_PUZZLE_BANK.some((q) => q.question === creativityQ.question), '창의력 올림피아드 세션은 창의력 문제 은행에서 나와야 함');
+
+  const faithSession = { type: 'faith', askedQuestions: [] };
+  const faithQ = Question.generateNextProblem(50, faithSession);
+  ok(Question.FAITH_QUESTIONS.some((q) => q.question === faithQ.question), '기도와 선행 세션은 기도와 선행 문제 은행에서 나와야 함');
 }
 
 {

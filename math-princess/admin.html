@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>프린세스 메이커 · 관리자</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗂️</text></svg>" />
+<link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+  <div id="app">
+    <section id="screen-pin" class="admin-screen active">
+      <div class="pin-card" id="pin-card">
+        <div class="pin-title">🔐 관리자 페이지</div>
+        <div class="pin-desc">PIN 번호 6자리를 입력하세요</div>
+        <div id="pin-dots" class="pin-dots"></div>
+        <div id="pin-error" class="pin-error"></div>
+        <div class="pin-keypad" id="pin-keypad">
+          <button class="pin-key" data-key="1">1</button>
+          <button class="pin-key" data-key="2">2</button>
+          <button class="pin-key" data-key="3">3</button>
+          <button class="pin-key" data-key="4">4</button>
+          <button class="pin-key" data-key="5">5</button>
+          <button class="pin-key" data-key="6">6</button>
+          <button class="pin-key" data-key="7">7</button>
+          <button class="pin-key" data-key="8">8</button>
+          <button class="pin-key" data-key="9">9</button>
+          <button class="pin-key pin-key-erase" data-key="erase">⌫</button>
+          <button class="pin-key" data-key="0">0</button>
+          <button class="pin-key pin-key-submit" id="btn-pin-submit" data-key="submit">확인</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-dashboard" class="admin-screen">
+      <header class="admin-header">
+        <div class="admin-header-title">📊 콘텐츠 ↔ 역량 관리자 페이지</div>
+        <div class="admin-header-actions">
+          <a href="index.html" class="admin-btn admin-btn-secondary">🏠 게임으로</a>
+          <button id="btn-lock" class="admin-btn admin-btn-secondary">🔒 잠그기</button>
+        </div>
+      </header>
+
+      <div class="admin-body">
+        <section class="admin-section" id="section-overview">
+          <h2>개요</h2>
+          <div id="overview-cards" class="overview-cards"></div>
+        </section>
+
+        <section class="admin-section" id="section-notes">
+          <h2>설계 노트 · 역량 모델과 게임의 연계</h2>
+          <div id="design-notes" class="design-notes"></div>
+        </section>
+
+        <section class="admin-section" id="section-matrix">
+          <h2>역량 커버리지 매트릭스 (콘텐츠 × 6대 핵심역량)</h2>
+          <p class="admin-card-desc" style="margin-bottom:10px;">각 행(과목/활동/상황판단 유형/시나리오)이 어떤 핵심역량과 연결되어 있는지 한눈에 보여줍니다.</p>
+          <div class="table-scroll"><table id="coverage-matrix"></table></div>
+        </section>
+
+        <section class="admin-section" id="section-subjects">
+          <h2>과목별 콘텐츠 현황 (지식 축)</h2>
+          <div id="subject-list" class="admin-list"></div>
+        </section>
+
+        <section class="admin-section" id="section-cert">
+          <h2>기초 과목 인증(동/은/금메달) 현황</h2>
+          <div id="cert-list" class="admin-list"></div>
+        </section>
+
+        <section class="admin-section" id="section-activities">
+          <h2>스케줄 활동별 역량 태그</h2>
+          <div id="activity-list" class="admin-list"></div>
+        </section>
+
+        <section class="admin-section" id="section-etiquette">
+          <h2>연회 예절 · 상황판단 문제</h2>
+          <div class="filter-row" id="etiquette-filter"></div>
+          <div id="etiquette-list" class="admin-list"></div>
+        </section>
+
+        <section class="admin-section" id="section-creativity">
+          <h2>창의력 올림피아드 문제</h2>
+          <div class="filter-row" id="creativity-filter"></div>
+          <div id="creativity-list" class="admin-list"></div>
+        </section>
+
+        <section class="admin-section" id="section-faith">
+          <h2>기도와 선행 문제</h2>
+          <div class="filter-row" id="faith-filter"></div>
+          <div id="faith-list" class="admin-list"></div>
+        </section>
+
+        <section class="admin-section" id="section-scenarios">
+          <h2>시나리오 (인물별 1회성 이야기)</h2>
+          <div id="scenario-list" class="admin-list"></div>
+        </section>
+      </div>
+    </section>
+  </div>
+
+  <script src="problems.js"></script>
+  <script src="subjects.js"></script>
+  <script src="endings.js"></script>
+  <script src="scenarios.js"></script>
+  <script src="question-engine.js"></script>
+  <script src="reward-engine.js"></script>
+  <script src="game-engine.js"></script>
+  <script src="competency-model.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

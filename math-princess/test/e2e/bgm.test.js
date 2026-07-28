@@ -52,6 +52,10 @@ async function testScenarioTrackSwitchAndRevert() {
       wardrobe: { equipped: 5, owned: [true, true, true, true, true, true], notifiedGraceTier: 5 },
       weekPlan: ['friend', null, null, null],
       completedScenarios: ['prince-and-stray-dog', 'grand-ball-debut', 'garden-walk-prince'],
+      // 이 테스트는 배경음악 전환을 검증하는 것이지 신분 상승 이벤트가 목적이
+      // 아니므로, 능력치가 전부 높은 이 시드에서 승급 이벤트가 끼어들지
+      // 않도록 이미 작위를 받은 상태로 시작한다.
+      nobleTitle: '테스트 백작',
     });
     await seedAndContinue(page, state);
     await page.click('[data-menu="execute"]');
