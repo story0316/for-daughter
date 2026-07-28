@@ -152,9 +152,9 @@
       <ul>
         <li><b>역량 축</b>: 2022 개정 교육과정(교육부) 총론의 6대 핵심역량 — 자기관리, 지식정보처리, 창의적 사고, 심미적 감성, 협력적 소통, 공동체 역량을 그대로 채택했습니다. 한국 초/중학교 교육과정이 실제로 쓰는 분류라 이 게임의 사용자(한국 초/중학생)에게 가장 직접적으로 맞아떨어집니다.</li>
         <li><b>지식 축</b>: 수학/영어/과학 세 과목의 학년별 교과 지식(기존 study/job/기초 과목 인증 시스템).</li>
-        <li><b>상황판단 축</b>: 연회 예절 문제와 시나리오 선택지처럼 "이 상황에서 어떤 행동이 바람직한가"를 묻는 콘텐츠 전용 축입니다. 인사·식사 예절뿐 아니라 디지털 시민의식, 안전, 갈등해결, 협력과 공정, 다양성 존중, 정직과 책임감까지 생활 전반으로 넓혔습니다.</li>
+        <li><b>상황판단·사고력 축</b>: 연회 예절 문제, 창의력 올림피아드 퀴즈, 기도와 선행 문제, 시나리오 선택지처럼 "이 상황에서 어떤 행동이 바람직한가" 또는 "어떻게 생각을 확장할까"를 묻는 콘텐츠 전용 축입니다. 인사·식사 예절뿐 아니라 디지털 시민의식, 안전, 갈등해결, 협력과 공정, 다양성 존중, 정직과 책임감, 패턴/유추/공간지각 같은 사고력, 성경 지식·어른 공경·친구 배려·기도하는 마음가짐까지 생활 전반으로 넓혔습니다.</li>
         <li>OECD <a href="https://www.oecd.org/en/about/projects/future-of-education-and-skills-2030.html" target="_blank" rel="noopener">Learning Compass 2030</a>이 제시한 지식·기술·태도·가치를 아우르는 역량 개념과, Romero, Usart &amp; Ott (2015) <a href="https://journals.sagepub.com/doi/10.1177/1555412014548919" target="_blank" rel="noopener">"Can Serious Games Contribute to Developing and Sustaining 21st-Century Skills?"</a> 연구, 그리고 게임 기반 학습이 인지·사회·정서 발달을 함께 촉진할 수 있다는 <a href="https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2024.1307881/full" target="_blank" rel="noopener">2024년 체계적 문헌 고찰</a>을 활동별 역량 태깅의 참고 근거로 삼았습니다.</li>
-        <li>아래 매트릭스는 이 세 축이 실제 게임 콘텐츠(과목/활동/예절 문제/시나리오)와 어떻게 연결되는지 한눈에 보여줍니다.</li>
+        <li>아래 매트릭스는 이 세 축이 실제 게임 콘텐츠(과목/활동/예절·창의력·기도와 선행 문제/시나리오)와 어떻게 연결되는지 한눈에 보여줍니다.</li>
       </ul>`;
   }
 
@@ -188,7 +188,7 @@
       rows.push(`<tr><td>${def.emoji} ${def.name}</td>${competencyDotsRow(tag.competencies)}</tr>`);
     });
 
-    rows.push(axisHeaderRow('🧭 상황판단 축 — 연회 예절 유형'));
+    rows.push(axisHeaderRow('🧭 상황판단·사고력 축 — 예절/창의력/기도와 선행 유형'));
     CM.JUDGMENT_CATEGORIES.forEach((j) => {
       rows.push(`<tr><td>${j.emoji} ${j.id}</td>${competencyDotsRow(j.competencies)}</tr>`);
     });

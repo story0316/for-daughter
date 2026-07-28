@@ -495,7 +495,11 @@
   // 실행할 후속 작업(예: 왕자님과 우연히 마주치는 토스트)을 위한 콜백이다.
   function goToMainScreen(onArrived) {
     if (Engine.noblePromotionEligible(state)) {
-      showNoblePromotionCeremony();
+      showNoblePromotionCeremony(() => {
+        renderMain();
+        showScreen('main');
+        if (onArrived) onArrived();
+      });
       return;
     }
     renderMain();
@@ -503,7 +507,13 @@
     if (onArrived) onArrived();
   }
 
-  function showNoblePromotionCeremony() {
+  // 작위 수여 확인 뒤 무엇을 할지는 상황에 따라 다르다(보통은 메인 화면으로,
+  // 하지만 마지막 턴에 조건을 채운 경우엔 엔딩으로 이어져야 한다). 그래서
+  // "메인으로 가기"를 하드코딩하지 않고 호출부가 넘겨준 콜백을 그대로 실행한다.
+  let afterNoblePromotionConfirm = null;
+
+  function showNoblePromotionCeremony(afterConfirm) {
+    afterNoblePromotionConfirm = afterConfirm || (() => { renderMain(); showScreen('main'); });
     el.nobleTitleInput.value = '';
     el.nobleTitleError.textContent = '';
     showScreen('noblePromotion');
@@ -516,9 +526,22 @@
     }
     saveGame();
     showLevelToast(`👑 ${state.nobleTitle} 작위를 받아 귀족이 되었어요!`);
-    renderMain();
-    showScreen('main');
+    const next = afterNoblePromotionConfirm || (() => { renderMain(); showScreen('main'); });
+    afterNoblePromotionConfirm = null;
+    next();
   });
+
+  // 게임이 끝나는 턴(마지막 달)에 마침 승급 조건도 함께 채웠다면, 엔딩으로
+  // 곧장 넘어가기 전에 작위 수여 이벤트를 먼저 보여주고 그 다음 엔딩으로
+  // 이어간다(그렇지 않으면 승급 기회가 영영 사라짐 — 엔딩 화면은 저장을
+  // 지우고 처음부터 다시 시작하게 만들기 때문).
+  function showEndingOrNoblePromotionFirst() {
+    if (Engine.noblePromotionEligible(state)) {
+      showNoblePromotionCeremony(() => showEnding());
+      return;
+    }
+    showEnding();
+  }
 
   /* ---------------- 레벨업 토스트 ---------------- */
 
@@ -1697,7 +1720,7 @@
   function advanceTurn() {
     const { ended, princeEncounter } = Engine.advanceTurn(state, TOTAL_TURNS);
     if (ended) {
-      showEnding();
+      showEndingOrNoblePromotionFirst();
       return;
     }
     saveGame();
@@ -1717,7 +1740,7 @@
       return;
     }
     if (ended) {
-      showEnding();
+      showEndingOrNoblePromotionFirst();
       return;
     }
     saveGame();
