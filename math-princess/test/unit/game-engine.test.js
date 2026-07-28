@@ -401,6 +401,90 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   ok(withCareerSum / N > withoutCareerSum / N, '서기관으로 취업하면 왕자님을 만날 때 애정도 보너스가 더 붙어야 함');
 }
 
+/* ---------------- 기초 과목 등급 인증(동/은/금메달) ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  eq(state.certifications.math, null, '초기 상태는 세 과목 모두 미인증이어야 함');
+  eq(state.certifications.english, null, '초기 상태는 세 과목 모두 미인증이어야 함');
+  eq(state.certifications.science, null, '초기 상태는 세 과목 모두 미인증이어야 함');
+  eq(Engine.MEDAL_TIERS.length, 3, '메달 등급은 동/은/금 3단계여야 함');
+  eq(Engine.CERT_SUBJECT_KEYS.length, 3, '인증 과목은 수학/영어/과학 3개여야 함');
+}
+{
+  // 지능이 낮으면 동메달조차 시험 볼 수 없어야 하고, 지능이 오르면 응시할 수 있어야 함
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = 0;
+  ok(Engine.certExamEligible(state, 'math'), '지능 0이어도 동메달(레벨1)은 처음부터 응시 가능해야 함');
+  eq(Engine.nextMedalTier(state, 'math').id, 'bronze', '아직 미인증이면 다음 등급은 동메달이어야 함');
+}
+{
+  // 과학은 레벨이 4단계(중1)까지밖에 없어서, 은메달을 딴 뒤 금메달(레벨7)에는
+  // 지능이 아무리 높아도 영원히 응시할 수 없어야 한다(콘텐츠 자체가 없으므로).
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = 90;
+  state.certifications.science = 'silver';
+  eq(Engine.nextMedalTier(state, 'science').id, 'gold', '은메달을 딴 뒤 다음 목표는 금메달이어야 함');
+  ok(!Engine.certExamEligible(state, 'science'), '과학은 레벨7 콘텐츠가 없어서 지능이 높아도 금메달에 응시할 수 없어야 함');
+  // 반면 수학/영어는 레벨7 콘텐츠가 있으므로 지능만 충분하면 응시 가능해야 함
+  state.certifications.math = 'silver';
+  state.certifications.english = 'silver';
+  ok(Engine.certExamEligible(state, 'math'), '수학은 지능이 충분하면 금메달에 응시할 수 있어야 함');
+  ok(Engine.certExamEligible(state, 'english'), '영어는 지능이 충분하면 금메달에 응시할 수 있어야 함');
+}
+{
+  // 이미 금메달(최고 등급)까지 딴 과목은 더 도전할 다음 등급이 없어야 함
+  // (상태 화면 UI도 이 경우 "시험 보기" 버튼 대신 "최고 등급 달성"만 보여줌)
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = 90;
+  state.certifications.math = 'gold';
+  eq(Engine.nextMedalTier(state, 'math'), null, '금메달까지 다 땄으면 다음 등급이 없어야 함');
+  ok(!Engine.certExamEligible(state, 'math'), '다음 등급이 없으면 응시 대상 자체가 없어야 함');
+}
+{
+  // 실패해도 이미 딴 등급이 깎이지 않아야 함(은메달 보유 중 금메달 도전에 실패)
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = 90;
+  state.certifications.math = 'silver';
+  const session = Engine.startCertExamSession(state, 'math');
+  eq(session.tier.id, 'gold', '은메달 보유 중이면 다음 목표는 금메달이어야 함');
+  for (let i = 0; i < session.count; i++) {
+    session.index = i;
+    Engine.applyWrong(state, session);
+  }
+  const outcome = Engine.finishCertExamOutcome(state, session);
+  ok(!outcome.pass, '전부 틀리면 통과하지 못해야 함');
+  eq(state.certifications.math, 'silver', '금메달 도전에 실패해도 기존에 딴 은메달이 유지되어야 함');
+}
+{
+  // 정상적으로 통과하면 메달이 기록되고 축하금이 지급되어야 함
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = 60;
+  const session = Engine.startCertExamSession(state, 'math');
+  eq(session.type, 'cert-exam', '세션 타입은 cert-exam이어야 함');
+  eq(session.count, session.tier.questionCount, '세션 문제 수는 그 등급의 questionCount와 같아야 함');
+  const beforeGold = state.gold;
+  for (let i = 0; i < session.count; i++) {
+    session.index = i;
+    const problem = Engine.generateNextProblem(state, session);
+    eq(problem.level, session.tier.requiredLevel, '인증 시험 문제는 그 등급이 요구하는 레벨로만 나와야 함');
+    Engine.applyCorrect(state, session, problem);
+  }
+  const outcome = Engine.finishCertExamOutcome(state, session);
+  ok(outcome.pass, '전부 맞히면 통과해야 함');
+  eq(state.certifications.math, 'bronze', '동메달을 통과하면 certifications에 기록되어야 함');
+  ok(state.gold > beforeGold, '인증에 통과하면 축하금이 지급되어야 함');
+}
+{
+  // migrateLoadedState: 옛 저장 데이터(certifications 필드 없음)와 손상된 값 모두 정상화되어야 함
+  const migrated = Engine.migrateLoadedState({ turn: 1 });
+  eq(migrated.certifications.math, null, 'certifications 필드가 없던 옛 저장 데이터는 전부 미인증으로 채워져야 함');
+
+  const withGarbage = Engine.migrateLoadedState({ turn: 1, certifications: { math: 'platinum', english: 'gold', science: null } });
+  eq(withGarbage.certifications.math, null, '존재하지 않는 등급 id는 미인증으로 되돌려야 함');
+  eq(withGarbage.certifications.english, 'gold', '유효한 등급 id는 그대로 유지되어야 함');
+}
+
 /* ---------------- 수학 경시대회 ---------------- */
 
 {

@@ -17,7 +17,7 @@
     // 세션 도중에는 콤보만 쌓고, 정답/오답 보상은 세션이 끝날 때 한 번에
     // 반영하는 유형(보너스 미니게임들). 연회/공부/알바처럼 문제마다 바로
     // 보상을 주는 유형과 구분하기 위한 목록이다.
-    const DEFERRED_REWARD_TYPES = ['scenario-quiz', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
+    const DEFERRED_REWARD_TYPES = ['scenario-quiz', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus', 'cert-exam'];
 
     function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
@@ -122,6 +122,13 @@
       return { gold: Math.round((20 + topLevel * 4) * lm) };
     }
 
+    // 기초 과목 등급 인증 시험을 통과했을 때 주는 축하금. 등급이 높을수록
+    // (동=0, 은=1, 금=2) 더 큰 목돈을 준다 - 매주 반복하는 활동이 아니라
+    // 한 번뿐인 성취라서 그만큼 화끈하게 보상한다.
+    function certExamReward(tierIndex) {
+      return { gold: 80 + tierIndex * 70 };
+    }
+
     // 인물 호감도 증가량. rangeOrValue는 [최소,최대] 배열이거나 고정값.
     // 왕실 초대장(ITEMS의 affectionBonus) 보너스가 항상 함께 적용된다.
     function affectionGain(rangeOrValue, items) {
@@ -134,7 +141,7 @@
       itemBonusSum, comboMultiplier,
       correctAnswerReward, wrongAnswerPenalty,
       exerciseBonusReward, restBonusReward, laundryBonusReward, gardenBonusReward,
-      competitionQuestionReward, competitionPerfectBonus, affectionGain,
+      competitionQuestionReward, competitionPerfectBonus, certExamReward, affectionGain,
     };
   }
 
