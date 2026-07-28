@@ -89,7 +89,10 @@ async function testScienceCannotReachGoldEvenAtHighIntelligence() {
     const scienceRow = (await page.$$eval('.status-cert-row', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()))).find((r) => r.startsWith('과학'));
     ok(scienceRow.includes('은메달'), '과학은 은메달 상태를 유지해야 함');
     ok(!scienceRow.includes('금메달 시험 보기'), `과학은 금메달 콘텐츠가 없어서 지능이 아무리 높아도 시험 버튼이 뜨면 안 됨 (got "${scienceRow}")`);
-    ok(scienceRow.includes('준비가 더 필요'), `과학의 금메달은 "준비가 더 필요" 안내가 떠야 함 (got "${scienceRow}")`);
+    // "곧 준비되면 도전 가능"처럼 오해를 주는 잠김 문구가 아니라, 콘텐츠 자체가
+    // 없어서 여기가 한계라는 걸 명확히 알려주는 문구가 떠야 한다.
+    ok(scienceRow.includes('최고 등급이에요'), `과학의 금메달은 "여기가 한계"라는 안내가 떠야 함(잠김 문구가 아니라) (got "${scienceRow}")`);
+    ok(!scienceRow.includes('준비가 더 필요'), `과학의 금메달은 "준비가 더 필요"(곧 될 것 같은 문구)가 뜨면 안 됨 (got "${scienceRow}")`);
   });
   ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
 }

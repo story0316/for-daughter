@@ -17,7 +17,7 @@
 
     const SUBJECTS = {
       math: { name: '수학', isLevelUnlocked: P.isLevelUnlocked, generateProblem: P.generateProblem, maxLevel: 9 },
-      english: { name: '영어', isLevelUnlocked: SUBJ.isEnglishLevelUnlocked, generateProblem: SUBJ.generateEnglishProblem, maxLevel: 4 },
+      english: { name: '영어', isLevelUnlocked: SUBJ.isEnglishLevelUnlocked, generateProblem: SUBJ.generateEnglishProblem, maxLevel: 8 },
       science: { name: '과학', isLevelUnlocked: SUBJ.isScienceLevelUnlocked, generateProblem: SUBJ.generateScienceProblem, maxLevel: 4 },
     };
     const SUBJECT_KEYS = Object.keys(SUBJECTS);
@@ -118,8 +118,19 @@
       // 왕국 수학경시대회: 문제마다 미리 정해둔 난이도 사다리(session.levels)를
       // 따라간다(덧셈뺄셈부터 점점 어려워짐), 다른 과목과 섞이지 않는다.
       if (session.type === 'competition') return P.generateProblem(session.levels[session.index]);
-      // 기초 과목 등급 인증 시험: 그 과목의 그 등급이 요구하는 레벨로만 출제한다.
-      if (session.type === 'cert-exam') return SUBJECTS[session.subject].generateProblem(session.tier.requiredLevel);
+      // 기초 과목 등급 인증 시험: 그 과목의 그 등급이 요구하는 레벨로만
+      // 출제한다. 영어/과학은 한 레벨당 문제 은행이 6개뿐이라 5문제를 뽑을
+      // 때 같은 문제가 반복되기 쉬운데, 한 시험 안에서 같은 문제가 또
+      // 나오면 방금 본 설명 때문에 사실상 정답을 아는 채로 다시 풀게 되어
+      // 시험의 의미가 옅어진다. generateProblem에 askedQuestions를 넘기면
+      // (영어/과학은) 이미 나온 문제를 걸러내고 뽑아주므로 같은 회차
+      // 안에서는 반복되지 않는다(수학은 절차적으로 생성되어 이 인자를 쓰지
+      // 않지만 넘겨도 무해하다).
+      if (session.type === 'cert-exam') {
+        const problem = SUBJECTS[session.subject].generateProblem(session.tier.requiredLevel, session.askedQuestions);
+        session.askedQuestions.push(problem.question);
+        return problem;
+      }
       if (MULTI_SUBJECT_TYPES.includes(session.type)) {
         let picked;
         if (session.type === 'job') picked = pickRandomSubjectLevel1();

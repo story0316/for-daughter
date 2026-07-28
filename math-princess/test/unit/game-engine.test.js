@@ -483,6 +483,71 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   const withGarbage = Engine.migrateLoadedState({ turn: 1, certifications: { math: 'platinum', english: 'gold', science: null } });
   eq(withGarbage.certifications.math, null, '존재하지 않는 등급 id는 미인증으로 되돌려야 함');
   eq(withGarbage.certifications.english, 'gold', '유효한 등급 id는 그대로 유지되어야 함');
+
+  // 배열은 typeof가 'object'라서 이전엔 검증을 통과해버렸고, math/english/science를
+  // 배열의 "이름 붙은 속성"으로 써버리면 JSON.stringify가 통째로 날려버려서
+  // 다음에 저장할 때 인증 기록이 조용히 사라지는 문제가 있었다.
+  const withArray = Engine.migrateLoadedState({ turn: 1, certifications: [] });
+  ok(!Array.isArray(withArray.certifications), 'certifications가 배열로 저장돼 있었다면 객체로 정상화되어야 함');
+  eq(withArray.certifications.math, null, '배열이었던 certifications을 정상화하면 미인증 상태여야 함');
+  const roundTripped = JSON.parse(JSON.stringify(withArray.certifications));
+  eq(roundTripped.math, null, '정상화된 certifications는 JSON 직렬화에도 필드가 살아남아야 함');
+}
+{
+  // 과학은 은메달을 딴 뒤 금메달 콘텐츠가 아예 없어서(레벨7 없음) 영원히
+  // 응시할 수 없는데, "곧 준비되면 도전 가능"처럼 오해를 주는 문구 대신
+  // "여기가 한계"라는 걸 UI가 구분할 수 있어야 한다.
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = 100;
+  state.certifications.science = 'silver';
+  const nextTier = Engine.nextMedalTier(state, 'science');
+  ok(!Engine.certTierContentExists('science', nextTier), '과학은 금메달 레벨(7) 콘텐츠 자체가 없어야 함');
+
+  // 반대로 수학처럼 콘텐츠는 있지만 아직 지능이 부족해서 응시 못 하는
+  // 경우는(예: 막 은메달을 딴 직후) certTierContentExists가 true여야 한다.
+  const state2 = Engine.makeInitialState();
+  state2.stats.intelligence = 30;
+  state2.certifications.math = 'silver';
+  const mathNextTier = Engine.nextMedalTier(state2, 'math');
+  ok(Engine.certTierContentExists('math', mathNextTier), '수학은 금메달 레벨(7) 콘텐츠가 실제로 존재해야 함');
+  ok(!Engine.certExamEligible(state2, 'math'), '콘텐츠는 있어도 지능이 아직 부족하면 응시는 불가능해야 함');
+}
+{
+  // 인증 시험 오답에는 실제 대가(체력/스트레스)가 있어야 한다 - 그렇지
+  // 않으면 통과할 때까지 공짜로 무한 재도전할 수 있어 시험의 의미가 없다.
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = 60;
+  state.stats.stamina = 50;
+  state.stats.stress = 10;
+  const session = Engine.startCertExamSession(state, 'math');
+  Engine.applyWrong(state, session);
+  ok(state.stats.stamina < 50, '인증 시험 오답은 체력을 깎아야 함(무한 재도전 방지)');
+  ok(state.stats.stress > 10, '인증 시험 오답은 스트레스도 쌓여야 함');
+
+  const beforeGold = state.gold;
+  const problem = Engine.generateNextProblem(state, session);
+  Engine.applyCorrect(state, session, problem);
+  eq(state.gold, beforeGold, '인증 시험은 정답을 맞혀도 문제당 골드가 바로 붙지 않아야 함(합격 보상은 시험 종료 시 한 번에)');
+}
+{
+  // 영어/과학처럼 문제 은행이 작은 과목(레벨당 6개)은 5문제를 뽑을 때
+  // 같은 시험 회차 안에서 문제가 반복되면, 방금 본 설명 때문에 사실상
+  // 정답을 아는 채로 다시 풀게 되어 시험이 쉬워진다. 같은 세션 안에서는
+  // 반복되지 않아야 한다(은행 크기 6 > 문제 수 5이므로 항상 피할 수 있음).
+  const state = Engine.makeInitialState();
+  state.stats.intelligence = 60;
+  let anyRepeat = false;
+  for (let trial = 0; trial < 30; trial++) {
+    const session = Engine.startCertExamSession(state, 'english');
+    const seen = new Set();
+    for (let i = 0; i < session.count; i++) {
+      session.index = i;
+      const problem = Engine.generateNextProblem(state, session);
+      if (seen.has(problem.question)) anyRepeat = true;
+      seen.add(problem.question);
+    }
+  }
+  ok(!anyRepeat, '영어 인증 시험 한 회차 안에서는 같은 문제가 반복되면 안 됨');
 }
 
 /* ---------------- 수학 경시대회 ---------------- */

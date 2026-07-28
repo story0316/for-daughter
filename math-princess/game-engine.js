@@ -336,7 +336,7 @@
       if (!Array.isArray(loaded.completedScenarios)) loaded.completedScenarios = [];
       if (typeof loaded.career === 'undefined') loaded.career = null;
       if (loaded.career !== null && !CAREER_DEFS.some((c) => c.id === loaded.career)) loaded.career = null;
-      if (!loaded.certifications || typeof loaded.certifications !== 'object') {
+      if (!loaded.certifications || typeof loaded.certifications !== 'object' || Array.isArray(loaded.certifications)) {
         loaded.certifications = { math: null, english: null, science: null };
       }
       CERT_SUBJECT_KEYS.forEach((key) => {
@@ -716,9 +716,18 @@
       return subject.isLevelUnlocked(tier.requiredLevel, state.stats.intelligence);
     }
 
+    // 과학처럼 그 과목 자체에 해당 레벨 콘텐츠가 아예 없는 경우(지능이
+    // 아무리 높아도 영원히 해금될 수 없음)를 가려낸다. isLevelUnlocked를
+    // 무한대 지능으로 호출해서 "언젠가는 해금 가능"인지 "애초에 그런 레벨이
+    // 없음"인지 구분한다. UI가 "곧 도전 가능"과 "이 과목은 여기까지가
+    // 한계"를 다른 문구로 보여줄 수 있게 해준다.
+    function certTierContentExists(subjectKey, tier) {
+      return Question.SUBJECTS[subjectKey].isLevelUnlocked(tier.requiredLevel, Infinity);
+    }
+
     function startCertExamSession(state, subjectKey) {
       const tier = nextMedalTier(state, subjectKey);
-      return makeSession('cert-exam', { subject: subjectKey, tier, count: tier.questionCount });
+      return makeSession('cert-exam', { subject: subjectKey, tier, count: tier.questionCount, askedQuestions: [] });
     }
 
     function finishCertExamOutcome(state, session) {
@@ -956,7 +965,7 @@
       // 직업
       careerRequirementMet, unlockedCareers, applyForCareer, resignCareer,
       // 기초 과목 등급 인증
-      nextMedalTier, certExamEligible, startCertExamSession, finishCertExamOutcome,
+      nextMedalTier, certExamEligible, certTierContentExists, startCertExamSession, finishCertExamOutcome,
       // 스케줄/활동
       currentWeekActivity, tryStartBanquet, competitionUnlocked, talkToDaughter,
       // 계획 미리보기

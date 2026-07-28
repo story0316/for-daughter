@@ -129,9 +129,14 @@
     return !!level && intelligence >= level.unlockIntelligence;
   }
 
-  function generateEnglishProblem(level) {
+  // askedQuestions(선택)를 주면 그중 이미 나온 문제는 은행에서 걸러내고
+  // 뽑는다(예: 기초 과목 인증 시험처럼 한 회차 안에서 반복을 피해야 할 때).
+  // 다 걸러내서 남는 게 없으면(문제 수가 은행 크기보다 많은 경우) 은행
+  // 전체에서 다시 뽑는다.
+  function generateEnglishProblem(level, askedQuestions) {
     const bank = ENGLISH_BANK[level] || ENGLISH_BANK[1];
-    return makeChoiceProblem('en', level, randChoice(bank));
+    const pool = askedQuestions && askedQuestions.length ? bank.filter((item) => !askedQuestions.includes(item.question)) : bank;
+    return makeChoiceProblem('en', level, randChoice(pool.length ? pool : bank));
   }
 
   /* ---------------------------------------------------------------- */
@@ -185,9 +190,12 @@
     return !!level && intelligence >= level.unlockIntelligence;
   }
 
-  function generateScienceProblem(level) {
+  // askedQuestions(선택)를 주면 그중 이미 나온 문제는 은행에서 걸러내고
+  // 뽑는다(예: 기초 과목 인증 시험처럼 한 회차 안에서 반복을 피해야 할 때).
+  function generateScienceProblem(level, askedQuestions) {
     const bank = SCIENCE_BANK[level] || SCIENCE_BANK[1];
-    return makeChoiceProblem('sci', level, randChoice(bank));
+    const pool = askedQuestions && askedQuestions.length ? bank.filter((item) => !askedQuestions.includes(item.question)) : bank;
+    return makeChoiceProblem('sci', level, randChoice(pool.length ? pool : bank));
   }
 
   const api = {

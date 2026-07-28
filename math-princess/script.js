@@ -1404,6 +1404,10 @@
         actionHtml = '<span class="status-cert-maxed">최고 등급 달성</span>';
       } else if (eligible) {
         actionHtml = `<button class="status-cert-btn" data-subject="${subjectKey}">${nextTier.emoji} ${nextTier.name} 시험 보기</button>`;
+      } else if (!Engine.certTierContentExists(subjectKey, nextTier)) {
+        // 과학처럼 그 과목 자체에 더 어려운 콘텐츠가 없어서, 지능이 아무리
+        // 높아져도 다음 등급에는 영원히 도전할 수 없는 경우.
+        actionHtml = `<span class="status-cert-maxed">이 과목은 ${currentMedal ? currentMedal.name : '여기'}까지가 최고 등급이에요</span>`;
       } else {
         actionHtml = `<span class="status-cert-locked">🔒 다음 등급(${nextTier.name})은 아직 준비가 더 필요해요</span>`;
       }
