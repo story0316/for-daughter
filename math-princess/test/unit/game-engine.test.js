@@ -565,18 +565,27 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(Engine.nextMedalTier(state, 'math').id, 'bronze', '아직 미인증이면 다음 등급은 동메달이어야 함');
 }
 {
-  // 과학은 레벨이 4단계(중1)까지밖에 없어서, 은메달을 딴 뒤 금메달(레벨7)에는
-  // 지능이 아무리 높아도 영원히 응시할 수 없어야 한다(콘텐츠 자체가 없으므로).
+  // 과학도 이제 고1 통합과학(레벨7)까지 콘텐츠가 있으므로, 은메달을 딴 뒤
+  // 지능이 충분하면 수학/영어와 마찬가지로 금메달에 응시할 수 있어야 한다.
   const state = Engine.makeInitialState();
   state.stats.intelligence = 90;
   state.certifications.science = 'silver';
-  eq(Engine.nextMedalTier(state, 'science').id, 'gold', '은메달을 딴 뒤 다음 목표는 금메달이어야 함');
-  ok(!Engine.certExamEligible(state, 'science'), '과학은 레벨7 콘텐츠가 없어서 지능이 높아도 금메달에 응시할 수 없어야 함');
-  // 반면 수학/영어는 레벨7 콘텐츠가 있으므로 지능만 충분하면 응시 가능해야 함
   state.certifications.math = 'silver';
   state.certifications.english = 'silver';
+  eq(Engine.nextMedalTier(state, 'science').id, 'gold', '은메달을 딴 뒤 다음 목표는 금메달이어야 함');
+  ok(Engine.certExamEligible(state, 'science'), '과학은 지능이 충분하면 금메달에 응시할 수 있어야 함(레벨7 콘텐츠 존재)');
   ok(Engine.certExamEligible(state, 'math'), '수학은 지능이 충분하면 금메달에 응시할 수 있어야 함');
   ok(Engine.certExamEligible(state, 'english'), '영어는 지능이 충분하면 금메달에 응시할 수 있어야 함');
+}
+{
+  // certTierContentExists는 "콘텐츠 자체가 없는" 경우를 가려내는 일반
+  // 메커니즘이다 — 세 과목 모두 금메달까지 콘텐츠가 있는 지금은 항상
+  // true를 돌려줘야 한다(레벨이 부족해 영원히 막히는 과목이 없음을 보장).
+  Engine.MEDAL_TIERS.forEach((tier) => {
+    Engine.CERT_SUBJECT_KEYS.forEach((subjectKey) => {
+      ok(Engine.certTierContentExists(subjectKey, tier), `${subjectKey}는 ${tier.name} 콘텐츠(레벨${tier.requiredLevel})가 존재해야 함`);
+    });
+  });
 }
 {
   // 이미 금메달(최고 등급)까지 딴 과목은 더 도전할 다음 등급이 없어야 함
@@ -640,23 +649,17 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(roundTripped.math, null, '정상화된 certifications는 JSON 직렬화에도 필드가 살아남아야 함');
 }
 {
-  // 과학은 은메달을 딴 뒤 금메달 콘텐츠가 아예 없어서(레벨7 없음) 영원히
-  // 응시할 수 없는데, "곧 준비되면 도전 가능"처럼 오해를 주는 문구 대신
-  // "여기가 한계"라는 걸 UI가 구분할 수 있어야 한다.
+  // 콘텐츠는 있지만(certTierContentExists=true) 아직 지능이 부족해서 응시
+  // 못 하는 경우(예: 막 은메달을 딴 직후)와, 콘텐츠 자체가 없어서 응시
+  // 불가능한 경우는 구분되어야 한다 — "곧 준비되면 도전 가능"과 "여기가
+  // 한계"는 UI에서 다른 문구를 보여줘야 하기 때문이다. 세 과목 모두
+  // 금메달까지 콘텐츠가 있는 지금은 항상 전자(콘텐츠는 있음)에 해당한다.
   const state = Engine.makeInitialState();
-  state.stats.intelligence = 100;
-  state.certifications.science = 'silver';
-  const nextTier = Engine.nextMedalTier(state, 'science');
-  ok(!Engine.certTierContentExists('science', nextTier), '과학은 금메달 레벨(7) 콘텐츠 자체가 없어야 함');
-
-  // 반대로 수학처럼 콘텐츠는 있지만 아직 지능이 부족해서 응시 못 하는
-  // 경우는(예: 막 은메달을 딴 직후) certTierContentExists가 true여야 한다.
-  const state2 = Engine.makeInitialState();
-  state2.stats.intelligence = 30;
-  state2.certifications.math = 'silver';
-  const mathNextTier = Engine.nextMedalTier(state2, 'math');
+  state.stats.intelligence = 30;
+  state.certifications.math = 'silver';
+  const mathNextTier = Engine.nextMedalTier(state, 'math');
   ok(Engine.certTierContentExists('math', mathNextTier), '수학은 금메달 레벨(7) 콘텐츠가 실제로 존재해야 함');
-  ok(!Engine.certExamEligible(state2, 'math'), '콘텐츠는 있어도 지능이 아직 부족하면 응시는 불가능해야 함');
+  ok(!Engine.certExamEligible(state, 'math'), '콘텐츠는 있어도 지능이 아직 부족하면 응시는 불가능해야 함');
 }
 {
   // 인증 시험 오답에는 실제 대가(체력/스트레스)가 있어야 한다 - 그렇지

@@ -821,8 +821,10 @@
     }
 
     // 다음 등급 시험에 응시할 수 있으려면, 그 등급이 요구하는 레벨이 지금
-    // 지능으로 이미 해금되어 있어야 한다(과학처럼 레벨 자체가 부족한 과목은
-    // 애초에 해당 등급이 영원히 해금되지 않을 수 있다).
+    // 지능으로 이미 해금되어 있어야 한다(어떤 과목이 그 레벨 자체를 아직
+    // 만들어두지 않았다면 애초에 해당 등급이 영원히 해금되지 않을 수도
+    // 있다 — 세 과목 모두 금메달까지 콘텐츠가 있는 지금은 해당하지 않지만,
+    // 앞으로 과목이 더 늘어날 경우를 대비한 방어 로직이다).
     function certExamEligible(state, subjectKey) {
       const tier = nextMedalTier(state, subjectKey);
       if (!tier) return false;
@@ -830,11 +832,11 @@
       return subject.isLevelUnlocked(tier.requiredLevel, state.stats.intelligence);
     }
 
-    // 과학처럼 그 과목 자체에 해당 레벨 콘텐츠가 아예 없는 경우(지능이
-    // 아무리 높아도 영원히 해금될 수 없음)를 가려낸다. isLevelUnlocked를
-    // 무한대 지능으로 호출해서 "언젠가는 해금 가능"인지 "애초에 그런 레벨이
-    // 없음"인지 구분한다. UI가 "곧 도전 가능"과 "이 과목은 여기까지가
-    // 한계"를 다른 문구로 보여줄 수 있게 해준다.
+    // 어떤 과목이 그 등급이 요구하는 레벨 콘텐츠를 아예 만들어두지 않은
+    // 경우(지능이 아무리 높아도 영원히 해금될 수 없음)를 가려낸다.
+    // isLevelUnlocked를 무한대 지능으로 호출해서 "언젠가는 해금 가능"인지
+    // "애초에 그런 레벨이 없음"인지 구분한다. UI가 "곧 도전 가능"과 "이
+    // 과목은 여기까지가 한계"를 다른 문구로 보여줄 수 있게 해준다.
     function certTierContentExists(subjectKey, tier) {
       return Question.SUBJECTS[subjectKey].isLevelUnlocked(tier.requiredLevel, Infinity);
     }

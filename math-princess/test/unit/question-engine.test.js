@@ -183,4 +183,41 @@ eq(Question.SUBJECTS.science.maxLevel, SUBJ.SCIENCE_LEVELS.length, '과학 maxLe
   ok(seen.size > 1, 'fixedSubject가 없는 세션은 여러 번 시도하면 과목이 섞여 나와야 함');
 }
 
+{
+  // weightedChoice([쉬움...어려움])는 뒤쪽(어려운 쪽)일수록 더 자주 뽑혀야
+  // 한다(가중치 1,2,3,...로 선형 증가) — pickLevelForSubject가 최근 해금된
+  // 3개 레벨 중 가장 어려운 레벨을 우대하는 데 쓰는 로직이다.
+  const counts = { easy: 0, mid: 0, hard: 0 };
+  const TRIALS = 6000;
+  for (let i = 0; i < TRIALS; i++) {
+    const picked = Question.weightedChoice(['easy', 'mid', 'hard']);
+    counts[picked]++;
+  }
+  ok(counts.hard > counts.mid, `가중치가 가장 큰 항목(hard)이 중간(mid)보다 더 자주 뽑혀야 함: ${JSON.stringify(counts)}`);
+  ok(counts.mid > counts.easy, `중간(mid)이 가장 가중치가 낮은 항목(easy)보다 더 자주 뽑혀야 함: ${JSON.stringify(counts)}`);
+  // 대략 1:2:3 비율(전체 6칸 중 1/2/3칸)에 가까운지 느슨하게 확인
+  const hardRatio = counts.hard / TRIALS;
+  ok(hardRatio > 0.4 && hardRatio < 0.6, `hard 비율은 대략 절반(3/6) 근처여야 함: ${hardRatio}`);
+
+  // 항목이 하나뿐이면 항상 그 하나를 돌려줘야 함(빈 배열이 되지 않게 하는 경계값)
+  eq(Question.weightedChoice(['only']), 'only', '항목이 하나면 그 하나를 그대로 돌려줘야 함');
+}
+
+{
+  // pickLevelForSubject: 지능이 충분히 올라 최근 해금 밴드가 3개 꽉 찼을
+  // 때, 가장 최근에 해금된(가장 어려운) 레벨이 가장 쉬운 레벨보다 더 자주
+  // 나와야 한다(예전에는 3개가 완전히 균등해서 이 성질이 없었다).
+  const intelligence = 58; // 영어/과학 레벨 6,7이 막 해금된 지점 근처(밴드가 [5,6,7] 정도)
+  const band = Question.unlockedLevelsFor(intelligence, 'english').slice(-3);
+  eq(band.length, 3, '테스트 조건: 최근 해금 밴드가 3개여야 함');
+  const [easiest, , hardest] = band;
+  const counts = {};
+  band.forEach((lv) => { counts[lv] = 0; });
+  const TRIALS = 6000;
+  for (let i = 0; i < TRIALS; i++) {
+    counts[Question.pickLevelForSubject(intelligence, 'english')]++;
+  }
+  ok(counts[hardest] > counts[easiest], `최근 해금 밴드 중 가장 어려운 레벨(${hardest})이 가장 쉬운 레벨(${easiest})보다 자주 나와야 함: ${JSON.stringify(counts)}`);
+}
+
 summary('question-engine.js');
