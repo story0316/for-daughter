@@ -171,6 +171,16 @@
       return unlocked.length ? unlocked[unlocked.length - 1] : 1;
     }
 
+    // "알바"가 계속 낼 수 있는 가장 어려운 레벨(해금된 레벨의 하위 절반 중
+    // 가장 높은 것). pickJobLevelForSubject와 같은 기준을 preview 계산에도
+    // 쓸 수 있도록 대표 과목(수학)으로 미리 계산해둔다.
+    function typicalJobLevel(intelligence) {
+      const unlocked = unlockedLevelsFor(intelligence, 'math');
+      if (!unlocked.length) return 1;
+      const ceiling = Math.max(1, Math.ceil(unlocked.length / 2));
+      return unlocked[ceiling - 1];
+    }
+
     // 레벨은 방금 해금된 것 위주(최근 3개)로 뽑되, 그중에서도 균등하게
     // 고르지 않고 가장 어려운(가장 최근에 해금된) 쪽에 가중치를 둬서 더
     // 자주 나오게 한다 — 지능이 오를수록 실제로 체감하는 난이도도 함께
@@ -189,8 +199,23 @@
       return { subject: subjectKey, level: pickLevelForSubject(intelligence, subjectKey) };
     }
 
-    function pickRandomSubjectLevel1() {
-      return { subject: randChoice(SUBJECT_KEYS), level: 1 };
+    // "알바"는 "공부"처럼 최근 해금된 어려운 레벨 위주가 아니라, 여러 잡일을
+    // 가볍게 도맡는 캐주얼한 활동이라는 느낌을 유지해야 한다. 그렇다고 지능이
+    // 아무리 올라도 평생 레벨 1만 나오면 실제 성장과 완전히 무관해져 "학습이
+    // 그저 쇼핑을 위한 통행료" 처럼 느껴질 위험이 있다. 그래서 해금된 레벨의
+    // 하위 절반까지는 알바에도 반영해 지능 성장이 알바 보상에도 조금은
+    // 체감되게 하되, 상위 절반(가장 어려운 레벨들)은 "공부"에서만 만날 수
+    // 있게 남겨 공부의 존재 이유를 지킨다.
+    function pickJobLevelForSubject(intelligence, subjectKey) {
+      const unlocked = unlockedLevelsFor(intelligence, subjectKey);
+      if (!unlocked.length) return 1;
+      const ceiling = Math.max(1, Math.ceil(unlocked.length / 2));
+      return randChoice(unlocked.slice(0, ceiling));
+    }
+
+    function pickJobSubjectAndLevel(intelligence) {
+      const subjectKey = randChoice(SUBJECT_KEYS);
+      return { subject: subjectKey, level: pickJobLevelForSubject(intelligence, subjectKey) };
     }
 
     // 연회 예절/창의력 올림피아드/기도와 선행은 은행 크기가 20~30개뿐이라
@@ -280,7 +305,7 @@
       }
       if (MULTI_SUBJECT_TYPES.includes(session.type)) {
         let picked;
-        if (session.type === 'job') picked = pickRandomSubjectLevel1();
+        if (session.type === 'job') picked = pickJobSubjectAndLevel(intelligence);
         else if (session.fixedSubject) picked = { subject: session.fixedSubject, level: pickLevelForSubject(intelligence, session.fixedSubject) };
         else picked = pickRandomSubjectAndLevel(intelligence);
         session.currentSubject = picked.subject;
@@ -293,8 +318,8 @@
       SUBJECTS, SUBJECT_KEYS, MULTI_SUBJECT_TYPES, ETIQUETTE_QUESTIONS,
       CREATIVITY_PUZZLE_BANK, FAITH_QUESTIONS,
       randInt, randChoice, shuffle, weightedChoice,
-      subjectName, unlockedLevelsFor, typicalStudyLevel, pickLevelForSubject,
-      pickRandomSubjectAndLevel, pickRandomSubjectLevel1,
+      subjectName, unlockedLevelsFor, typicalStudyLevel, typicalJobLevel, pickLevelForSubject,
+      pickRandomSubjectAndLevel, pickJobLevelForSubject, pickJobSubjectAndLevel,
       generateEtiquetteQuestion, generateCreativityQuestion, generateFaithQuestion,
       generateScenarioQuestion, generateNextProblem,
     };
