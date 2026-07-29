@@ -774,8 +774,14 @@
       announceStatLevelUps(beforeTiers);
       el.quizFeedback.textContent = `정답이에요! 🎉 ${problem.explanation}`;
     } else {
+      // 반복 오답 여부는 기록이 남기 전에 확인해야 한다(기록 후엔 방금 남긴
+      // 자기 자신과 비교하게 되어 항상 true가 됨).
+      const repeatMistake = Engine.isRepeatMistake(state, session, problem);
       Engine.applyWrong(state, session, problem);
-      el.quizFeedback.textContent = `아쉬워요! 정답: ${problem.answer}\n${problem.explanation}`;
+      el.quizFeedback.textContent = repeatMistake
+        ? `아쉬워요! 정답: ${problem.answer}\n${problem.explanation}\n\n🔁 이 문제, 예전에도 헷갈렸었죠? 아래 힌트를 같이 살펴봐요!`
+        : `아쉬워요! 정답: ${problem.answer}\n${problem.explanation}`;
+      if (repeatMistake) revealHint();
     }
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
     saveGame();
@@ -795,14 +801,16 @@
   const GENERIC_HINT_CHOICE = '확실히 답이 아닌 것 같은 보기부터 하나씩 지워보렴. 그리고 문제를 다시 한 번 천천히 읽어보면 힌트가 보일 거야!';
   const GENERIC_HINT_INPUT = '문제를 다시 한 번 천천히 읽고, 무엇을 구해야 하는지부터 확인해보렴. 아는 것부터 하나씩 정리해서 계산해보면 실마리가 보일 거야!';
 
-  el.btnQuizHint.addEventListener('click', () => {
+  function revealHint() {
     if (!session || !session.currentProblem) return;
     const helper = NPC_DEFS.find((n) => n.id === session.helperNpc) || NPC_DEFS.find((n) => n.id === 'teacher');
     const problem = session.currentProblem;
     const hintText = problem.hint || (problem.type === 'choice' ? GENERIC_HINT_CHOICE : GENERIC_HINT_INPUT);
     el.quizHint.textContent = `${helper.emoji} ${helper.name}: "${hintText}"`;
     el.quizHint.style.display = 'block';
-  });
+  }
+
+  el.btnQuizHint.addEventListener('click', revealHint);
 
   function finishSession() {
     if (session.type === 'banquet') { finishBanquetSession(); return; }
