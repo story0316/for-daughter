@@ -413,9 +413,9 @@
   }
 
   // 단계별로 그려둔 일러스트(assets/portraits/tierN.png)가 있으면 그것을 쓰고,
-  // 아직 없는 단계는 자동 생성 SVG 초상화로 대신 보여준다. 작위 세분화로
-  // 추가된 tier6 이상은 아직 그림이 없다는 게 미리 확정돼 있으므로(옷장의
-  // hasArt와 같은 값), 아예 이미지 요청을 시도하지 않고 곧바로 SVG로
+  // 아직 없는 단계는 자동 생성 SVG 초상화로 대신 보여준다. OUTFIT_TIERS의
+  // hasArt가 false인 단계(현재는 없음, 향후 새 단계가 그림 없이 먼저
+  // 추가되는 경우를 대비)는 아예 이미지 요청을 시도하지 않고 곧바로 SVG로
   // 그린다(불필요한 404 요청/콘솔 에러를 피하기 위함).
   function renderPortraitInto(container, tierIndex, uid) {
     container.innerHTML = '';

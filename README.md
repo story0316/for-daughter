@@ -94,8 +94,8 @@
 - `math-princess/competency-model.js` — 게임 콘텐츠(과목/활동/연회 예절/시나리오/기초 과목 인증)가 어떤 핵심역량·상황판단 유형과 연결되는지 태깅한 참고 데이터(DOM 비의존, 게임 로직에는 관여하지 않음). admin.html이 이 데이터를 읽어 커버리지 매트릭스를 그린다
 - `math-princess/admin.html`/`admin.js`/`admin.css` — PIN 로그인(관리자 전용) 뒤에 "어떤 문제가 어떤 역량/상황판단 유형과 연결되어 있는지"를 한눈에 보여주는 관리자 대시보드. 콘텐츠 열람 위주지만, "📈 실제 플레이 학습 현황" 섹션은 이 브라우저에 저장된 실제 진행 데이터(`math-princess-save-v1`)를 읽어와 과목·레벨별 정답/오답 횟수와 정답률이 낮은(3회 이상 시도했는데 60% 미만) 약한 부분, 최근 오답 문제를 보여준다(저장 데이터가 없으면 안내 문구만 표시)
 - `math-princess/assets/scenarios/{id}/*.png` — 시나리오별 실제 일러스트 장면 이미지
-- `math-princess/assets/portraits/tier0~5.png` — 품위 단계별 실제 일러스트 초상화(6단계 전부)
-- `math-princess/assets/wardrobe/tier0~5.png` — 옷장 탭에 쓰이는 옷 썸네일 이미지(6단계 전부)
+- `math-princess/assets/portraits/tier0~10.png` — 품위/작위 단계별 실제 일러스트 초상화(옷 11단계 전부, 옷을 갈아입으면 초상화도 그에 맞게 바뀜)
+- `math-princess/assets/wardrobe/tier0~10.png` — 옷장 탭에 쓰이는 옷 썸네일 이미지(11단계 전부)
 - `math-princess/assets/npcs/{id}.png` — 인물별 초상화(친구/라이벌/선생님/사교계 친구/왕자님/왕실 스승 6명 전부 적용됨)
 - `math-princess/script.js` — game-engine.js를 호출해 화면을 그리는 UI 레이어. 스케줄/실행 메뉴, 옷장/상점, 상태 화면(다가오는 이야기 포함), 로컬 저장/이어하기, 배경음악 재생
 
