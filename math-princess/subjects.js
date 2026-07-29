@@ -46,6 +46,13 @@
     return studyBags[key].pop();
   }
 
+  // 그 레벨이 concept을 갖고 있으면(중학교 이상) 문제 객체에 그대로 붙여준다.
+  function attachConcept(problem, levels, level) {
+    const levelDef = levels.find((l) => l.id === level);
+    if (levelDef && levelDef.concept) problem.concept = levelDef.concept;
+    return problem;
+  }
+
   function makeChoiceProblem(subjectTag, level, item) {
     return {
       id: `${subjectTag}-${level}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`,
@@ -65,15 +72,18 @@
   /* 영어                                                                */
   /* ---------------------------------------------------------------- */
 
+  // concept: 초등학생 기준으로 중학교 이상 범위인 레벨(4~8)에만 있는 핵심
+  // 개념 설명. problems.js LEVELS의 concept과 같은 규칙(정답을 알려주지
+  // 않는 일반 개념 설명, 문제를 낼 때마다 도움 캐릭터 대사로 쓰임)을 따른다.
   const ENGLISH_LEVELS = [
     { id: 1, name: '초4 영어', desc: '기초 어휘 · 간단한 문장', unlockIntelligence: 0 },
     { id: 2, name: '초5 영어', desc: '품사 · 기본 문법', unlockIntelligence: 8 },
     { id: 3, name: '초6 영어', desc: '시제 · 비교급 · 짧은 독해', unlockIntelligence: 18 },
-    { id: 4, name: '중1 영어', desc: '관계대명사 기초 · 문맥 어휘 · 숙어', unlockIntelligence: 28 },
-    { id: 5, name: '중2 영어', desc: '현재완료 · 5형식 문장 · to부정사', unlockIntelligence: 38 },
-    { id: 6, name: '중3 영어', desc: '관계부사 · 가정법 과거 · 화법전환', unlockIntelligence: 48 },
-    { id: 7, name: '고1 영어', desc: '강조구문 · 도치 · 분사구문', unlockIntelligence: 58 },
-    { id: 8, name: '고2 영어', desc: '수능형 어휘 · 논리 추론 · 복잡한 관계절', unlockIntelligence: 68 },
+    { id: 4, name: '중1 영어', desc: '관계대명사 기초 · 문맥 어휘 · 숙어', unlockIntelligence: 28, concept: '관계대명사(who, which, that)는 명사 바로 뒤에서 그 명사를 자세히 설명해주는 문장을 이어주는 말이야. 꾸며주는 대상이 사람이면 who, 사물이면 which나 that을 써.' },
+    { id: 5, name: '중2 영어', desc: '현재완료 · 5형식 문장 · to부정사', unlockIntelligence: 38, concept: '현재완료(have/has + p.p.)는 과거에 시작된 일이 지금까지 영향을 미치거나 막 끝났을 때 써. to부정사(to + 동사원형)는 "~하는 것", "~할"처럼 문장 안에서 여러 역할을 할 수 있는 말이야.' },
+    { id: 6, name: '중3 영어', desc: '관계부사 · 가정법 과거 · 화법전환', unlockIntelligence: 48, concept: '관계부사(where, when 등)는 장소나 시간을 나타내는 명사 뒤에서 문장을 이어줘. 가정법 과거는 지금 사실과 반대되는 상상을 할 때 쓰는데, be동사는 인칭에 상관없이 항상 were를 써.' },
+    { id: 7, name: '고1 영어', desc: '강조구문 · 도치 · 분사구문', unlockIntelligence: 58, concept: '강조구문 "It is/was ~ that"은 문장의 한 부분을 특별히 강조하고 싶을 때 써. 도치는 부정의 뜻을 가진 말이 문장 맨 앞에 오면 주어와 동사의 순서가 바뀌는 걸 말해.' },
+    { id: 8, name: '고2 영어', desc: '수능형 어휘 · 논리 추론 · 복잡한 관계절', unlockIntelligence: 68, concept: '긴 문장은 콤마(,)나 접속사를 기준으로 끊어서 하나씩 해석하면 도움이 돼. however, therefore처럼 글의 흐름을 바꿔주는 연결어에 주목하면 글쓴이의 생각 흐름을 따라가기 쉬워.' },
   ];
 
   const ENGLISH_BANK = {
@@ -179,11 +189,14 @@
   // 뽑아 은행을 한 바퀴 다 돌 때까지 같은 문제가 반복되지 않게 한다.
   function generateEnglishProblem(level, askedQuestions) {
     const bank = ENGLISH_BANK[level] || ENGLISH_BANK[1];
+    let problem;
     if (Array.isArray(askedQuestions)) {
       const pool = askedQuestions.length ? bank.filter((item) => !askedQuestions.includes(item.question)) : bank;
-      return makeChoiceProblem('en', level, randChoice(pool.length ? pool : bank));
+      problem = makeChoiceProblem('en', level, randChoice(pool.length ? pool : bank));
+    } else {
+      problem = makeChoiceProblem('en', level, nextFromStudyBag('en', level, bank));
     }
-    return makeChoiceProblem('en', level, nextFromStudyBag('en', level, bank));
+    return attachConcept(problem, ENGLISH_LEVELS, level);
   }
 
   /* ---------------------------------------------------------------- */
@@ -263,14 +276,16 @@
   /* 과학                                                                */
   /* ---------------------------------------------------------------- */
 
+  // concept: 초등학생 기준으로 중학교 이상 범위인 레벨(4~7)에만 있는 핵심
+  // 개념 설명. ENGLISH_LEVELS의 concept과 같은 규칙을 따른다.
   const SCIENCE_LEVELS = [
     { id: 1, name: '초4 과학', desc: '상태변화 · 동식물 · 힘', unlockIntelligence: 0 },
     { id: 2, name: '초5 과학', desc: '태양계 · 용해 · 날씨', unlockIntelligence: 8 },
     { id: 3, name: '초6 과학', desc: '연소 · 전기회로 · 순환계', unlockIntelligence: 18 },
-    { id: 4, name: '중1 과학', desc: '상태변화 심화 · 광합성 · 힘과 원소', unlockIntelligence: 28 },
-    { id: 5, name: '중2 과학', desc: '밀도와 용해도 · 기압과 바람 · 소화·순환·호흡 · 유전', unlockIntelligence: 38 },
-    { id: 6, name: '중3 과학', desc: '질량보존 · 등가속도 운동 · 일과 에너지 · 자연선택', unlockIntelligence: 48 },
-    { id: 7, name: '고1 통합과학', desc: '주기율표 · 관성의 법칙 · 지구시스템 · 중화반응', unlockIntelligence: 58 },
+    { id: 4, name: '중1 과학', desc: '상태변화 심화 · 광합성 · 힘과 원소', unlockIntelligence: 28, concept: '광합성은 식물이 햇빛·물·이산화탄소를 이용해 스스로 양분을 만드는 과정이야. 원소 기호(O=산소, H=수소 등)는 원소마다 정해진 약속된 표시야.' },
+    { id: 5, name: '중2 과학', desc: '밀도와 용해도 · 기압과 바람 · 소화·순환·호흡 · 유전', unlockIntelligence: 38, concept: '밀도는 같은 부피에서 질량이 얼마나 되는지를 나타내는 값이야(빽빽한 정도라고 생각하면 돼). 유전은 부모의 특징이 자식에게 전해지는 현상이야.' },
+    { id: 6, name: '중3 과학', desc: '질량보존 · 등가속도 운동 · 일과 에너지 · 자연선택', unlockIntelligence: 48, concept: '질량 보존 법칙은 화학 반응 전후에 물질의 총 질량이 변하지 않는다는 법칙이야. 등가속도 운동은 시간이 지날수록 속력이 일정하게 늘어나거나 줄어드는 운동이야.' },
+    { id: 7, name: '고1 통합과학', desc: '주기율표 · 관성의 법칙 · 지구시스템 · 중화반응', unlockIntelligence: 58, concept: '주기율표는 원소를 성질이 비슷한 것끼리 규칙적으로 배열한 표야. 관성은 물체가 원래 상태(멈춰있거나 움직이던 대로)를 계속 유지하려는 성질이야.' },
   ];
 
   const SCIENCE_BANK = {
@@ -364,11 +379,14 @@
   // 규칙(위 주석 참고).
   function generateScienceProblem(level, askedQuestions) {
     const bank = SCIENCE_BANK[level] || SCIENCE_BANK[1];
+    let problem;
     if (Array.isArray(askedQuestions)) {
       const pool = askedQuestions.length ? bank.filter((item) => !askedQuestions.includes(item.question)) : bank;
-      return makeChoiceProblem('sci', level, randChoice(pool.length ? pool : bank));
+      problem = makeChoiceProblem('sci', level, randChoice(pool.length ? pool : bank));
+    } else {
+      problem = makeChoiceProblem('sci', level, nextFromStudyBag('sci', level, bank));
     }
-    return makeChoiceProblem('sci', level, nextFromStudyBag('sci', level, bank));
+    return attachConcept(problem, SCIENCE_LEVELS, level);
   }
 
   const api = {

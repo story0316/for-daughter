@@ -53,6 +53,30 @@ Object.entries(EXPECTED_THRESHOLDS).forEach(([levelId, threshold]) => {
   }
 });
 
+// 초등학생 기준 중학교 이상 범위(레벨 3~9)에서는 문제를 낼 때마다 "개념
+// 설명"(problem.concept)이 함께 붙어야 하고, 초등 범위(레벨 1~2)에는 없어야
+// 한다. 개념 설명은 그 레벨의 모든 문제의 정답을 미리 알려주면 안 된다.
+{
+  const ADVANCED_LEVELS = [3, 4, 5, 6, 7, 8, 9];
+  const ELEMENTARY_LEVELS = [1, 2];
+  ADVANCED_LEVELS.forEach((level) => {
+    const levelDef = P.LEVELS.find((l) => l.id === level);
+    ok(typeof levelDef.concept === 'string' && levelDef.concept.length > 10, `레벨 ${level}(중학교 이상)은 LEVELS에 concept 설명이 있어야 함`);
+    for (let i = 0; i < 10; i++) {
+      const problem = P.generateProblem(level);
+      eq(problem.concept, levelDef.concept, `레벨 ${level} 문제에는 그 레벨의 개념 설명이 그대로 붙어야 함`);
+    }
+  });
+  ELEMENTARY_LEVELS.forEach((level) => {
+    const levelDef = P.LEVELS.find((l) => l.id === level);
+    ok(!levelDef.concept, `레벨 ${level}(초등 범위)은 개념 설명이 없어야 함`);
+    for (let i = 0; i < 10; i++) {
+      const problem = P.generateProblem(level);
+      ok(!problem.concept, `레벨 ${level}(초등) 문제에는 concept 필드가 없어야 함`);
+    }
+  });
+}
+
 // 분수/약수 헬퍼
 eq(P.fractionToString(4, 8), '1/2', 'fractionToString은 기약분수로 약분해야 함');
 eq(P.fractionToString(6, 3), '2', '정수로 나눠떨어지면 분모 없이 표시해야 함');

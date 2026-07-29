@@ -84,6 +84,31 @@ SUBJECTS.forEach(({ name, levels, isUnlocked, generate, expectedThresholds }) =>
   });
 });
 
+// 초등학생 기준 중학교 이상 범위(영어 레벨 4~8, 과학 레벨 4~7)에서는
+// problems.js와 마찬가지로 문제를 낼 때마다 concept(개념 설명)이 붙어야
+// 하고, 초등 범위(레벨 1~3)에는 없어야 한다.
+[
+  { name: '영어', levels: SUBJ.ENGLISH_LEVELS, generate: SUBJ.generateEnglishProblem, advancedIds: [4, 5, 6, 7, 8] },
+  { name: '과학', levels: SUBJ.SCIENCE_LEVELS, generate: SUBJ.generateScienceProblem, advancedIds: [4, 5, 6, 7] },
+].forEach(({ name, levels, generate, advancedIds }) => {
+  levels.forEach((level) => {
+    const isAdvanced = advancedIds.includes(level.id);
+    if (isAdvanced) {
+      ok(typeof level.concept === 'string' && level.concept.length > 10, `${name} 레벨 ${level.id}(중학교 이상)은 concept 설명이 있어야 함`);
+    } else {
+      ok(!level.concept, `${name} 레벨 ${level.id}(초등 범위)은 concept 설명이 없어야 함`);
+    }
+    for (let i = 0; i < 10; i++) {
+      const problem = generate(level.id);
+      if (isAdvanced) {
+        eq(problem.concept, level.concept, `${name} 레벨 ${level.id} 문제에는 그 레벨의 개념 설명이 그대로 붙어야 함`);
+      } else {
+        ok(!problem.concept, `${name} 레벨 ${level.id}(초등) 문제에는 concept 필드가 없어야 함`);
+      }
+    }
+  });
+});
+
 // 영어 인증(동/은/금메달) 시험 전용 "단어 - 뜻 짝지어 맞추기" 문제.
 // MEDAL_TIERS의 requiredLevel(1/4/7)에 대해서만 존재한다.
 {

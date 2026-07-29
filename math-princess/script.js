@@ -110,6 +110,7 @@
     quizProgress: document.getElementById('quiz-progress'),
     quizCombo: document.getElementById('quiz-combo'),
     quizLevelBadge: document.getElementById('quiz-level-badge'),
+    quizConcept: document.getElementById('quiz-concept'),
     quizQuestion: document.getElementById('quiz-question'),
     btnQuizHint: document.getElementById('btn-quiz-hint'),
     quizHint: document.getElementById('quiz-hint'),
@@ -656,6 +657,14 @@
           : session.type === 'scenario-quiz'
             ? session.scenario.arc
             : `Lv.${problem.level}`;
+    if (problem.concept) {
+      const conceptHelper = NPC_DEFS.find((n) => n.id === session.helperNpc) || NPC_DEFS.find((n) => n.id === 'teacher');
+      el.quizConcept.innerHTML = `${conceptHelper.emoji} <b>${conceptHelper.name}</b>: ${problem.concept}`;
+      el.quizConcept.style.display = 'block';
+    } else {
+      el.quizConcept.textContent = '';
+      el.quizConcept.style.display = 'none';
+    }
     el.quizQuestion.textContent = problem.question;
     el.quizFeedback.textContent = '';
 

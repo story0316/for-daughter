@@ -122,6 +122,64 @@ async function testCompetitionHintUsesGivenSubjectHelper() {
   ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
 }
 
+// 초등학생 기준으로 중학교 이상 범위 레벨의 문제를 낼 때는 도움 캐릭터가
+// 그 레벨의 핵심 개념을 자동으로(힌트 버튼을 누르지 않아도) 설명해줘야 한다.
+// 지능을 100으로 두면 세 과목 모두 "최근 해금된 3개 레벨" 밴드가 전부
+// 중학교 이상이라, 공부 세션이 어떤 과목/레벨을 뽑든 항상 개념 설명이 있어야 한다.
+async function testConceptShownForAdvancedLevelStudySession() {
+  const errors = await withPage(async (page) => {
+    // intelligence만 레벨/과목 선택에 영향을 준다. 나머지 성장 능력치는 일부러
+    // 50 미만으로 남겨서(모든 성장 능력치가 50을 넘으면 평민→귀족 신분 상승
+    // 이벤트가 떠서 #screen-main 대신 그 화면으로 가버리는 걸 피하기 위함).
+    const state = makeState({
+      stats: { intelligence: 100, focus: 20, stamina: 50, charm: 20, creativity: 20, stress: 0, luck: 20 },
+      weekPlan: ['study', null, null, null],
+    });
+    await seedAndContinue(page, state);
+    await page.click('[data-menu="execute"]');
+    await page.waitForSelector('#screen-quiz.active');
+
+    for (let i = 0; i < 3; i++) {
+      const visible = await page.evaluate(() => getComputedStyle(document.getElementById('quiz-concept')).display !== 'none');
+      ok(visible, '중학교 이상 레벨에서는 문제를 낼 때마다 개념 설명이 자동으로 보여야 함');
+      const conceptText = await page.textContent('#quiz-concept');
+      ok(conceptText.trim().length > 10, `개념 설명 내용이 있어야 함 (got "${conceptText}")`);
+      ok(/👩‍🏫|🧙/.test(conceptText), `개념 설명은 선생님(👩‍🏫) 또는 왕실 스승(🧙)이 말해주는 형태여야 함 (got "${conceptText}")`);
+
+      await answerCurrentQuestion(page);
+      await page.waitForSelector('#btn-quiz-next', { state: 'visible' });
+      await page.click('#btn-quiz-next');
+      await page.waitForTimeout(150);
+    }
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(개념 설명 표시): ${errors.join('\n')}`);
+}
+
+// 지능 0이면 세 과목 모두 레벨 1(초등 범위)만 나오므로, 개념 설명 영역이
+// 계속 숨겨져 있어야 한다(초등학생에게는 불필요한 정보를 보여주지 않음).
+async function testConceptHiddenForElementaryLevelStudySession() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({
+      stats: { intelligence: 0, focus: 0, stamina: 50, charm: 0, creativity: 0, stress: 10, luck: 0 },
+      weekPlan: ['study', null, null, null],
+    });
+    await seedAndContinue(page, state);
+    await page.click('[data-menu="execute"]');
+    await page.waitForSelector('#screen-quiz.active');
+
+    for (let i = 0; i < 3; i++) {
+      const hidden = await page.evaluate(() => getComputedStyle(document.getElementById('quiz-concept')).display === 'none');
+      ok(hidden, '초등 범위 레벨(지능 0)에서는 개념 설명 영역이 보이면 안 됨');
+
+      await answerCurrentQuestion(page);
+      await page.waitForSelector('#btn-quiz-next', { state: 'visible' });
+      await page.click('#btn-quiz-next');
+      await page.waitForTimeout(150);
+    }
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(개념 설명 숨김): ${errors.join('\n')}`);
+}
+
 (async () => {
   console.log('quiz-hint-and-pacing e2e tests');
   await testAnswerDoesNotAutoAdvance();
@@ -129,5 +187,7 @@ async function testCompetitionHintUsesGivenSubjectHelper() {
   await testHintButtonShowsHelperMessage();
   await testHintResetsOnNextQuestion();
   await testCompetitionHintUsesGivenSubjectHelper();
+  await testConceptShownForAdvancedLevelStudySession();
+  await testConceptHiddenForElementaryLevelStudySession();
   summary('quiz-hint-and-pacing.test.js');
 })();

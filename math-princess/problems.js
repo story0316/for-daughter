@@ -74,16 +74,20 @@
   /* 레벨 정의                                                          */
   /* ---------------------------------------------------------------- */
 
+  // concept: 초등학생 기준으로 중학교 이상 범위인 레벨(3~9)에만 있는,
+  // 그 레벨의 핵심 개념을 짧고 친절하게 설명하는 문구. 특정 문제의 정답을
+  // 알려주지 않는 "일반적인 개념" 설명이며, 문제를 낼 때마다 도움 캐릭터가
+  // 말해주는 대사로 쓰인다(script.js의 nextQuizQuestion 참고).
   const LEVELS = [
     { id: 1, name: '초등 연산', desc: '덧셈 · 뺄셈 · 곱셈 · 나눗셈', unlockIntelligence: 0 },
     { id: 2, name: '분수와 소수', desc: '분수, 소수, 약수와 배수', unlockIntelligence: 8 },
-    { id: 3, name: '방정식', desc: '일차방정식, 비례식', unlockIntelligence: 18 },
-    { id: 4, name: '함수와 좌표', desc: '일차함수, 좌표평면', unlockIntelligence: 28 },
-    { id: 5, name: '도형', desc: '도형의 넓이, 피타고라스 정리', unlockIntelligence: 38 },
-    { id: 6, name: '확률과 통계', desc: '확률, 평균', unlockIntelligence: 48 },
-    { id: 7, name: '수열과 로그', desc: '등차수열, 등비수열, 로그', unlockIntelligence: 58 },
-    { id: 8, name: '삼각함수와 벡터', desc: '삼각비, 벡터', unlockIntelligence: 68 },
-    { id: 9, name: '심화 문제', desc: '올림피아드 · 논리 문제', unlockIntelligence: 78 },
+    { id: 3, name: '방정식', desc: '일차방정식, 비례식', unlockIntelligence: 18, concept: '방정식은 모르는 수 x가 들어있는 식이야. 등호(=) 양쪽에 같은 수를 더하거나 빼거나 곱하거나 나누어도 식은 그대로 성립한다는 규칙을 이용해서, x만 남을 때까지 정리하면 답을 구할 수 있어. 비례식(A:B = C:D)은 안쪽 두 수를 곱한 값과 바깥쪽 두 수를 곱한 값이 서로 같다는 성질을 이용하면 돼.' },
+    { id: 4, name: '함수와 좌표', desc: '일차함수, 좌표평면', unlockIntelligence: 28, concept: '좌표평면은 가로(x축)와 세로(y축) 두 줄로 위치를 나타내는 방법이야. 일차함수 y = ax + b는 x값을 정하면 그에 따라 y값이 하나로 정해지는 규칙이야. x자리에 주어진 수를 그대로 넣어서 계산하면 y를 구할 수 있어.' },
+    { id: 5, name: '도형', desc: '도형의 넓이, 피타고라스 정리', unlockIntelligence: 38, concept: '도형의 넓이는 도형마다 정해진 공식(예: 직사각형은 가로×세로)으로 구해. 피타고라스 정리는 직각삼각형에서, 직각을 낀 두 변을 각각 제곱해서 더한 값이 빗변을 제곱한 값과 같아진다는 성질이야.' },
+    { id: 6, name: '확률과 통계', desc: '확률, 평균', unlockIntelligence: 48, concept: '확률은 원하는 경우의 수를 전체 경우의 수로 나눈 값이야(전체 중에서 몇 분의 몇인지). 평균은 여러 수를 모두 더한 다음 그 개수로 나누면 구할 수 있어.' },
+    { id: 7, name: '수열과 로그', desc: '등차수열, 등비수열, 로그', unlockIntelligence: 58, concept: '등차수열은 앞의 수에 항상 같은 수(공차)를 더해가며 만들어지는 수의 줄이야. 로그 log(밑) 값 은 "밑을 몇 번 곱해야 그 값이 되는지"를 나타내는 거야.' },
+    { id: 8, name: '삼각함수와 벡터', desc: '삼각비, 벡터', unlockIntelligence: 68, concept: '삼각비(sin, cos, tan)는 직각삼각형에서 각도에 따라 변들의 길이 비율이 항상 똑같다는 성질을 이용한 값이야. 자주 나오는 각도(30°, 45°, 60°)의 값은 표로 외워두면 편해. 벡터는 크기와 방향을 함께 가진 화살표 같은 개념이야.' },
+    { id: 9, name: '심화 문제', desc: '올림피아드 · 논리 문제', unlockIntelligence: 78, concept: '순열은 순서를 따져서 뽑는 경우의 수이고(첫 자리부터 하나씩 곱해서 구해), 조합은 순서를 따지지 않고 뽑는 경우의 수야(순열로 구한 값을, 뽑은 인원을 줄 세우는 경우의 수로 나누면 돼).' },
   ];
 
   function isLevelUnlocked(levelId, intelligence) {
@@ -448,6 +452,9 @@
 
     recentQuestions.push(problem.question);
     if (recentQuestions.length > RECENT_HISTORY_SIZE) recentQuestions.shift();
+
+    const levelDef = LEVELS.find((l) => l.id === level);
+    if (levelDef && levelDef.concept) problem.concept = levelDef.concept;
 
     return problem;
   }
