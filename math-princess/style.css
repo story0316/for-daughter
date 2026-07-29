@@ -274,6 +274,25 @@ html, body {
     url("assets/backgrounds/main-room.png") center 30% / cover no-repeat;
 }
 
+#screen-schedule,
+#screen-week-pick {
+  background:
+    linear-gradient(180deg, rgba(28, 20, 40, 0.55) 0%, rgba(20, 14, 30, 0.8) 65%, rgba(16, 11, 24, 0.92) 100%),
+    url("assets/backgrounds/schedule-desk.png") center / cover no-repeat;
+}
+
+#screen-shop {
+  background:
+    linear-gradient(180deg, rgba(28, 20, 40, 0.55) 0%, rgba(20, 14, 30, 0.8) 65%, rgba(16, 11, 24, 0.92) 100%),
+    url("assets/backgrounds/dressing-room.png") center / cover no-repeat;
+}
+
+#screen-banquet-tier-pick {
+  background:
+    linear-gradient(180deg, rgba(28, 20, 40, 0.5) 0%, rgba(20, 14, 30, 0.78) 65%, rgba(16, 11, 24, 0.92) 100%),
+    url("assets/backgrounds/ballroom.png") center / cover no-repeat;
+}
+
 .hud {
   flex: 0 0 auto;
   /* 오른쪽 위에 떠 있는 음소거 버튼(.btn-mute-toggle, absolute 위치)과 겹치지
