@@ -218,6 +218,22 @@
       { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', requiresNoble: true, wardrobeDesc: '품위 100(만점) + 귀족 신분에서만 구매 가능한 전설의 옷' },
     ];
 
+    // 옷장과 같은 구조(품위 요건 + 상위 등급은 귀족 신분까지 필요)를 그대로
+    // 따르는 애완동물 목록. 옷과 달리 시작할 때 기본으로 갖고 있는 펫은
+    // 없다(owned가 전부 false로 시작 — makeInitialState 참고). petDesc는
+    // 옷장의 wardrobeDesc와 같은 역할(카드 하단 안내 문구). stressRelief는
+    // 그 펫을 착용(equipped) 중일 때 매턴 자동으로 줄어드는 스트레스 양이다
+    // (applyServantEffects에서 적용 — 하녀/정원사 같은 고용인 효과와 동일한 훅).
+    const PET_TIERS = [
+      { min: 0, cost: 300, emoji: '🐶', name: '강아지', stressRelief: 1, petDesc: '누구나 바로 데려올 수 있는 든든한 첫 반려동물' },
+      { min: 15, cost: 600, emoji: '🐱', name: '고양이', stressRelief: 1, petDesc: '품위 15 이상에서 데려올 수 있음' },
+      { min: 30, cost: 1100, emoji: '🐰', name: '토끼', stressRelief: 2, petDesc: '품위 30 이상에서 데려올 수 있음' },
+      { min: 50, cost: 1900, emoji: '🦊', name: '여우', stressRelief: 2, petDesc: '품위 50 이상에서 데려올 수 있음' },
+      { min: 65, cost: 3200, emoji: '🦚', name: '공작새', stressRelief: 3, requiresNoble: true, petDesc: '품위 65 이상 + 귀족 신분 필요(평민은 키울 수 없는 새)' },
+      { min: 85, cost: 5500, emoji: '🐎', name: '백마', stressRelief: 3, requiresNoble: true, petDesc: '품위 85 이상 + 귀족 신분 필요(평민은 탈 수 없는 말)' },
+      { min: 100, cost: 9500, emoji: '🦄', name: '유니콘', stressRelief: 4, requiresNoble: true, petDesc: '품위 100(만점) + 귀족 신분에서만 만날 수 있는 전설의 동물' },
+    ];
+
     const NPC_DEFS = [
       { id: 'friend', emoji: '😊', name: '친구', desc: '함께 있으면 마음이 편안해지는 단짝', unlock: () => true, apply: (s) => { s.stats.charm += 6; }, lines: ['같이 떡볶이를 먹으며 수다를 떨었어요.', '친구가 요즘 고민을 털어놓았어요.', '같이 만화책을 보며 깔깔 웃었어요.'] },
       { id: 'rival', emoji: '😏', name: '라이벌', desc: '괜히 신경 쓰이지만 자꾸 실력이 느는 상대', unlock: () => true, apply: (s) => { s.stats.intelligence += 3; s.stats.stress += 3; }, lines: ['라이벌이 이번 시험 점수를 자랑했어요. 오기가 생겨요!', '라이벌과 문제풀이 대결을 했어요.', '라이벌이 은근히 신경 쓰이는 하루였어요.'] },
@@ -350,6 +366,7 @@
         items: {},
         npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 })),
         wardrobe: { equipped: 0, owned: OUTFIT_TIERS.map((_, i) => i === 0), notifiedGraceTier: 0 },
+        pets: { equipped: null, owned: PET_TIERS.map(() => false), notifiedGraceTier: 0 },
         weekPlan: new Array(WEEKS_PER_MONTH).fill(null),
         weekPlanCount: new Array(WEEKS_PER_MONTH).fill(null),
         weekPlanBanquetTier: new Array(WEEKS_PER_MONTH).fill(null),
@@ -377,6 +394,12 @@
       }
       delete loaded.wardrobe.unlockedMax;
       if (typeof loaded.wardrobe.notifiedGraceTier !== 'number') loaded.wardrobe.notifiedGraceTier = 0;
+      loaded.pets = loaded.pets || { equipped: null, owned: PET_TIERS.map(() => false), notifiedGraceTier: 0 };
+      if (!Array.isArray(loaded.pets.owned) || loaded.pets.owned.length !== PET_TIERS.length) {
+        loaded.pets.owned = PET_TIERS.map(() => false);
+      }
+      if (typeof loaded.pets.equipped !== 'number' || !loaded.pets.owned[loaded.pets.equipped]) loaded.pets.equipped = null;
+      if (typeof loaded.pets.notifiedGraceTier !== 'number') loaded.pets.notifiedGraceTier = 0;
       if (typeof loaded.characterName !== 'string' || !loaded.characterName.trim()) loaded.characterName = '우리 딸';
       if (!Array.isArray(loaded.weekPlan) || loaded.weekPlan.length !== WEEKS_PER_MONTH) {
         loaded.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
@@ -778,6 +801,44 @@
       return null;
     }
 
+    /* ---------------- 애완동물 ---------------- */
+    // 옷장(구매/장착/품위 요건/알림)과 완전히 같은 구조를 따른다. 다른 점은
+    // 딱 하나, 기본으로 소유한 펫이 없다는 것(equipped: null로 시작 —
+    // makeInitialState 참고). 함수 이름도 옷장 쪽과 나란히 대응된다.
+
+    function equipPet(state, tierIndex) {
+      if (!state.pets.owned[tierIndex]) return false;
+      state.pets.equipped = tierIndex;
+      return true;
+    }
+
+    function petRequirementMet(state, tierIndex) {
+      const tier = PET_TIERS[tierIndex];
+      if (graceScore(state.stats) < tier.min) return false;
+      if (tier.requiresNoble && !state.nobleTitle) return false;
+      return true;
+    }
+
+    function buyPet(state, tierIndex) {
+      const tier = PET_TIERS[tierIndex];
+      if (state.pets.owned[tierIndex] || state.gold < tier.cost) return false;
+      if (!petRequirementMet(state, tierIndex)) return false;
+      state.gold -= tier.cost;
+      state.pets.owned[tierIndex] = true;
+      state.pets.equipped = tierIndex;
+      return true;
+    }
+
+    function checkPetGraceNotification(state) {
+      let tierIndex = 0;
+      PET_TIERS.forEach((tier, i) => { if (petRequirementMet(state, i)) tierIndex = i; });
+      if (tierIndex > state.pets.notifiedGraceTier) {
+        state.pets.notifiedGraceTier = tierIndex;
+        return PET_TIERS[tierIndex];
+      }
+      return null;
+    }
+
     /* ---------------- 직업(정식 취업) ---------------- */
 
     function careerRequirementMet(stats, career) {
@@ -1018,6 +1079,9 @@
     function applyServantEffects(state) {
       if (state.items.maid) state.stats.stress = Math.max(0, state.stats.stress - 2);
       if (state.items.gardener) { state.gold += 10; state.stats.luck += 1; }
+      if (state.pets.equipped !== null) {
+        state.stats.stress = Math.max(0, state.stats.stress - PET_TIERS[state.pets.equipped].stressRelief);
+      }
 
       let princeEncounter = false;
       if (state.career) {
@@ -1089,7 +1153,7 @@
       BANQUET_TIERS, PRINCE_MIN_TIER,
       STRESS_OVERFLOW_THRESHOLD, NPC_HINT_AFFECTION, NPC_LENIENT_AFFECTION, CAREER_DEFS,
       MEDAL_TIERS, CERT_SUBJECT_KEYS,
-      AFFECTION_TIERS, AFFECTION_DECAY_GRACE_TURNS, AFFECTION_DECAY_AMOUNT, OUTFIT_TIERS, NPC_DEFS, ACTIVITY_DEFS,
+      AFFECTION_TIERS, AFFECTION_DECAY_GRACE_TURNS, AFFECTION_DECAY_AMOUNT, OUTFIT_TIERS, PET_TIERS, NPC_DEFS, ACTIVITY_DEFS,
       MULTI_SUBJECT_TYPES: Question.MULTI_SUBJECT_TYPES, BONUS_QUIZ_TYPES: Reward.DEFERRED_REWARD_TYPES,
       ASSUMED_CORRECT_RATE, EXPECTED_COMBO_MULTIPLIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS,
       // 기본 헬퍼
@@ -1114,6 +1178,8 @@
       resolveScenarioOutcome, resolveBranchingOption, resolveNarrativeScenario, finishScenarioQuizOutcome,
       // 상점/옷장
       buyItem, equipOutfit, buyOutfit, checkWardrobeGraceNotification, outfitRequirementMet,
+      // 애완동물
+      equipPet, buyPet, checkPetGraceNotification, petRequirementMet,
       // 직업
       careerRequirementMet, unlockedCareers, applyForCareer, resignCareer,
       // 기초 과목 등급 인증

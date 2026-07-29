@@ -8,7 +8,7 @@
   const Engine = window.MathPrincessEngine.createEngine({ P, SUBJ, SC, E });
 
   const {
-    STAT_KEYS, STAT_LABELS, OUTFIT_TIERS, NPC_DEFS, ITEMS, ACTIVITY_DEFS,
+    STAT_KEYS, STAT_LABELS, OUTFIT_TIERS, PET_TIERS, NPC_DEFS, ITEMS, ACTIVITY_DEFS,
     WEEKS_PER_MONTH, PRINCE_MIN_TIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS, CAREER_DEFS,
     MEDAL_TIERS, CERT_SUBJECT_KEYS, BANQUET_TIERS,
   } = Engine;
@@ -55,6 +55,7 @@
     characterPortrait: document.getElementById('character-portrait'),
     characterName: document.getElementById('character-name'),
     outfitBadge: document.getElementById('outfit-badge'),
+    petBadge: document.getElementById('pet-badge'),
     portraitExpRingFill: document.getElementById('portrait-exp-ring-fill'),
     portraitProgressLabel: document.getElementById('portrait-progress-label'),
     nobleTitleBadge: document.getElementById('noble-title-badge'),
@@ -84,6 +85,7 @@
     btnStatusBack: document.getElementById('btn-status-back'),
     statusPortrait: document.getElementById('status-portrait'),
     statusOutfitBadge: document.getElementById('status-outfit-badge'),
+    statusPetBadge: document.getElementById('status-pet-badge'),
     statusCareerBadge: document.getElementById('status-career-badge'),
     statusStatPanel: document.getElementById('status-stat-panel'),
     statusGraceLine: document.getElementById('status-grace-line'),
@@ -97,6 +99,7 @@
     shopGoldLabel: document.getElementById('shop-gold-label'),
     shopTabBtns: document.querySelectorAll('.shop-tab-btn'),
     wardrobeList: document.getElementById('wardrobe-list'),
+    petList: document.getElementById('pet-list'),
     careerList: document.getElementById('career-list'),
 
     levelToast: document.getElementById('level-toast'),
@@ -471,14 +474,32 @@
     el.turnLabel.textContent = yearMonthLabel(state.turn);
     el.goldLabel.textContent = `💰 ${state.gold}G`;
     el.characterName.textContent = state.characterName;
+    // 옷장/펫 알림이 같은 순간(같은 renderMain 호출)에 동시에 뜰 수 있어서,
+    // 토스트가 하나뿐이라 나중 호출이 앞 호출을 덮어써버리지 않도록 모아서
+    // 한 번에 보여준다(showLevelToast를 이 안에서 두 번 부르면 안 됨).
+    const newGraceNotices = [];
     const newlyPurchasable = Engine.checkWardrobeGraceNotification(state);
     if (newlyPurchasable) {
-      showLevelToast(`👗 ${newlyPurchasable.name} 구매 가능! 옷장에서 ${newlyPurchasable.cost}G에 살 수 있어요`);
+      newGraceNotices.push(`👗 ${newlyPurchasable.name} 구매 가능! 옷장에서 ${newlyPurchasable.cost}G에 살 수 있어요`);
+    }
+    const newlyPurchasablePet = Engine.checkPetGraceNotification(state);
+    if (newlyPurchasablePet) {
+      newGraceNotices.push(`🐾 ${newlyPurchasablePet.name} 데려오기 가능! 펫 탭에서 ${newlyPurchasablePet.cost}G에 데려올 수 있어요`);
+    }
+    if (newGraceNotices.length) {
+      showLevelToast(newGraceNotices.join(' / '));
       saveGame();
     }
     const equippedTier = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.characterPortrait, state.wardrobe.equipped, 'main');
     el.outfitBadge.textContent = `${equippedTier.emoji} ${equippedTier.name}`;
+    if (state.pets.equipped !== null) {
+      const equippedPetTier = PET_TIERS[state.pets.equipped];
+      el.petBadge.textContent = `${equippedPetTier.emoji} ${equippedPetTier.name}`;
+      el.petBadge.style.display = 'inline-block';
+    } else {
+      el.petBadge.style.display = 'none';
+    }
     updatePortraitProgressRing();
     if (state.nobleTitle) {
       el.nobleTitleBadge.textContent = `👑 ${state.nobleTitle}`;
@@ -1079,8 +1100,10 @@
     el.shopTabBtns.forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
     el.shopList.style.display = tab === 'items' ? 'flex' : 'none';
     el.wardrobeList.style.display = tab === 'wardrobe' ? 'grid' : 'none';
+    el.petList.style.display = tab === 'pet' ? 'grid' : 'none';
     el.careerList.style.display = tab === 'career' ? 'flex' : 'none';
     if (tab === 'wardrobe') renderWardrobeList();
+    else if (tab === 'pet') renderPetList();
     else if (tab === 'career') renderCareerList();
     else renderShopList();
   }
@@ -1176,6 +1199,57 @@
     showLevelToast(`✨ 새 옷을 샀어요: ${OUTFIT_TIERS[tierIndex].name}!`);
     saveGame();
     renderWardrobeList();
+    renderMain();
+  }
+
+  /* ---------------- 애완동물 ---------------- */
+  // 옷장 렌더링(renderWardrobeList/equipOutfit/buyOutfit)과 같은 구조를
+  // 그대로 따른다. 실제 그려진 일러스트 이미지가 없어서 카드에 이모지만 쓴다.
+
+  function renderPetList() {
+    el.petList.innerHTML = '';
+    PET_TIERS.forEach((tier, tierIndex) => {
+      const owned = state.pets.owned[tierIndex];
+      const purchasable = !owned && Engine.petRequirementMet(state, tierIndex);
+      const equipped = tierIndex === state.pets.equipped;
+      const canAfford = state.gold >= tier.cost;
+      const card = document.createElement('div');
+      card.className = `wardrobe-card${owned ? '' : purchasable ? ' purchasable' : ' locked'}${equipped ? ' equipped' : ''}${tier.requiresNoble ? ' noble-tier' : ''}`;
+      card.innerHTML = `
+        ${equipped ? '<span class="wardrobe-card-badge">함께하는 중</span>' : ''}
+        ${tier.requiresNoble ? '<span class="wardrobe-card-noble-badge">👑 귀족 전용</span>' : ''}
+        <span class="wardrobe-card-img-wrap">
+          <span class="wardrobe-card-emoji-fallback" style="display:flex">${tier.emoji}</span>
+        </span>
+        <span class="wardrobe-card-label">${tier.emoji} ${tier.name}</span>
+        ${purchasable ? `<button class="wardrobe-buy-btn" ${canAfford ? '' : 'disabled'}>💰 ${tier.cost}G 데려오기</button>` : ''}
+      `;
+      if (owned) {
+        card.addEventListener('click', () => equipPet(tierIndex));
+      } else if (purchasable) {
+        card.querySelector('.wardrobe-card-label').textContent = tier.name;
+        if (canAfford) {
+          card.querySelector('.wardrobe-buy-btn').addEventListener('click', () => buyPet(tierIndex));
+        }
+      } else {
+        card.querySelector('.wardrobe-card-label').textContent = tier.petDesc;
+      }
+      el.petList.appendChild(card);
+    });
+  }
+
+  function equipPet(tierIndex) {
+    if (!Engine.equipPet(state, tierIndex)) return;
+    saveGame();
+    renderPetList();
+    renderMain();
+  }
+
+  function buyPet(tierIndex) {
+    if (!Engine.buyPet(state, tierIndex)) return;
+    showLevelToast(`🐾 새 동물 친구가 생겼어요: ${PET_TIERS[tierIndex].name}!`);
+    saveGame();
+    renderPetList();
     renderMain();
   }
 
@@ -1591,6 +1665,13 @@
     const outfit = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.statusPortrait, state.wardrobe.equipped, 'status');
     el.statusOutfitBadge.textContent = `${outfit.emoji} ${outfit.name}`;
+    if (state.pets.equipped !== null) {
+      const petTier = PET_TIERS[state.pets.equipped];
+      el.statusPetBadge.textContent = `${petTier.emoji} ${petTier.name}`;
+      el.statusPetBadge.style.display = 'inline-block';
+    } else {
+      el.statusPetBadge.style.display = 'none';
+    }
     const career = CAREER_DEFS.find((c) => c.id === state.career);
     if (career) {
       el.statusCareerBadge.textContent = `${career.emoji} ${career.name}`;

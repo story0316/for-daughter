@@ -259,6 +259,120 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(afterNoble && afterNoble.name, '대관식 드레스', '귀족이 되는 순간, 품위가 이미 충족된 최고 등급까지 한 번에 알림이 떠야 함');
 }
 
+/* ---------------- 애완동물 ---------------- */
+// 옷장(구매/장착/품위 요건/알림/귀족 게이트)과 거의 같은 테스트를 그대로
+// 반복한다 — 애완동물이 옷장과 동일한 규칙으로 설계되었기 때문이다. 다른
+// 점은 기본으로 소유/장착한 펫이 없다는 것뿐이다.
+
+{
+  const state = Engine.makeInitialState();
+  eq(state.pets.equipped, null, '초기에는 장착한 펫이 없어야 함');
+  ok(Engine.PET_TIERS.every((_, i) => state.pets.owned[i] === false), '초기에는 소유한 펫이 하나도 없어야 함(옷과 달리 기본 펫이 없음)');
+  eq(state.pets.owned.length, Engine.PET_TIERS.length, 'owned 배열 길이는 PET_TIERS 개수와 같아야 함');
+}
+{
+  // 옛 저장 형식(pets 필드 자체가 없던 시절)도 최신 형식으로 이관되어야 함
+  const migrated = Engine.migrateLoadedState({ turn: 5 });
+  ok(Array.isArray(migrated.pets.owned) && migrated.pets.owned.length === Engine.PET_TIERS.length, 'pets 필드가 없던 저장도 owned 배열이 새로 생성되어야 함');
+  eq(migrated.pets.equipped, null, '옛 저장에는 장착한 펫이 없어야 함');
+
+  // owned 배열이 손상돼(길이가 안 맞게) 저장된 경우도 정상화되어야 함
+  const corrupted = Engine.migrateLoadedState({ turn: 5, pets: { owned: [true], equipped: 0 } });
+  eq(corrupted.pets.owned.length, Engine.PET_TIERS.length, '길이가 안 맞는 owned 배열은 새로 초기화되어야 함');
+  eq(corrupted.pets.equipped, null, 'owned가 초기화되면 equipped도 null로 되돌려야 함(소유하지 않은 걸 장착한 상태 방지)');
+
+  // equipped가 실제로 소유하지 않은 tier를 가리키면 null로 되돌려야 함
+  const owned = Engine.PET_TIERS.map(() => false);
+  owned[1] = true;
+  const dangling = Engine.migrateLoadedState({ turn: 5, pets: { owned, equipped: 3 } });
+  eq(dangling.pets.equipped, null, '소유하지 않은 tier를 장착 중이라고 하면 null로 되돌려야 함');
+  const valid = Engine.migrateLoadedState({ turn: 5, pets: { owned, equipped: 1 } });
+  eq(valid.pets.equipped, 1, '실제로 소유한 tier를 장착 중이면 그대로 유지되어야 함');
+}
+{
+  const state = Engine.makeInitialState();
+  state.gold = 10000;
+  state.stats.charm = 40; // grace = 16 + 기본 지능/창의력 몫 => tier0(0)~tier1(15) 요건은 충족
+  ok(Engine.buyPet(state, 0), '골드와 품위가 충분하면 펫 구매 성공');
+  eq(state.pets.equipped, 0, '펫을 사면 바로 함께하게 됨');
+  ok(state.pets.owned[0], '산 펫은 소유 목록에 표시됨');
+  ok(!Engine.buyPet(state, 0), '이미 데려온 펫은 다시 살 수 없음');
+
+  ok(Engine.buyPet(state, 1), '두 번째 펫도 조건을 만족하면 살 수 있음');
+  eq(state.pets.equipped, 1, '새 펫을 사면 그 펫으로 장착이 바뀜');
+  ok(Engine.equipPet(state, 0), '이미 소유한 펫으로 다시 장착을 바꿀 수 있음');
+  eq(state.pets.equipped, 0, '장착을 바꾸면 실제로 바뀜');
+  ok(!Engine.equipPet(state, 3), '소유하지 않은 펫은 장착할 수 없음');
+}
+{
+  // 품위는 충분해도 골드가 부족하면 여전히 구매할 수 없어야 함
+  const state = Engine.makeInitialState();
+  state.stats.charm = 40;
+  state.gold = 0;
+  ok(!Engine.buyPet(state, 0), '골드가 부족하면 구매 실패');
+}
+{
+  // 품위가 부족하면 골드가 아무리 많아도 구매할 수 없어야 함(engine 레벨에서도 강제)
+  const state = Engine.makeInitialState();
+  state.gold = 100000;
+  ok(!Engine.petRequirementMet(state, 3), '기본 상태(품위 부족)에서는 tier3(여우, 품위 50) 요건을 만족하지 못해야 함');
+  ok(!Engine.buyPet(state, 3), '품위가 부족하면 골드가 충분해도 구매할 수 없어야 함');
+}
+
+/* ---------------- 귀족 전용 펫(tier 4 이상) ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  state.gold = 100000;
+  state.stats.charm = 100;
+  state.stats.creativity = 100;
+  state.stats.intelligence = 100; // grace = 100(만점)
+  ok(Engine.petRequirementMet(state, 3), '여우(tier3)는 귀족이 아니어도 품위만 충분하면 데려올 수 있어야 함');
+  ok(!Engine.petRequirementMet(state, 4), '공작새(tier4)는 품위가 만점이어도 귀족 신분이 없으면 데려올 수 없어야 함');
+  ok(!Engine.buyPet(state, 4), '귀족이 아니면 골드/품위가 충분해도 tier4 구매가 막혀야 함');
+  eq(state.pets.owned[4], false, '구매가 막혔으면 소유 목록에 기록되면 안 됨');
+
+  ok(Engine.grantNobleTitle(state, '은빛 백작'), '작위를 받으면');
+  ok(Engine.petRequirementMet(state, 4), '귀족 신분을 얻으면 tier4 요건을 만족해야 함');
+  ok(Engine.buyPet(state, 4), '귀족이 되면 공작새를 데려올 수 있어야 함');
+  eq(state.pets.equipped, 4, '구매하면 바로 함께하게 되어야 함');
+}
+{
+  const state = Engine.makeInitialState();
+  state.stats.charm = 100;
+  state.stats.creativity = 100;
+  state.stats.intelligence = 100;
+  const beforeNoble = Engine.checkPetGraceNotification(state);
+  eq(beforeNoble && beforeNoble.name, '여우', '귀족이 아니면 품위 만점이어도 귀족 전용이 아닌 마지막 등급(여우)까지만 알림 대상이어야 함');
+  eq(Engine.checkPetGraceNotification(state), null, '같은 등급은 두 번 알리지 않아야 함');
+
+  Engine.grantNobleTitle(state, '루비 자작');
+  const afterNoble = Engine.checkPetGraceNotification(state);
+  eq(afterNoble && afterNoble.name, '유니콘', '귀족이 되는 순간, 품위가 이미 충족된 최고 등급까지 한 번에 알림이 떠야 함');
+}
+{
+  // 펫을 장착하고 있으면 매턴(applyServantEffects) 자동으로 스트레스가
+  // 줄어들어야 한다(하녀/정원사와 같은 훅).
+  const state = Engine.makeInitialState();
+  state.stats.stress = 50;
+  state.gold = 10000;
+  ok(Engine.buyPet(state, 0), '강아지 구매');
+  const stressBefore = state.stats.stress;
+  Engine.applyServantEffects(state);
+  ok(state.stats.stress < stressBefore, '펫을 장착 중이면 매턴 스트레스가 줄어야 함');
+
+  const noPetState = Engine.makeInitialState();
+  noPetState.stats.stress = 50;
+  Engine.applyServantEffects(noPetState);
+  eq(noPetState.stats.stress, 50, '펫이 없으면 스트레스가 그대로여야 함');
+}
+{
+  eq(Engine.PET_TIERS.length, 7, '애완동물은 총 7단계여야 함');
+  const requiresNoble = Engine.PET_TIERS.map((t) => !!t.requiresNoble);
+  eq(JSON.stringify(requiresNoble), JSON.stringify([false, false, false, false, true, true, true]), '상위 3단계(공작새/백마/유니콘)만 귀족 신분을 요구해야 함');
+  ok(Engine.PET_TIERS.every((t) => t.stressRelief > 0), '모든 펫은 스트레스 완화 효과가 있어야 함');
+}
+
 /* ---------------- 연회 입장 게이트(사교모임 3단계) ---------------- */
 
 {
