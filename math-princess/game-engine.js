@@ -634,6 +634,18 @@
       }
     }
 
+    // 방금 틀린 문제가 최근 오답 목록에 이미 있었는지(=같은 문제를 예전에도
+    // 틀렸는지) 확인한다. applyWrong이 기록을 남기기 "전"에 호출해야 정확하다
+    // (그 뒤에 호출하면 방금 추가된 기록 자신과 비교하게 되어 항상 true가 됨).
+    // UI가 이 값을 보고 매번 같은 일반 힌트 대신, 반복되는 실수를 짚어주는
+    // 맞춤 피드백을 보여줄 수 있다.
+    function isRepeatMistake(state, session, problem) {
+      if (!problem) return false;
+      const subjectKey = subjectKeyForSession(session);
+      if (!subjectKey || !state.learningLog[subjectKey]) return false;
+      return state.learningLog[subjectKey].recentMistakes.some((m) => m.question === problem.question);
+    }
+
     function applyCorrect(state, session, problem) {
       state.combo++;
       state.bestCombo = Math.max(state.bestCombo, state.combo);
@@ -1297,7 +1309,7 @@
       startStudySession, startJobSession, startBanquetSession, startExerciseSession, startRestSession,
       startLaundrySession, startGardenSession, startScenarioQuizSession, startCompetitionSession,
       startCreativitySession, startFaithSession,
-      applyCorrect, applyWrong,
+      applyCorrect, applyWrong, isRepeatMistake,
       finishStudyOrJobOutcome, finishBanquetOutcome, finishExerciseBonusOutcome, finishRestBonusOutcome,
       finishLaundryBonusOutcome, finishGardenBonusOutcome, finishCompetitionOutcome, rollRandomEvent, checkStressOverflow,
       finishCreativityOutcome, finishFaithOutcome,

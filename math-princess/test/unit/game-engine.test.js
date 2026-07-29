@@ -235,6 +235,55 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   ok(corrupted.learningLog.english, '일부 과목만 있던 저장도 나머지 과목 로그가 채워져야 함');
 }
 
+/* ---------------- 반복 오답 감지(isRepeatMistake) ---------------- */
+// 같은 문제를 예전에도 틀렸는지 확인해, UI가 매번 같은 일반 힌트 대신
+// "이 문제 전에도 틀렸었죠?" 같은 맞춤 피드백을 보여줄 수 있게 한다.
+
+{
+  const state = Engine.makeInitialState();
+  const session = Engine.startStudySession();
+  session.currentSubject = 'math';
+  const problem = { level: 3, question: '3 + 4 = ?' };
+  ok(!Engine.isRepeatMistake(state, session, problem), '한 번도 틀린 적 없는 문제는 반복 오답이 아니어야 함');
+
+  Engine.applyWrong(state, session, problem);
+  // 새 세션(다음 주 "공부")에서 같은 문제가 다시 나왔다고 가정
+  const nextSession = Engine.startStudySession();
+  nextSession.currentSubject = 'math';
+  ok(Engine.isRepeatMistake(state, nextSession, problem), '전에 틀렸던 문제가 다시 나오면 반복 오답으로 감지되어야 함');
+  ok(!Engine.isRepeatMistake(state, nextSession, { level: 3, question: '전혀 다른 문제' }), '다른 문제는 반복 오답이 아니어야 함');
+}
+{
+  // applyWrong이 기록을 남기기 "전"에 확인해야 정확하다 — 기록 직후 같은
+  // 세션에서 곧바로 확인하면 방금 자기 자신을 기록과 비교해 항상 true가
+  // 되어버리는 순서 버그를 방지하기 위한 계약 테스트.
+  const state = Engine.makeInitialState();
+  const session = Engine.startStudySession();
+  session.currentSubject = 'math';
+  const problem = { level: 1, question: '처음 틀리는 문제' };
+  const before = Engine.isRepeatMistake(state, session, problem);
+  Engine.applyWrong(state, session, problem);
+  ok(!before, 'applyWrong 호출 전에 확인하면 첫 오답은 반복이 아니어야 함');
+}
+{
+  // 정답만 맞혔을 뿐 틀린 적 없는 문제는 반복 오답이 아니어야 함
+  const state = Engine.makeInitialState();
+  const session = Engine.startStudySession();
+  session.currentSubject = 'math';
+  const problem = { level: 2, question: '항상 맞히는 문제' };
+  Engine.applyCorrect(state, session, problem);
+  ok(!Engine.isRepeatMistake(state, session, problem), '틀린 적 없이 정답만 맞힌 문제는 반복 오답이 아니어야 함');
+}
+{
+  // 연회/창의력/기도와 선행처럼 과목·레벨 구조가 없는 활동은 애초에 기록이
+  // 안 되므로 반복 오답도 항상 false여야 함
+  const state = Engine.makeInitialState();
+  const banquetSession = Engine.startBanquetSession('tea-party');
+  const problem = { level: 0, question: 'EtiquetteQ' };
+  Engine.applyWrong(state, banquetSession, problem);
+  ok(!Engine.isRepeatMistake(state, banquetSession, problem), '과목 구조가 없는 활동은 반복 오답 감지 대상이 아니어야 함');
+}
+
 {
   // 은행: 세션 도중이 아니라 세션이 끝날 때 한 번에 매력치를 반영(finishBanquetOutcome)
   // 왕자님은 최고 등급(고급 사교 모임)에서만 만날 수 있음
