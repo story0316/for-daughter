@@ -25,26 +25,32 @@
     // 과목별 문제 대신 고정된 문제 은행에서 뽑는 세션 유형(연회 예절 문제).
     const MULTI_SUBJECT_TYPES = ['study', 'job', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
 
-    // "학교 수업" 전용 과목(수학·과학·음악). 공부/알바가 쓰는 SUBJECTS(수학·
-    // 영어·과학)와는 다른 세트다 — 학교 수업에는 영어가 없고 대신 음악이
-    // 있다. 난이도도 지능으로 해금되는 게 아니라 신분(평민/하위 귀족/상위
-    // 귀족)에 따라 학년 단계가 정해진다(game-engine.js의 schoolTierForRank).
+    // "학교 수업" 전용 과목(수학·과학·음악·국어·미술·사회). 공부/알바가 쓰는
+    // SUBJECTS(수학·영어·과학)와는 다른 세트다 — 학교 수업에는 영어가 없고
+    // 대신 음악·국어·미술·사회가 있다. 난이도도 지능으로 해금되는 게 아니라
+    // 신분(평민/하위 귀족/상위 귀족)에 따라 학년 단계가 정해진다
+    // (game-engine.js의 schoolTierForRank). 신분(학년)마다 배우는 과목
+    // 구성은 똑같이 이 여섯 과목 전체이며, 세션마다 그중 하나가 무작위로
+    // 고정된다(난이도만 학년 단계에 따라 달라짐).
     const SCHOOL_SUBJECTS = {
       math: { name: '수학' },
       science: { name: '과학' },
       music: { name: '음악' },
+      korean: { name: '국어' },
+      art: { name: '미술' },
+      social: { name: '사회' },
     };
     const SCHOOL_SUBJECT_KEYS = Object.keys(SCHOOL_SUBJECTS);
     function schoolSubjectName(key) { return SCHOOL_SUBJECTS[key].name; }
 
     // 신분 단계(elementary=평민/초등, middle=하위 귀족/중학교, high=상위
     // 귀족/고등학교)별로 각 과목에서 뽑을 수 있는 레벨 범위. 수학(1~9)과
-    // 과학(1~7)은 기존 레벨 체계를 그대로 나눠 쓰고, 음악은 애초에 학년
-    // 단계 3개로만 만들어져 있어 1:1로 대응한다.
+    // 과학(1~7)은 기존 레벨 체계를 그대로 나눠 쓰고, 음악·국어·미술·사회는
+    // 애초에 학년 단계 3개로만 만들어져 있어 1:1로 대응한다.
     const SCHOOL_LEVEL_RANGES = {
-      elementary: { math: [1, 2], science: [1, 2, 3], music: [1] },
-      middle: { math: [3, 4, 5], science: [4, 5, 6], music: [2] },
-      high: { math: [6, 7, 8, 9], science: [7], music: [3] },
+      elementary: { math: [1, 2], science: [1, 2, 3], music: [1], korean: [1], art: [1], social: [1] },
+      middle: { math: [3, 4, 5], science: [4, 5, 6], music: [2], korean: [2], art: [2], social: [2] },
+      high: { math: [6, 7, 8, 9], science: [7], music: [3], korean: [3], art: [3], social: [3] },
     };
 
     // 각 문제의 category는 상황판단(situational judgment) 유형 태그로,
@@ -514,16 +520,20 @@
       return { type: 'choice', question: picked.question, choices: shuffle(choices), answer: picked.answer, explanation: picked.explanation, hint: picked.hint, rewardGold: 0, level: 0 };
     }
 
-    // "학교 수업": session.fixedSubject(수학/과학/음악 중 하나, 세션 시작 시
-    // 한 번 고정됨)와 session.schoolTier(신분에 따라 정해진 학년 단계)로
-    // 레벨 범위를 찾아 그 안에서 무작위로 뽑는다. 공부처럼 지능으로 해금된
-    // 레벨을 따지지 않고, 그 학년 단계에 정해진 범위 안에서만 출제된다.
+    // "학교 수업": session.fixedSubject(수학/과학/음악/국어/미술/사회 중
+    // 하나, 세션 시작 시 한 번 고정됨)와 session.schoolTier(신분에 따라
+    // 정해진 학년 단계)로 레벨 범위를 찾아 그 안에서 무작위로 뽑는다.
+    // 공부처럼 지능으로 해금된 레벨을 따지지 않고, 그 학년 단계에 정해진
+    // 범위 안에서만 출제된다.
     function generateSchoolProblem(session) {
       const subjectKey = session.fixedSubject;
       const range = SCHOOL_LEVEL_RANGES[session.schoolTier][subjectKey];
       const level = randChoice(range);
       session.currentSubject = subjectKey;
       if (subjectKey === 'music') return SUBJ.generateMusicProblem(level);
+      if (subjectKey === 'korean') return SUBJ.generateKoreanProblem(level);
+      if (subjectKey === 'art') return SUBJ.generateArtProblem(level);
+      if (subjectKey === 'social') return SUBJ.generateSocialProblem(level);
       if (subjectKey === 'science') return SUBJ.generateScienceProblem(level);
       return P.generateProblem(level);
     }
