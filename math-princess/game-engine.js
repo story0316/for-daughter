@@ -146,6 +146,9 @@
       { id: 'aiTutor', emoji: '🤖', name: 'AI 학습기', cost: 3500, desc: '문제 정답 시 골드 +25%, 지능 +2 추가', goldBonus: 0.25, intBonus: 2 },
       { id: 'orchestra', emoji: '🎻', name: '개인 오케스트라 레슨', cost: 4000, desc: '공부 정답 시 지능 +2 추가 획득', intBonus: 2 },
       { id: 'palace', emoji: '🏰', name: '별궁으로 이사', cost: 5000, desc: '휴식 효과 추가 +50% (총 150%)', restBonus: 0.5 },
+      { id: 'sketchbook', emoji: '🎨', name: '창의력 스케치북', cost: 1800, desc: '공부·창의력 올림피아드 정답 시 창의력 +1 추가 획득', creativityBonus: 1 },
+      { id: 'clover-necklace', emoji: '🍀', name: '네잎클로버 목걸이', cost: 2800, desc: '텃밭 가꾸기·기도와 선행 정답 시 행운 +1 추가 획득', luckBonus: 1 },
+      { id: 'villa', emoji: '🏖️', name: '왕실 별장', cost: 8000, desc: '휴식 효과 추가 +50% (총 200%)', restBonus: 0.5 },
     ];
 
     // 매주 문제를 풀어 돈을 버는 "알바"(ACTIVITY_DEFS.job)와는 별개로, 스탯
@@ -731,7 +734,7 @@
 
     function finishGardenBonusOutcome(state, session) {
       const bonus = session.correctCount > 0;
-      applyDelta(state, Reward.gardenBonusReward(bonus));
+      applyDelta(state, Reward.gardenBonusReward(bonus, state.items));
       clampStats(state);
       return { bonus };
     }

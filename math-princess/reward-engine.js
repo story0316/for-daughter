@@ -55,12 +55,12 @@
       // 의미가 없음). lengthMultiplier(도전자가 고른 문제 수)는 골드에만 적용.
       if (sessionType === 'creativity') {
         const base = creativityQuestionReward();
-        return { gold: Math.round(base.gold * lm), creativity: base.creativity };
+        return { gold: Math.round(base.gold * lm), creativity: base.creativity + itemBonusSum(items, 'creativityBonus') };
       }
       // 기도와 선행: 성경 퀴즈/어른 공경/친구 배려/기도 문제를 맞히면 행운이
       // 오르고, 차분히 돌아보는 시간이라는 뜻에서 스트레스도 살짝 줄어든다.
       if (sessionType === 'faith') {
-        return { luck: 1, stress: -1 };
+        return { luck: 1 + itemBonusSum(items, 'luckBonus'), stress: -1 };
       }
       // 인증 시험은 상금/스탯이 문제마다 붙지 않고 시험 종료 시 한 번에
       // 통과 여부로 결정되지만(certExamReward), 오답에는 그래도 체력/스트레스
@@ -79,7 +79,7 @@
       const goldMultiplier = (1 + itemBonusSum(items, 'goldBonus')) * lm;
       const gold = Math.round(problem.rewardGold * multiplier * jobBonus * goldMultiplier);
       if (sessionType === 'study') {
-        return { gold, intelligence: problem.level + itemBonusSum(items, 'intBonus'), creativity: problem.level * 0.2 };
+        return { gold, intelligence: problem.level + itemBonusSum(items, 'intBonus'), creativity: problem.level * 0.2 + itemBonusSum(items, 'creativityBonus') };
       }
       return { gold, stamina: -2 };
     }
@@ -128,8 +128,9 @@
     // 행운). "기도와 선행" 활동은 마음가짐(선행/신앙)을 통해 행운을 올리는
     // 또 다른 경로다 — 행운이 필요한 엔딩(올림피아드/스타트업 CEO/여행가)을
     // 노리는 플레이어가 텃밭 가꾸기 하나에만 의존하지 않아도 되게 한다.
-    function gardenBonusReward(bonus) {
-      const d = { stamina: -4, gold: 25, luck: 1 };
+    function gardenBonusReward(bonus, items) {
+      const luckItemBonus = itemBonusSum(items, 'luckBonus');
+      const d = { stamina: -4, gold: 25, luck: 1 + luckItemBonus };
       if (bonus) { d.gold += 15; d.luck += 1; }
       return d;
     }

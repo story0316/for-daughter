@@ -16,6 +16,8 @@ const ITEMS = [
   { id: 'tiara', charmBonus: 1 },
   { id: 'invitation', affectionBonus: 2 },
   { id: 'apartment', restBonus: 0.5 },
+  { id: 'sketchbook', creativityBonus: 1 },
+  { id: 'clover-necklace', luckBonus: 1 },
 ];
 
 const Reward = createRewardEngine({ ITEMS });
@@ -46,6 +48,10 @@ eq(Reward.itemBonusSum({ sharp: true, tablet: true }, 'intBonus'), 1, '다른 �
 {
   const r = Reward.correctAnswerReward('study', { level: 3, rewardGold: 10 }, 1, { tablet: true });
   eq(r.intelligence, 4, '태블릿 보유 시 지능 보너스 +1이 더해져야 함');
+}
+{
+  const r = Reward.correctAnswerReward('study', { level: 3, rewardGold: 10 }, 1, { sketchbook: true });
+  approx(r.creativity, 1.6, 0.001, '창의력 스케치북 보유 시 공부 정답 창의력 보너스 +1이 더해져야 함(0.6+1)');
 }
 {
   const r = Reward.correctAnswerReward('job', { level: 1, rewardGold: 10 }, 1, {});
@@ -105,12 +111,15 @@ eq(Reward.wrongAnswerPenalty('banquet').stress, 2, '연회 오답은 스트레�
   ok(withoutBonus.stamina < 0, '직접 빨래하면 체력도 소모되어야 함');
 }
 {
-  const withoutBonus = Reward.gardenBonusReward(false);
-  const withBonus = Reward.gardenBonusReward(true);
+  const withoutBonus = Reward.gardenBonusReward(false, {});
+  const withBonus = Reward.gardenBonusReward(true, {});
   eq(withoutBonus.gold, 25, '텃밭 기본 골드 +25');
   ok(withBonus.gold > withoutBonus.gold, '보너스 문제까지 맞히면 골드가 더 많아야 함');
   eq(withoutBonus.luck, 1, '텃밭은 기본으로도 행운 +1을 줘야 함(노동을 통해 행운을 키우는 대표 활동)');
   ok(withBonus.luck > withoutBonus.luck, '보너스 문제까지 맞히면 행운도 더 많아야 함');
+
+  const withClover = Reward.gardenBonusReward(false, { 'clover-necklace': true });
+  ok(withClover.luck > withoutBonus.luck, '네잎클로버 목걸이가 있으면 텃밭 행운 획득이 더 커야 함');
 }
 
 /* ---------------- 왕국 수학경시대회 상금 ---------------- */
@@ -146,6 +155,9 @@ eq(Reward.wrongAnswerPenalty('banquet').stress, 2, '연회 오답은 스트레�
   eq(correct.gold, perQuestion.gold, '창의력 올림피아드는 콤보 배율 없이 문제당 고정 보상을 줘야 함');
   eq(correct.creativity, perQuestion.creativity, '창의력 올림피아드 정답 보상에 창의력 증가량이 포함되어야 함');
   ok(Reward.wrongAnswerPenalty('creativity').stress > 0, '창의력 올림피아드 오답은 스트레스가 쌓여야 함');
+
+  const withSketchbook = Reward.correctAnswerReward('creativity', {}, 1, { sketchbook: true });
+  ok(withSketchbook.creativity > correct.creativity, '창의력 스케치북 보유 시 창의력 올림피아드 정답 창의력 획득이 더 커야 함');
 }
 
 /* ---------------- 기도와 선행 ---------------- */
@@ -158,6 +170,9 @@ eq(Reward.wrongAnswerPenalty('banquet').stress, 2, '연회 오답은 스트레�
 
   const wrong = Reward.wrongAnswerPenalty('faith');
   eq(Object.keys(wrong).length, 0, '기도와 선행은 오답이어도 벌점이 없어야 함(마음가짐을 돌아보는 시간)');
+
+  const withClover = Reward.correctAnswerReward('faith', {}, 1, { 'clover-necklace': true });
+  ok(withClover.luck > correct.luck, '네잎클로버 목걸이 보유 시 기도와 선행 정답 행운 획득이 더 커야 함');
 }
 
 /* ---------------- 호감도 증가량 ---------------- */
