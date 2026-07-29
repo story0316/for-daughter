@@ -1,43 +1,17 @@
 // 연회 3단계(작은 다과회/사교 모임/고급 사교 모임)의 등급 선택 화면, 등급별
 // 입장료/옷차림/품위/영어 인증 게이트, 그리고 왕자님은 고급 사교 모임에서만
 // 만날 수 있다는 것을 실제 UI 흐름으로 검증한다.
+const path = require('path');
 const { ok, eq, summary } = require('../helpers/assert');
 const { withPage, seedAndContinue, makeState, activeScreenId, getSavedState, planWeekActivity } = require('./helpers');
+const P = require(path.join(__dirname, '..', '..', 'problems.js'));
+const SUBJ = require(path.join(__dirname, '..', '..', 'subjects.js'));
+const QE = require(path.join(__dirname, '..', '..', 'question-engine.js')).createQuestionEngine({ P, SUBJ });
 
-// question-engine.js의 ETIQUETTE_QUESTIONS 정답 문구(고정 콘텐츠). 연회 문제를
-// 확실히 맞히기 위해 화면에 뜬 보기 중 이 목록에 있는 텍스트를 고른다.
-const CORRECT_ETIQUETTE_ANSWERS = [
-  '조용히 미소지으며 인사하기',
-  '왼손 포크, 오른손 나이프로 조용히',
-  '끝까지 귀 기울여 듣는다',
-  '눈을 마주치고 미소지으며 인사한다',
-  '조용히 한 모금씩 마신다',
-  '"고맙습니다"라고 인사한다',
-  '약속 시간에 맞춰 도착한다',
-  '바로 "미안합니다"라고 사과한다',
-  '알려주지 않고 어른에게 이야기한다',
-  '위로해주고 함께 방법을 찾아본다',
-  '괜찮은지 물어보고 도와준다',
-  '침착하게 비상구로 대피한다',
-  '서로 이야기를 나누며 타협점을 찾는다',
-  '서로 의논해서 공평하게 나눈다',
-  '다름을 이해하고 존중한다',
-  '쓰레기통을 찾을 때까지 가지고 있는다',
-  '조용히 하고 다른 사람을 배려한다',
-  '솔직히 말하고 사과한다',
-  '안 된다고 부드럽게 거절한다',
-  '정중하게 순서를 지켜달라고 말한다',
-  '문 앞까지 나가서 인사한다',
-  '손이나 손수건으로 입을 가린다',
-  '미리 연락해서 상황을 알린다',
-  '출처를 밝히고 허락을 구한다',
-  '단호히 거절하고 자리를 피한다',
-  '직접 만나서 차분히 이야기해본다',
-  '왜 어려운지 먼저 물어보고 함께 방법을 찾는다',
-  '불편한 곳이 있는지 살피고 자연스럽게 돕는다',
-  '정해진 분리수거함에 버린다',
-  '실제 점수를 솔직하게 말씀드린다',
-];
+// question-engine.js의 ETIQUETTE_QUESTIONS 정답 문구(고정 콘텐츠)를 실제
+// 문제 은행에서 그대로 가져온다. 은행 크기가 바뀌어도(문제가 추가/삭제돼도)
+// 이 목록이 항상 동기화되도록, 하드코딩된 정답 목록 대신 동적으로 만든다.
+const CORRECT_ETIQUETTE_ANSWERS = QE.ETIQUETTE_QUESTIONS.map((q) => q.answer);
 
 async function answerBanquetCorrectly(page) {
   await page.waitForTimeout(150);

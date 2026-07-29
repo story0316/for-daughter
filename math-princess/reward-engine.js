@@ -78,7 +78,10 @@
       const jobBonus = sessionType === 'job' ? 1.5 : 1;
       const goldMultiplier = (1 + itemBonusSum(items, 'goldBonus')) * lm;
       const gold = Math.round(problem.rewardGold * multiplier * jobBonus * goldMultiplier);
-      if (sessionType === 'study') {
+      // "학교 수업"은 수학·과학·음악을 배우는 활동이라 공부와 같은 보상
+      // 공식을 쓴다(신분에 따라 교사만 달라질 뿐, 경제적으로는 공부의
+      // 한 종류다).
+      if (sessionType === 'study' || sessionType === 'school') {
         return { gold, intelligence: problem.level + itemBonusSum(items, 'intBonus'), creativity: problem.level * 0.2 + itemBonusSum(items, 'creativityBonus') };
       }
       return { gold, stamina: -2 };
@@ -95,7 +98,7 @@
       if (sessionType === 'faith') return {};
       if (sessionType === 'cert-exam') return { stamina: -3, stress: 5 };
       if (DEFERRED_REWARD_TYPES.includes(sessionType)) return {};
-      if (sessionType === 'study') return { stress: 6, stamina: -4 };
+      if (sessionType === 'study' || sessionType === 'school') return { stress: 6, stamina: -4 };
       return { stamina: -3 };
     }
 

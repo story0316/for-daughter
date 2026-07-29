@@ -87,6 +87,7 @@
   const ACTIVITY_COMPETENCY_TAGS = {
     study: { name: '공부', competencies: ['knowledge-processing', 'self-management'] },
     job: { name: '알바', competencies: ['knowledge-processing', 'self-management'] },
+    school: { name: '학교 수업', competencies: ['knowledge-processing', 'aesthetic-emotional'] },
     exercise: { name: '운동', competencies: ['self-management'] },
     rest: { name: '휴식', competencies: ['self-management'] },
     laundry: { name: '빨래하기', competencies: ['self-management', 'community'] },

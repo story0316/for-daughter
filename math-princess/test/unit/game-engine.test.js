@@ -182,6 +182,100 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   Engine.applyCorrect(state, session, { level: 1, question: 'JobQ' });
   eq(state.learningLog.science.byLevel[1].correct, 1, '알바 세션도 currentSubject 기준으로 기록되어야 함');
 }
+
+/* ---------------- 학교 수업 (수학/과학/음악, 신분에 따른 교사·학년) ---------------- */
+
+// schoolTierForRank: 평민(null)은 초등, 남작~백작(0~2, 하위 귀족)은 중학교,
+// 후작~대공(3~5, 상위 귀족)은 고등학교여야 함.
+eq(Engine.schoolTierForRank(null), 'elementary', '평민은 초등학교 과정');
+eq(Engine.schoolTierForRank(undefined), 'elementary', 'nobleRankIndex 미설정도 평민(초등학교) 취급');
+[0, 1, 2].forEach((idx) => eq(Engine.schoolTierForRank(idx), 'middle', `nobleRankIndex ${idx}(하위 귀족)는 중학교 과정`));
+[3, 4, 5].forEach((idx) => eq(Engine.schoolTierForRank(idx), 'high', `nobleRankIndex ${idx}(상위 귀족)는 고등학교 과정`));
+
+{
+  const state = Engine.makeInitialState();
+  const session = Engine.startSchoolSession(state, 5);
+  eq(session.type, 'school', '학교 수업 세션 타입');
+  eq(session.count, 5, '학교 수업 세션 문제 수');
+  ok(Engine.SCHOOL_SUBJECT_KEYS.includes(session.fixedSubject), '학교 수업 세션은 시작할 때 과목(수학/과학/음악)이 하나 고정되어야 함');
+  eq(session.schoolTier, 'elementary', '평민 상태로 시작하면 초등학교 과정이어야 함');
+  eq(session.helperNpc, 'teacher', '평민은 선생님이 가르쳐야 함');
+
+  const fixedSubject = session.fixedSubject;
+  const seenLevels = new Set();
+  for (let i = 0; i < 20; i++) {
+    const problem = Engine.generateNextProblem(state, session);
+    eq(session.currentSubject, fixedSubject, '학교 수업은 문제마다 과목이 바뀌지 않고 고정 과목으로 통일되어야 함');
+    seenLevels.add(problem.level);
+  }
+  const elementaryRanges = { math: [1, 2], science: [1, 2, 3], music: [1] };
+  seenLevels.forEach((lv) => {
+    ok(elementaryRanges[fixedSubject].includes(lv), `평민(초등학교) 학교 수업의 ${fixedSubject} 레벨은 ${elementaryRanges[fixedSubject].join(',')} 중 하나여야 함(실제: ${lv})`);
+  });
+}
+
+{
+  // 하위 귀족(남작, index 0)은 중학교 과정 + 왕궁 학자
+  const state = Engine.makeInitialState();
+  state.nobleTitle = '테스트 남작';
+  state.nobleRankIndex = 0;
+  const session = Engine.startSchoolSession(state, 6);
+  eq(session.schoolTier, 'middle', '하위 귀족은 중학교 과정이어야 함');
+  eq(session.helperNpc, 'royalScholar', '귀족(하위 포함)은 왕궁 학자가 가르쳐야 함');
+  const middleRanges = { math: [3, 4, 5], science: [4, 5, 6], music: [2] };
+  for (let i = 0; i < 20; i++) {
+    const problem = Engine.generateNextProblem(state, session);
+    ok(middleRanges[session.fixedSubject].includes(problem.level), `하위 귀족(중학교) 학교 수업의 ${session.fixedSubject} 레벨은 ${middleRanges[session.fixedSubject].join(',')} 중 하나여야 함(실제: ${problem.level})`);
+  }
+}
+
+{
+  // 상위 귀족(대공, index 5)은 고등학교 과정 + 왕궁 학자
+  const state = Engine.makeInitialState();
+  state.nobleTitle = '테스트 대공';
+  state.nobleRankIndex = 5;
+  const session = Engine.startSchoolSession(state, 6);
+  eq(session.schoolTier, 'high', '상위 귀족은 고등학교 과정이어야 함');
+  eq(session.helperNpc, 'royalScholar', '상위 귀족도 왕궁 학자가 가르쳐야 함');
+  const highRanges = { math: [6, 7, 8, 9], science: [7], music: [3] };
+  for (let i = 0; i < 20; i++) {
+    const problem = Engine.generateNextProblem(state, session);
+    ok(highRanges[session.fixedSubject].includes(problem.level), `상위 귀족(고등학교) 학교 수업의 ${session.fixedSubject} 레벨은 ${highRanges[session.fixedSubject].join(',')} 중 하나여야 함(실제: ${problem.level})`);
+  }
+}
+
+{
+  // 학교 수업의 보상/오답 페널티는 공부(study)와 같은 공식을 써야 한다.
+  const state = Engine.makeInitialState();
+  const session = Engine.startSchoolSession(state, 4);
+  session.fixedSubject = 'math';
+  session.currentSubject = 'math';
+  const beforeInt = state.stats.intelligence;
+  const beforeGold = state.gold;
+  Engine.applyCorrect(state, session, { level: 3, rewardGold: 10, question: 'SchoolQ' });
+  ok(state.stats.intelligence > beforeInt, '학교 수업 정답은 지능을 올려야 함(공부와 동일한 보상 공식)');
+  ok(state.gold > beforeGold, '학교 수업 정답은 골드를 줘야 함');
+  eq(state.learningLog.math.byLevel[3].correct, 1, '학교 수업(수학)도 learningLog.math에 기록되어야 함');
+
+  Engine.applyWrong(state, session, { level: 3, question: 'SchoolWrongQ' });
+  eq(state.learningLog.math.recentMistakes[0].question, 'SchoolWrongQ', '학교 수업 오답도 최근 오답 목록에 기록되어야 함');
+}
+
+{
+  // 학교 수업(음악)은 learningLog에 없는 과목이라 조용히 무시되어야 함(에러 없이)
+  const state = Engine.makeInitialState();
+  const session = Engine.startSchoolSession(state, 4);
+  session.fixedSubject = 'music';
+  session.currentSubject = 'music';
+  Engine.applyCorrect(state, session, { level: 1, rewardGold: 10, question: 'MusicQ' });
+  eq(session.correctCount, 1, '음악 학교 수업도 정답 카운트는 정상적으로 올라야 함');
+}
+
+{
+  const session = Engine.startSchoolSession(Engine.makeInitialState(), 4);
+  const outcome = Engine.finishStudyOrJobOutcome(session);
+  eq(outcome.title, '학교 수업을 마쳤어요!', '학교 수업 종료 문구');
+}
 {
   // 왕국 수학경시대회(competition)는 항상 수학으로 기록되어야 함
   const state = Engine.makeInitialState();

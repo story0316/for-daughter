@@ -64,6 +64,14 @@ eq(Reward.itemBonusSum({ sharp: true, tablet: true }, 'intBonus'), 1, '다른 �
   eq(r.gold, 22, '콤보 10(배율 2.2)에서 골드는 rewardGold*2.2 반올림');
 }
 {
+  // "학교 수업"은 신분에 따라 교사만 다를 뿐, 경제적으로는 공부와 같은 보상 공식이어야 함
+  const study = Reward.correctAnswerReward('study', { level: 3, rewardGold: 10 }, 1, {});
+  const school = Reward.correctAnswerReward('school', { level: 3, rewardGold: 10 }, 1, {});
+  eq(school.gold, study.gold, '학교 수업 정답 골드는 공부와 같아야 함');
+  eq(school.intelligence, study.intelligence, '학교 수업 정답 지능은 공부와 같아야 함');
+  approx(school.creativity, study.creativity, 0.001, '학교 수업 정답 창의력은 공부와 같아야 함');
+}
+{
   const r = Reward.correctAnswerReward('banquet', {}, 1, {});
   eq(r.charm, 4, '연회 정답은 매력 +4(아이템 없을 때)');
   ok(typeof r.gold === 'undefined', '연회는 골드를 주지 않음');
@@ -81,6 +89,8 @@ eq(Reward.itemBonusSum({ sharp: true, tablet: true }, 'intBonus'), 1, '다른 �
 
 eq(Reward.wrongAnswerPenalty('study').stress, 6, '공부 오답은 스트레스 +6');
 eq(Reward.wrongAnswerPenalty('study').stamina, -4, '공부 오답은 체력 -4');
+eq(Reward.wrongAnswerPenalty('school').stress, 6, '학교 수업 오답 페널티도 공부와 같아야 함(스트레스 +6)');
+eq(Reward.wrongAnswerPenalty('school').stamina, -4, '학교 수업 오답 페널티도 공부와 같아야 함(체력 -4)');
 eq(Reward.wrongAnswerPenalty('job').stamina, -3, '알바 오답은 체력 -3');
 eq(Reward.wrongAnswerPenalty('banquet').stress, 2, '연회 오답은 스트레스 +2');
 ['scenario-quiz', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'].forEach((type) => {

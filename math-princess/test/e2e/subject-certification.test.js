@@ -126,12 +126,11 @@ async function testScienceCertExamCanReachGoldAtHighIntelligence() {
   ok(errors.length === 0, `JS 에러 없어야 함(과학 금메달 인증): ${errors.join('\n')}`);
 }
 
-// subjects.js의 ENGLISH_VOCAB_BANK[1](동메달 레벨) 정답 목록. 화면에 뜬 단어를
-// 보고 정답 뜻을 찾아 클릭하기 위한 것으로, 콘텐츠 자체는 subjects.js와 동일해야 한다.
-const ENGLISH_BRONZE_VOCAB = {
-  apple: '사과', dog: '개', happy: '행복한', book: '책', water: '물',
-  school: '학교', friend: '친구', big: '큰', small: '작은', run: '달리다',
-};
+// subjects.js의 ENGLISH_VOCAB_BANK[1](동메달 레벨) 정답 목록을 실제 단어 은행에서
+// 그대로 가져온다. 은행 크기가 바뀌어도(단어가 추가/삭제돼도) 이 목록이 항상
+// 동기화되도록, 하드코딩된 단어 목록 대신 동적으로 만든다.
+const ENGLISH_BRONZE_VOCAB = {};
+SUBJ.ENGLISH_VOCAB_BANK[1].forEach((item) => { ENGLISH_BRONZE_VOCAB[item.word] = item.meaning; });
 
 async function answerEnglishCertQuestionCorrectly(page) {
   await page.waitForTimeout(150);

@@ -53,12 +53,12 @@ async function testDashboardShowsExpectedCounts() {
     await page.waitForSelector('#screen-dashboard.active');
 
     const cardValues = await page.$$eval('.overview-card-value', (els) => els.map((e) => e.textContent.trim()));
-    ok(cardValues.some((v) => v === '30개'), `개요 카드에 연회 예절 문제 수(30개)가 있어야 함 (got ${JSON.stringify(cardValues)})`);
+    ok(cardValues.some((v) => v === '100개'), `개요 카드에 연회 예절 문제 수(100개)가 있어야 함 (got ${JSON.stringify(cardValues)})`);
     ok(cardValues.some((v) => v === '14편'), `개요 카드에 시나리오 수(14편)가 있어야 함 (got ${JSON.stringify(cardValues)})`);
     ok(cardValues.some((v) => v === '6개'), `개요 카드에 핵심역량 축 수(6개)가 있어야 함 (got ${JSON.stringify(cardValues)})`);
 
     const etiquetteCount = await page.locator('#etiquette-list .admin-card').count();
-    eq(etiquetteCount, 30, '연회 예절 문제 카드가 30개 렌더링되어야 함');
+    eq(etiquetteCount, 100, '연회 예절 문제 카드가 100개 렌더링되어야 함');
 
     const scenarioCount = await page.locator('#scenario-list .admin-card').count();
     eq(scenarioCount, 14, '시나리오 카드가 14개 렌더링되어야 함');
@@ -84,7 +84,7 @@ async function testEtiquetteFilterNarrowsList() {
     await page.click('#etiquette-filter [data-cat="디지털시민의식"]');
     await page.waitForTimeout(100);
     const filteredCount = await page.locator('#etiquette-list .admin-card').count();
-    eq(filteredCount, 3, '디지털시민의식 카테고리로 필터링하면 해당 문제만(3개) 보여야 함');
+    eq(filteredCount, 7, '디지털시민의식 카테고리로 필터링하면 해당 문제만(7개) 보여야 함');
     ok(filteredCount < totalBefore, '필터링하면 전체보다 적은 카드가 보여야 함');
 
     await page.click('#etiquette-filter [data-cat=""]');
@@ -104,7 +104,7 @@ async function testSubjectAndCertSectionsReflectRealBankSizes() {
     const subjectCards = await page.$$eval('#subject-list .admin-card-title', (els) => els.map((e) => e.textContent));
     ok(subjectCards.some((t) => t.includes('수학') && t.includes('9단계')), `수학 카드에 9단계가 표시되어야 함 (got ${JSON.stringify(subjectCards)})`);
     ok(subjectCards.some((t) => t.includes('영어') && t.includes('총 112문제')), `영어 카드에 총 문제 수(112)가 표시되어야 함 (got ${JSON.stringify(subjectCards)})`);
-    ok(subjectCards.some((t) => t.includes('과학') && t.includes('총 98문제')), `과학 카드에 총 문제 수(98)가 표시되어야 함 (got ${JSON.stringify(subjectCards)})`);
+    ok(subjectCards.some((t) => t.includes('과학') && t.includes('총 300문제')), `과학 카드에 총 문제 수(300)가 표시되어야 함 (got ${JSON.stringify(subjectCards)})`);
 
     const certCards = await page.$$eval('#cert-list .admin-card-title', (els) => els.map((e) => e.textContent));
     eq(certCards.length, 3, '기초 과목 인증은 동/은/금메달 3단계여야 함');
