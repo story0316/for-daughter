@@ -58,6 +58,22 @@
     ];
     const NOBLE_PROMOTION_TIER = 5; // STAT_TIER_THRESHOLDS[5]=50: 이 값에 도달하면 "Lv5를 다 채움"(Lv6 문턱)
 
+    // 귀족이 된 뒤에도 성장은 계속되므로, 작위 자체를 6단계로 세분화했다.
+    // 남작(첫 승급, 기존 방식대로 이름을 직접 지음)부터 시작해서, 그 뒤로는
+    // 6개 성장 능력치가 전부 다음 문턱(STAT_TIER_THRESHOLDS와 완전히 같은
+    // 값들: 60/70/80/90/100)에 도달할 때마다 이름을 새로 짓지 않고도 자동으로
+    // 다음 작위로 승격한다(checkNobleRankPromotion). state.nobleRankIndex가
+    // 이 배열의 인덱스를 가리키며(null이면 아직 평민), 옷장의 상위 등급
+    // (tier6~10)이 특정 작위 이상을 요구할 때도 이 인덱스로 비교한다.
+    const NOBLE_RANKS = [
+      { id: 'baron', name: '남작', minAllStats: 50 },
+      { id: 'viscount', name: '자작', minAllStats: 60 },
+      { id: 'count', name: '백작', minAllStats: 70 },
+      { id: 'marquis', name: '후작', minAllStats: 80 },
+      { id: 'duke', name: '공작', minAllStats: 90 },
+      { id: 'grandDuke', name: '대공', minAllStats: 100 },
+    ];
+
     const WEEKS_PER_MONTH = 4;
     const QUESTIONS_PER_STUDY = 4;
     const QUESTIONS_PER_JOB = 3;
@@ -209,13 +225,29 @@
     // 살 수 없고 왕실 작위(귀족 신분, state.nobleTitle)를 받아야만 구매할 수
     // 있다(requiresNoble). 왕자님을 만나는 데 필요한 최소 등급(PRINCE_MIN_TIER
     // = tier 2)은 이 요건보다 낮아 왕자님 루트 자체에는 영향이 없다.
+    // tier6 이상은 품위가 이미 만점(100)인 상태에서, 작위가 세분화된 만큼
+    // (NOBLE_RANKS 참고) 더 높은 작위일수록 더 화려한 예복을 입을 수 있게
+    // 한 것이다. requiredNobleRankIndex는 NOBLE_RANKS의 인덱스로, 그 작위
+    // "이상"이어야 구매 가능하다(예: requiredNobleRankIndex:1은 자작 이상).
+    // tier3~5는 기존처럼 "귀족이기만 하면"(남작 이상, requiresNoble만 확인)
+    // 구매 가능하고 특정 작위를 요구하지 않는다 — 이미 출시되어 저장 데이터가
+    // 쌓인 등급이라 요건을 더 엄격하게 바꾸지 않았다.
+    // hasArt: assets/wardrobe/tierN.png로 실제 그린 일러스트가 있는지 여부.
+    // 기존 6단계(tier0~5)는 있고, 작위 세분화로 새로 추가한 tier6~10은 아직
+    // 그림이 없어서 이모지로만 표시한다(펫과 같은 방식). 그림이 준비되면
+    // hasArt: true만 추가하면 script.js가 자동으로 <img>를 렌더링한다.
     const OUTFIT_TIERS = [
-      { min: 0, cost: 0, emoji: '👕', name: '평범한 옷', wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
-      { min: 25, cost: 400, emoji: '👚', name: '단정한 옷', wardrobeDesc: '품위 25 이상에서 구매 가능' },
-      { min: 50, cost: 900, emoji: '👗', name: '예쁜 드레스', wardrobeDesc: '품위 50 이상에서 구매 가능' },
-      { min: 75, cost: 1800, emoji: '👑', name: '공주 드레스', requiresNoble: true, wardrobeDesc: '품위 75 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
-      { min: 90, cost: 3200, emoji: '💐', name: '무도회 드레스', requiresNoble: true, wardrobeDesc: '품위 90 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
-      { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', requiresNoble: true, wardrobeDesc: '품위 100(만점) + 귀족 신분에서만 구매 가능한 전설의 옷' },
+      { min: 0, cost: 0, emoji: '👕', name: '평범한 옷', hasArt: true, wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
+      { min: 25, cost: 400, emoji: '👚', name: '단정한 옷', hasArt: true, wardrobeDesc: '품위 25 이상에서 구매 가능' },
+      { min: 50, cost: 900, emoji: '👗', name: '예쁜 드레스', hasArt: true, wardrobeDesc: '품위 50 이상에서 구매 가능' },
+      { min: 75, cost: 1800, emoji: '👑', name: '공주 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 75 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
+      { min: 90, cost: 3200, emoji: '💐', name: '무도회 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 90 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
+      { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 100(만점) + 귀족 신분에서만 구매 가능한 전설의 옷' },
+      { min: 100, cost: 10000, emoji: '🎀', name: '자작 예복', requiresNoble: true, requiredNobleRankIndex: 1, wardrobeDesc: '품위 100(만점) + 자작 이상 필요(남작만으로는 살 수 없는 예복)' },
+      { min: 100, cost: 16000, emoji: '🏵️', name: '백작 예복', requiresNoble: true, requiredNobleRankIndex: 2, wardrobeDesc: '품위 100(만점) + 백작 이상 필요' },
+      { min: 100, cost: 24000, emoji: '🎖️', name: '후작 예복', requiresNoble: true, requiredNobleRankIndex: 3, wardrobeDesc: '품위 100(만점) + 후작 이상 필요' },
+      { min: 100, cost: 34000, emoji: '💎', name: '공작 예복', requiresNoble: true, requiredNobleRankIndex: 4, wardrobeDesc: '품위 100(만점) + 공작 이상 필요' },
+      { min: 100, cost: 48000, emoji: '🌟', name: '대공 예복', requiresNoble: true, requiredNobleRankIndex: 5, wardrobeDesc: '품위 100(만점) + 대공(최고위 작위)에서만 구매 가능한 전설의 예복' },
     ];
 
     // 옷장과 같은 구조(품위 요건 + 상위 등급은 귀족 신분까지 필요)를 그대로
@@ -317,7 +349,26 @@
       if (!trimmed) return false;
       if (state.nobleTitle) return false;
       state.nobleTitle = trimmed.slice(0, 20);
+      state.nobleRankIndex = 0; // 첫 승급은 항상 최소 작위(남작)에서 시작
       return true;
+    }
+
+    // 다음으로 승급할 수 있는 작위를 돌려준다(이미 최고위거나 아직 평민이면 null).
+    function nextNobleRank(state) {
+      if (state.nobleRankIndex === null || state.nobleRankIndex === undefined) return null;
+      return NOBLE_RANKS[state.nobleRankIndex + 1] || null;
+    }
+
+    // 귀족이 된 뒤에도 성장은 계속되므로, 매턴 6개 성장 능력치가 전부 다음
+    // 작위의 문턱을 넘었는지 확인해 자동으로 승격시킨다(이름을 다시 짓는
+    // 첫 승급 이벤트와 달리, 조용히 승격되고 UI가 토스트로만 알려준다).
+    function checkNobleRankPromotion(state) {
+      const next = nextNobleRank(state);
+      if (!next) return null;
+      const met = GROWTH_STAT_KEYS.every((k) => state.stats[k] >= next.minAllStats);
+      if (!met) return null;
+      state.nobleRankIndex++;
+      return next;
     }
 
     function affectionTierName(value) {
@@ -376,6 +427,7 @@
         career: null,
         certifications: { math: null, english: null, science: null },
         nobleTitle: null,
+        nobleRankIndex: null,
       };
     }
 
@@ -425,6 +477,20 @@
         if (value !== null && !MEDAL_TIERS.some((t) => t.id === value)) loaded.certifications[key] = null;
       });
       if (typeof loaded.nobleTitle !== 'string' && loaded.nobleTitle !== null) loaded.nobleTitle = null;
+      if (!loaded.nobleTitle) {
+        loaded.nobleRankIndex = null;
+      } else if (typeof loaded.nobleRankIndex !== 'number' || loaded.nobleRankIndex < 0 || loaded.nobleRankIndex >= NOBLE_RANKS.length) {
+        // 작위 세분화(NOBLE_RANKS) 이전 저장 데이터: 이미 귀족이었다면 최소
+        // 남작(0)으로 잡고, 지금 능력치가 이미 더 높은 작위 문턱을 넘었다면
+        // (성장 능력치는 줄어들지 않으므로 과거에도 넘었을 것) 그 작위로
+        // 곧바로 올려준다 — 강등처럼 느껴지지 않도록 하기 위함이다.
+        const stats = loaded.stats || {};
+        let rankIdx = 0;
+        NOBLE_RANKS.forEach((rank, i) => {
+          if (GROWTH_STAT_KEYS.every((k) => (stats[k] || 0) >= rank.minAllStats)) rankIdx = i;
+        });
+        loaded.nobleRankIndex = rankIdx;
+      }
       return loaded;
     }
 
@@ -769,12 +835,16 @@
       return true;
     }
 
-    // 그 옷을 "살 수 있는" 요건(품위, 그리고 tier 3 이상은 귀족 신분까지)을
-    // 갖췄는지 확인한다. 골드/이미 소유 여부는 별개(buyOutfit이 따로 확인).
+    // 그 옷을 "살 수 있는" 요건(품위, 그리고 tier 3 이상은 귀족 신분까지,
+    // tier6 이상은 특정 작위 이상까지)을 갖췄는지 확인한다. 골드/이미 소유
+    // 여부는 별개(buyOutfit이 따로 확인).
     function outfitRequirementMet(state, tierIndex) {
       const tier = OUTFIT_TIERS[tierIndex];
       if (graceScore(state.stats) < tier.min) return false;
       if (tier.requiresNoble && !state.nobleTitle) return false;
+      if (typeof tier.requiredNobleRankIndex === 'number') {
+        if (state.nobleRankIndex === null || state.nobleRankIndex === undefined || state.nobleRankIndex < tier.requiredNobleRankIndex) return false;
+      }
       return true;
     }
 
@@ -1159,7 +1229,7 @@
       // 기본 헬퍼
       randInt, randChoice, shuffle, statTierIndex, snapshotGrowthTiers, leveledUpStats,
       graceScore, affectionTierName, currentOutfit, comboMultiplier: Reward.comboMultiplier, itemBonusSum, clampStats,
-      noblePromotionEligible, grantNobleTitle, NOBLE_PROMOTION_TIER,
+      noblePromotionEligible, grantNobleTitle, NOBLE_PROMOTION_TIER, NOBLE_RANKS, nextNobleRank, checkNobleRankPromotion,
       // 상태 생성/이관
       makeInitialState, migrateLoadedState,
       // 과목/문제(질문 엔진에 위임)

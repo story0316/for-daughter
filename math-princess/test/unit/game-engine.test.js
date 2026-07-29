@@ -259,6 +259,88 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(afterNoble && afterNoble.name, '대관식 드레스', '귀족이 되는 순간, 품위가 이미 충족된 최고 등급까지 한 번에 알림이 떠야 함');
 }
 
+/* ---------------- 작위 세분화(NOBLE_RANKS) ---------------- */
+
+{
+  eq(Engine.NOBLE_RANKS.length, 6, '작위는 남작~대공 6단계여야 함');
+  const names = Engine.NOBLE_RANKS.map((r) => r.name);
+  eq(JSON.stringify(names), JSON.stringify(['남작', '자작', '백작', '후작', '공작', '대공']), '작위 이름 순서는 남작→자작→백작→후작→공작→대공이어야 함');
+  const thresholds = Engine.NOBLE_RANKS.map((r) => r.minAllStats);
+  eq(JSON.stringify(thresholds), JSON.stringify([50, 60, 70, 80, 90, 100]), '작위 문턱은 기존 Lv 문턱(50/60/70/80/90/100)과 같아야 함');
+}
+{
+  const state = Engine.makeInitialState();
+  eq(state.nobleRankIndex, null, '초기(평민) 상태의 nobleRankIndex는 null이어야 함');
+  eq(Engine.nextNobleRank(state), null, '평민은 nextNobleRank도 null이어야 함(승급 이벤트를 먼저 거쳐야 함)');
+
+  ok(Engine.grantNobleTitle(state, '은빛 백작'), '첫 승급(작위 수여)');
+  eq(state.nobleRankIndex, 0, '첫 승급은 항상 남작(인덱스 0)에서 시작해야 함');
+  eq(Engine.nextNobleRank(state).name, '자작', '남작 다음 목표는 자작이어야 함');
+
+  eq(Engine.checkNobleRankPromotion(state), null, '아직 능력치가 자작 문턱(60)에 못 미치면 승급하면 안 됨');
+  eq(state.nobleRankIndex, 0, '승급 실패 시 인덱스가 그대로여야 함');
+
+  Engine.GROWTH_STAT_KEYS.forEach((k) => { state.stats[k] = 60; });
+  const promoted = Engine.checkNobleRankPromotion(state);
+  eq(promoted && promoted.name, '자작', '6개 성장 능력치가 전부 60에 도달하면 자작으로 승급해야 함');
+  eq(state.nobleRankIndex, 1, '승급하면 인덱스가 1(자작)로 올라가야 함');
+  eq(Engine.checkNobleRankPromotion(state), null, '이미 승급했으면 같은 문턱에서 다시 승급하면 안 됨');
+
+  Engine.GROWTH_STAT_KEYS.forEach((k) => { state.stats[k] = 100; });
+  ok(Engine.checkNobleRankPromotion(state), '능력치가 만점이면 한 단계씩 계속 승급할 수 있어야 함(1회 호출 = 1단계)');
+  ok(Engine.checkNobleRankPromotion(state), '계속 호출하면 계속 승급해야 함');
+  ok(Engine.checkNobleRankPromotion(state), '계속 호출하면 계속 승급해야 함');
+  ok(Engine.checkNobleRankPromotion(state), '계속 호출하면 계속 승급해야 함');
+  eq(state.nobleRankIndex, 5, '만점이면 결국 최고위(대공, 인덱스5)까지 승급해야 함');
+  eq(Engine.checkNobleRankPromotion(state), null, '최고위에 도달하면 더 이상 승급할 곳이 없어야 함');
+  eq(Engine.nextNobleRank(state), null, '최고위에서는 nextNobleRank도 null이어야 함');
+}
+{
+  // 옛 저장 형식(작위 세분화 이전, nobleRankIndex 필드 자체가 없던 시절)도
+  // 최신 형식으로 이관되어야 한다 — 이미 귀족이었다면 최소 남작으로,
+  // 능력치가 이미 더 높은 문턱을 넘었다면 그 작위로 곧바로 승격시킨다.
+  const highStats = { intelligence: 65, focus: 65, stamina: 65, charm: 65, creativity: 65, luck: 65, stress: 10 };
+  const migrated = Engine.migrateLoadedState({ turn: 10, nobleTitle: '옛날 귀족', stats: highStats });
+  eq(migrated.nobleRankIndex, 1, '능력치가 이미 자작 문턱(60)은 넘었지만 백작 문턱(70)엔 못 미치면 자작으로 이관되어야 함');
+
+  const commoner = Engine.migrateLoadedState({ turn: 10, nobleTitle: null, stats: highStats });
+  eq(commoner.nobleRankIndex, null, '평민이었다면 능력치가 아무리 높아도 nobleRankIndex는 null이어야 함');
+
+  // 이미 유효한 nobleRankIndex가 있으면 그대로 유지되어야 함(불필요하게 재계산해 덮어쓰지 않음)
+  const alreadySet = Engine.migrateLoadedState({ turn: 10, nobleTitle: '기존 귀족', nobleRankIndex: 0, stats: highStats });
+  eq(alreadySet.nobleRankIndex, 0, '이미 유효한 nobleRankIndex는 능력치가 더 높아도 그대로 유지되어야 함(자동 재계산은 마이그레이션 1회성 보정용)');
+}
+
+/* ---------------- 작위 세분화에 따른 상위 예복(tier 6 이상) ---------------- */
+
+{
+  eq(Engine.OUTFIT_TIERS.length, 11, '옷은 기존 6단계 + 작위별 예복 5단계 = 총 11단계여야 함');
+  const state = Engine.makeInitialState();
+  state.gold = 1000000;
+  state.stats.charm = 100;
+  state.stats.creativity = 100;
+  state.stats.intelligence = 100; // grace = 100(만점), tier6~10은 모두 품위 요건은 충족
+  Engine.grantNobleTitle(state, '세분화 테스트'); // nobleRankIndex = 0(남작)
+
+  ok(!Engine.outfitRequirementMet(state, 6), '남작은 자작 예복(tier6)을 살 수 없어야 함');
+  ok(!Engine.buyOutfit(state, 6), '작위가 부족하면 골드/품위가 충분해도 tier6 구매가 막혀야 함');
+
+  for (let rank = 1; rank <= 5; rank++) {
+    const tierIndex = rank + 5; // rank1(자작)→tier6, rank5(대공)→tier10
+    // charm/creativity/intelligence는 품위(grace) 계산에도 쓰이므로, 문턱값으로
+    // 내리지 않고 max로만 올려서 품위 100을 계속 유지한 채 작위 문턱만 검증한다.
+    Engine.GROWTH_STAT_KEYS.forEach((k) => { state.stats[k] = Math.max(state.stats[k], Engine.NOBLE_RANKS[rank].minAllStats); });
+    const promoted = Engine.checkNobleRankPromotion(state);
+    eq(promoted.name, Engine.NOBLE_RANKS[rank].name, `단계별로 ${Engine.NOBLE_RANKS[rank].name}까지 승급해야 함`);
+    ok(Engine.outfitRequirementMet(state, tierIndex), `${Engine.NOBLE_RANKS[rank].name}이 되면 tier${tierIndex}(${Engine.OUTFIT_TIERS[tierIndex].name}) 요건을 만족해야 함`);
+    ok(Engine.buyOutfit(state, tierIndex), `${Engine.NOBLE_RANKS[rank].name}이 되면 tier${tierIndex}를 구매할 수 있어야 함`);
+    eq(state.wardrobe.equipped, tierIndex, '구매하면 바로 갈아입어야 함');
+    if (tierIndex < 10) {
+      ok(!Engine.outfitRequirementMet(state, tierIndex + 1), `아직 ${Engine.OUTFIT_TIERS[tierIndex + 1].name}(tier${tierIndex + 1})은 요건을 만족하면 안 됨`);
+    }
+  }
+}
+
 /* ---------------- 애완동물 ---------------- */
 // 옷장(구매/장착/품위 요건/알림/귀족 게이트)과 거의 같은 테스트를 그대로
 // 반복한다 — 애완동물이 옷장과 동일한 규칙으로 설계되었기 때문이다. 다른

@@ -144,6 +144,58 @@ async function testBasicPurchaseFlow() {
   ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
 }
 
+// tier6 이상(자작~대공 예복)은 품위가 만점이어도 남작(귀족이기만 함)으로는
+// 살 수 없고, 그 카드에 필요한 구체적인 작위 이름이 배지로 표시되어야 한다.
+async function testRankGatedOutfitTiersRequireSpecificRank() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({
+      gold: 1000000,
+      stats: { intelligence: 100, focus: 40, stamina: 60, charm: 100, creativity: 100, stress: 20, luck: 30 },
+      nobleTitle: '세분화 테스트',
+      nobleRankIndex: 0, // 남작
+    });
+    await seedAndContinue(page, state);
+    await page.click('[data-menu="wardrobe"]');
+    await page.waitForSelector('#screen-shop.active');
+    await page.click('.shop-tab-btn[data-tab="wardrobe"]');
+    await page.waitForTimeout(150);
+
+    const cardStates = await page.$$eval('.wardrobe-card', (cards) => cards.map((c) => ({
+      classes: c.className,
+      hasBuyBtn: !!c.querySelector('.wardrobe-buy-btn'),
+      badgeText: (c.querySelector('.wardrobe-card-noble-badge') || {}).textContent || '',
+    })));
+    eq(cardStates.length, 11, '옷장 카드는 기존 6단계 + 작위별 예복 5단계 = 총 11장이어야 함');
+    [6, 7, 8, 9, 10].forEach((i) => {
+      ok(cardStates[i].classes.includes('locked') && !cardStates[i].hasBuyBtn, `tier${i}는 남작만으로는 잠겨 있어야 함`);
+    });
+    ok(cardStates[6].badgeText.includes('자작'), `tier6(자작 예복) 배지는 "자작 이상"처럼 구체적인 작위를 보여줘야 함 (got "${cardStates[6].badgeText}")`);
+    ok(cardStates[10].badgeText.includes('대공'), `tier10(대공 예복) 배지는 "대공 이상"을 보여줘야 함 (got "${cardStates[10].badgeText}")`);
+
+    // 백작(인덱스2)까지 승급하면 자작 예복(tier6)·백작 예복(tier7)은 살 수 있고,
+    // 그보다 위(후작 예복 이상)는 여전히 잠겨 있어야 한다.
+    const state2 = makeState({
+      gold: 1000000,
+      stats: { intelligence: 100, focus: 40, stamina: 60, charm: 100, creativity: 100, stress: 20, luck: 30 },
+      nobleTitle: '세분화 테스트',
+      nobleRankIndex: 2, // 백작
+    });
+    await seedAndContinue(page, state2);
+    await page.click('[data-menu="wardrobe"]');
+    await page.waitForSelector('#screen-shop.active');
+    await page.click('.shop-tab-btn[data-tab="wardrobe"]');
+    await page.waitForTimeout(150);
+    const cardStates2 = await page.$$eval('.wardrobe-card', (cards) => cards.map((c) => ({
+      classes: c.className,
+      hasBuyBtn: !!c.querySelector('.wardrobe-buy-btn'),
+    })));
+    ok(cardStates2[6].classes.includes('purchasable') && cardStates2[6].hasBuyBtn, '백작이면 자작 예복(tier6)을 살 수 있어야 함');
+    ok(cardStates2[7].classes.includes('purchasable') && cardStates2[7].hasBuyBtn, '백작이면 백작 예복(tier7)을 살 수 있어야 함');
+    ok(cardStates2[8].classes.includes('locked') && !cardStates2[8].hasBuyBtn, '백작이면 후작 예복(tier8)은 아직 잠겨 있어야 함');
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(작위별 상위 예복): ${errors.join('\n')}`);
+}
+
 (async () => {
   console.log('wardrobe-purchase e2e tests');
   await testBasicPurchaseFlow();
@@ -151,5 +203,6 @@ async function testBasicPurchaseFlow() {
   await testNobleCanBuyTopTiers();
   await testStatusScreenShowsGraceScoreAndRank();
   await testStatusScreenShowsNobleRankWhenPromoted();
+  await testRankGatedOutfitTiersRequireSpecificRank();
   summary('wardrobe-purchase.test.js');
 })();
