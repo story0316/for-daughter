@@ -25,6 +25,28 @@
     // 과목별 문제 대신 고정된 문제 은행에서 뽑는 세션 유형(연회 예절 문제).
     const MULTI_SUBJECT_TYPES = ['study', 'job', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
 
+    // "학교 수업" 전용 과목(수학·과학·음악). 공부/알바가 쓰는 SUBJECTS(수학·
+    // 영어·과학)와는 다른 세트다 — 학교 수업에는 영어가 없고 대신 음악이
+    // 있다. 난이도도 지능으로 해금되는 게 아니라 신분(평민/하위 귀족/상위
+    // 귀족)에 따라 학년 단계가 정해진다(game-engine.js의 schoolTierForRank).
+    const SCHOOL_SUBJECTS = {
+      math: { name: '수학' },
+      science: { name: '과학' },
+      music: { name: '음악' },
+    };
+    const SCHOOL_SUBJECT_KEYS = Object.keys(SCHOOL_SUBJECTS);
+    function schoolSubjectName(key) { return SCHOOL_SUBJECTS[key].name; }
+
+    // 신분 단계(elementary=평민/초등, middle=하위 귀족/중학교, high=상위
+    // 귀족/고등학교)별로 각 과목에서 뽑을 수 있는 레벨 범위. 수학(1~9)과
+    // 과학(1~7)은 기존 레벨 체계를 그대로 나눠 쓰고, 음악은 애초에 학년
+    // 단계 3개로만 만들어져 있어 1:1로 대응한다.
+    const SCHOOL_LEVEL_RANGES = {
+      elementary: { math: [1, 2], science: [1, 2, 3], music: [1] },
+      middle: { math: [3, 4, 5], science: [4, 5, 6], music: [2] },
+      high: { math: [6, 7, 8, 9], science: [7], music: [3] },
+    };
+
     // 각 문제의 category는 상황판단(situational judgment) 유형 태그로,
     // competency-model.js가 이 값을 읽어 어떤 역량과 연결되는지 관리자
     // 페이지에서 보여준다(게임 로직 자체는 이 필드를 쓰지 않음).
@@ -492,6 +514,20 @@
       return { type: 'choice', question: picked.question, choices: shuffle(choices), answer: picked.answer, explanation: picked.explanation, hint: picked.hint, rewardGold: 0, level: 0 };
     }
 
+    // "학교 수업": session.fixedSubject(수학/과학/음악 중 하나, 세션 시작 시
+    // 한 번 고정됨)와 session.schoolTier(신분에 따라 정해진 학년 단계)로
+    // 레벨 범위를 찾아 그 안에서 무작위로 뽑는다. 공부처럼 지능으로 해금된
+    // 레벨을 따지지 않고, 그 학년 단계에 정해진 범위 안에서만 출제된다.
+    function generateSchoolProblem(session) {
+      const subjectKey = session.fixedSubject;
+      const range = SCHOOL_LEVEL_RANGES[session.schoolTier][subjectKey];
+      const level = randChoice(range);
+      session.currentSubject = subjectKey;
+      if (subjectKey === 'music') return SUBJ.generateMusicProblem(level);
+      if (subjectKey === 'science') return SUBJ.generateScienceProblem(level);
+      return P.generateProblem(level);
+    }
+
     // 세션 유형에 맞는 다음 문제를 만든다(UI는 이 결과로 화면만 그리면 된다).
     // 필요하면 session.currentSubject를 채워준다(표시용 과목 이름을 UI가 알 수 있도록).
     // session.fixedSubject가 있으면(공부 세션) 매 문제 과목을 다시 뽑지 않고
@@ -501,6 +537,7 @@
       if (session.type === 'creativity') return generateCreativityQuestion(session);
       if (session.type === 'faith') return generateFaithQuestion(session);
       if (session.type === 'scenario-quiz') return generateScenarioQuestion(session);
+      if (session.type === 'school') return generateSchoolProblem(session);
       // 왕국 수학경시대회: 문제마다 미리 정해둔 난이도 사다리(session.levels)를
       // 따라간다(덧셈뺄셈부터 점점 어려워짐), 다른 과목과 섞이지 않는다.
       if (session.type === 'competition') return P.generateProblem(session.levels[session.index]);
@@ -534,11 +571,12 @@
     return {
       SUBJECTS, SUBJECT_KEYS, MULTI_SUBJECT_TYPES, ETIQUETTE_QUESTIONS,
       CREATIVITY_PUZZLE_BANK, FAITH_QUESTIONS,
+      SCHOOL_SUBJECTS, SCHOOL_SUBJECT_KEYS, SCHOOL_LEVEL_RANGES, schoolSubjectName,
       randInt, randChoice, shuffle, weightedChoice,
       subjectName, unlockedLevelsFor, typicalStudyLevel, typicalJobLevel, pickLevelForSubject,
       pickRandomSubjectAndLevel, pickJobLevelForSubject, pickJobSubjectAndLevel,
       generateEtiquetteQuestion, generateCreativityQuestion, generateFaithQuestion,
-      generateScenarioQuestion, generateNextProblem,
+      generateScenarioQuestion, generateSchoolProblem, generateNextProblem,
     };
   }
 

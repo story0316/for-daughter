@@ -74,9 +74,20 @@
       { id: 'grandDuke', name: '대공', minAllStats: 100 },
     ];
 
+    // "학교 수업"의 학년 단계: 평민(nobleRankIndex가 null)은 초등학교,
+    // 남작~백작(하위 귀족, index 0~2)은 중학교, 후작~대공(상위 귀족,
+    // index 3~5)은 고등학교 과정으로 배운다. NOBLE_RANKS 6단계를 정확히
+    // 반으로 나눈 기준이다.
+    function schoolTierForRank(nobleRankIndex) {
+      if (nobleRankIndex === null || nobleRankIndex === undefined) return 'elementary';
+      if (nobleRankIndex <= 2) return 'middle';
+      return 'high';
+    }
+
     const WEEKS_PER_MONTH = 4;
     const QUESTIONS_PER_STUDY = 4;
     const QUESTIONS_PER_JOB = 3;
+    const QUESTIONS_PER_SCHOOL = 4;
     const QUESTIONS_PER_BANQUET = 3;
     const QUESTIONS_PER_COMPETITION = 5;
     const QUESTIONS_PER_CREATIVITY = 5;
@@ -281,18 +292,28 @@
       { min: 100, cost: 15000, emoji: '🧚', name: '요정 고양이', stressRelief: 5, requiresNoble: true, requiredNobleRankIndex: 5, hasArt: true, petDesc: '품위 100(만점) + 대공(최고위 작위)에서만 만날 수 있는, 유니콘보다도 희귀한 전설의 요정 고양이' },
     ];
 
+    // hasArt: assets/npcs/{id}.png(및 -happy/-surprised 감정 변형)로 실제
+    // 그린 일러스트가 있는지 여부. 없으면 이모지로만 표시해(npcAvatarHTML
+    // 참고) 존재하지 않는 이미지를 요청하는 404가 나지 않게 한다.
     const NPC_DEFS = [
-      { id: 'friend', emoji: '😊', name: '친구', desc: '함께 있으면 마음이 편안해지는 단짝', unlock: () => true, apply: (s) => { s.stats.charm += 6; }, lines: ['같이 떡볶이를 먹으며 수다를 떨었어요.', '친구가 요즘 고민을 털어놓았어요.', '같이 만화책을 보며 깔깔 웃었어요.'] },
-      { id: 'rival', emoji: '😏', name: '라이벌', desc: '괜히 신경 쓰이지만 자꾸 실력이 느는 상대', unlock: () => true, apply: (s) => { s.stats.intelligence += 3; s.stats.stress += 3; }, lines: ['라이벌이 이번 시험 점수를 자랑했어요. 오기가 생겨요!', '라이벌과 문제풀이 대결을 했어요.', '라이벌이 은근히 신경 쓰이는 하루였어요.'] },
-      { id: 'teacher', emoji: '👩‍🏫', name: '선생님', desc: '어려운 문제도 척척 알려주는 든든한 선생님', unlock: () => true, apply: (s) => { s.stats.intelligence += 2; s.stats.stress -= 5; }, lines: ['선생님이 어려운 문제 풀이법을 알려주셨어요.', '선생님과 진로 상담을 했어요.', '선생님이 숙제를 칭찬해주셨어요.'] },
-      { id: 'noble', emoji: '💃', name: '사교계 친구', desc: '무도회와 다과회에서 만난 사교계 친구', unlock: (stats) => graceScore(stats) >= 35, unlockHint: (stats) => `품위 35 필요 (현재 ${Math.round(graceScore(stats))})`, apply: (s) => { s.stats.charm += 4; s.stats.creativity += 3; }, lines: ['함께 무도회 예절을 배웠어요.', '다과회에서 우아하게 차를 마셨어요.', '사교계 소문 이야기로 즐거운 시간을 보냈어요.'] },
-      { id: 'prince', emoji: '🤴', name: '왕자님', desc: '무도회에서 우연히 마주친 왕자님', unlock: (stats) => graceScore(stats) >= 55, unlockHint: (stats) => `품위 55 필요 (현재 ${Math.round(graceScore(stats))})`, apply: (s) => { s.stats.charm += 5; s.stats.luck += 2; }, lines: ['왕자님과 정원을 산책했어요.', '왕자님이 춤을 신청했어요.', '왕자님과 함께 별을 보며 이야기를 나눴어요.'] },
-      { id: 'sage', emoji: '🧙', name: '왕실 스승', desc: '왕실 도서관을 관리하는 현자', unlock: (stats) => stats.intelligence >= 55, unlockHint: (stats) => `지능 55 필요 (현재 ${Math.round(stats.intelligence)})`, apply: (s) => { s.stats.intelligence += 4; s.stats.creativity += 2; }, lines: ['왕실 서고에서 귀한 책을 함께 읽었어요.', '현자에게서 아무도 모르는 문제 풀이를 배웠어요.', '현자가 재능을 칭찬해주셨어요.'] },
+      { id: 'friend', emoji: '😊', name: '친구', desc: '함께 있으면 마음이 편안해지는 단짝', unlock: () => true, hasArt: true, apply: (s) => { s.stats.charm += 6; }, lines: ['같이 떡볶이를 먹으며 수다를 떨었어요.', '친구가 요즘 고민을 털어놓았어요.', '같이 만화책을 보며 깔깔 웃었어요.'] },
+      { id: 'rival', emoji: '😏', name: '라이벌', desc: '괜히 신경 쓰이지만 자꾸 실력이 느는 상대', unlock: () => true, hasArt: true, apply: (s) => { s.stats.intelligence += 3; s.stats.stress += 3; }, lines: ['라이벌이 이번 시험 점수를 자랑했어요. 오기가 생겨요!', '라이벌과 문제풀이 대결을 했어요.', '라이벌이 은근히 신경 쓰이는 하루였어요.'] },
+      { id: 'teacher', emoji: '👩‍🏫', name: '선생님', desc: '어려운 문제도 척척 알려주는 든든한 선생님', unlock: () => true, hasArt: true, apply: (s) => { s.stats.intelligence += 2; s.stats.stress -= 5; }, lines: ['선생님이 어려운 문제 풀이법을 알려주셨어요.', '선생님과 진로 상담을 했어요.', '선생님이 숙제를 칭찬해주셨어요.'] },
+      { id: 'noble', emoji: '💃', name: '사교계 친구', desc: '무도회와 다과회에서 만난 사교계 친구', unlock: (stats) => graceScore(stats) >= 35, unlockHint: (stats) => `품위 35 필요 (현재 ${Math.round(graceScore(stats))})`, hasArt: true, apply: (s) => { s.stats.charm += 4; s.stats.creativity += 3; }, lines: ['함께 무도회 예절을 배웠어요.', '다과회에서 우아하게 차를 마셨어요.', '사교계 소문 이야기로 즐거운 시간을 보냈어요.'] },
+      { id: 'prince', emoji: '🤴', name: '왕자님', desc: '무도회에서 우연히 마주친 왕자님', unlock: (stats) => graceScore(stats) >= 55, unlockHint: (stats) => `품위 55 필요 (현재 ${Math.round(graceScore(stats))})`, hasArt: true, apply: (s) => { s.stats.charm += 5; s.stats.luck += 2; }, lines: ['왕자님과 정원을 산책했어요.', '왕자님이 춤을 신청했어요.', '왕자님과 함께 별을 보며 이야기를 나눴어요.'] },
+      { id: 'sage', emoji: '🧙', name: '왕실 스승', desc: '왕실 도서관을 관리하는 현자', unlock: (stats) => stats.intelligence >= 55, unlockHint: (stats) => `지능 55 필요 (현재 ${Math.round(stats.intelligence)})`, hasArt: true, apply: (s) => { s.stats.intelligence += 4; s.stats.creativity += 2; }, lines: ['왕실 서고에서 귀한 책을 함께 읽었어요.', '현자에게서 아무도 모르는 문제 풀이를 배웠어요.', '현자가 재능을 칭찬해주셨어요.'] },
+      // "학교 수업"에서 귀족 신분일 때 수학·과학·음악을 가르쳐주는 선생님.
+      // 평민일 때는 위의 'teacher'(선생님)가 그대로 가르쳐준다(startSchoolSession
+      // 참고). 언제든 만날 수 있게 unlock을 항상 참으로 둬서(teacher와 동일),
+      // 신분과 상관없이 "친구 만나기"에서도 만날 수 있다. 아직 전용
+      // 일러스트가 없어(hasArt 생략) 이모지로만 표시된다.
+      { id: 'royalScholar', emoji: '🎓', name: '왕궁 학자', desc: '귀족 자제에게 학문을 가르치는 왕궁의 학자', unlock: () => true, apply: (s) => { s.stats.intelligence += 3; s.stats.creativity += 2; }, lines: ['왕궁 학자에게서 귀한 지식을 배웠어요.', '왕궁 학자와 함께 어려운 문제를 풀어보았어요.', '왕궁 학자가 학업 성취를 칭찬해주셨어요.'] },
     ];
 
     const ACTIVITY_DEFS = {
       study: { emoji: '📖', name: '공부' },
       job: { emoji: '💼', name: '알바' },
+      school: { emoji: '🏫', name: '학교 수업' },
       exercise: { emoji: '🏃', name: '운동' },
       rest: { emoji: '🛌', name: '휴식' },
       laundry: { emoji: '🧺', name: '빨래하기' },
@@ -455,6 +476,15 @@
       loaded.items = loaded.items || {};
       loaded.npcs = loaded.npcs || NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 }));
       loaded.npcs.forEach((n) => { if (typeof n.lastMetTurn !== 'number') n.lastMetTurn = 0; });
+      // NPC_DEFS에 새 인물이 추가된 뒤에도(예: royalScholar), 그 전에 저장된
+      // 세이브에는 그 인물의 상태가 없어서 npcs.find()가 undefined를 돌려줄
+      // 수 있다(그러면 화면에서 npcState.affection 접근 시 에러가 남). 누락된
+      // 인물은 다른 신규 세이브와 같은 방식으로 채워 넣는다.
+      NPC_DEFS.forEach((n) => {
+        if (!loaded.npcs.some((existing) => existing.id === n.id)) {
+          loaded.npcs.push({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 });
+        }
+      });
       loaded.wardrobe = loaded.wardrobe || { equipped: 0 };
       if (!Array.isArray(loaded.wardrobe.owned)) {
         const grandfatheredMax = typeof loaded.wardrobe.unlockedMax === 'number' ? loaded.wardrobe.unlockedMax : 0;
@@ -530,6 +560,7 @@
     function unlockedLevelsFor(state, subjectKey) { return Question.unlockedLevelsFor(state.stats.intelligence, subjectKey); }
     function pickRandomSubjectAndLevel(state) { return Question.pickRandomSubjectAndLevel(state.stats.intelligence); }
     function subjectName(key) { return Question.subjectName(key); }
+    function schoolSubjectName(key) { return Question.schoolSubjectName(key); }
     function generateEtiquetteQuestion(session) { return Question.generateEtiquetteQuestion(session); }
     function generateScenarioQuestion(session) { return Question.generateScenarioQuestion(session); }
     function generateNextProblem(state, session) { return Question.generateNextProblem(state.stats.intelligence, session); }
@@ -576,6 +607,23 @@
       const n = clampSessionLength(count != null ? count : QUESTIONS_PER_JOB);
       return makeSession('job', { count: n, rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_JOB) });
     }
+    // "학교 수업": 수학·과학·음악 중 한 과목을 세션 시작 시 한 번 고정하고
+    // (공부와 같은 방식), 신분에 따른 학년 단계(schoolTierForRank)도 함께
+    // 정해둔다. 가르쳐주는 선생님도 신분에 따라 갈린다 — 평민이면 동네
+    // 선생님이, 귀족이면(하위든 상위든) 왕궁 학자가 맡는다. helperNpc를 세션
+    // 시작 시 미리 정해두면, 문제 풀이 화면이 매번 다시 뽑지 않고 그대로
+    // 재사용한다(nextQuizQuestion의 helperNpc 처리 참고).
+    function startSchoolSession(state, count) {
+      const n = clampSessionLength(count != null ? count : QUESTIONS_PER_SCHOOL);
+      const isNoble = state.nobleRankIndex !== null && state.nobleRankIndex !== undefined;
+      return makeSession('school', {
+        count: n,
+        rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_SCHOOL),
+        fixedSubject: randChoice(Question.SCHOOL_SUBJECT_KEYS),
+        schoolTier: schoolTierForRank(state.nobleRankIndex),
+        helperNpc: isNoble ? 'royalScholar' : 'teacher',
+      });
+    }
     function startBanquetSession(tierId) { return makeSession('banquet', { level: 1, count: QUESTIONS_PER_BANQUET, askedQuestions: [], tierId }); }
     function startExerciseSession() { return makeSession('exercise-bonus', { count: 1 }); }
     function startRestSession() { return makeSession('rest-bonus', { count: 1 }); }
@@ -618,6 +666,10 @@
       if (Question.MULTI_SUBJECT_TYPES.includes(session.type)) return session.currentSubject;
       if (session.type === 'competition') return 'math';
       if (session.type === 'cert-exam') return session.subject;
+      // 학교 수업의 음악은 learningLog에 없는 과목이라 기록되지 않고 조용히
+      // 무시된다(recordAnswerLog의 !state.learningLog[subjectKey] 가드).
+      // 수학·과학은 공부/알바와 같은 과목이라 오답 기록이 함께 쌓인다.
+      if (session.type === 'school') return session.currentSubject;
       return null;
     }
 
@@ -678,7 +730,7 @@
     function finishStudyOrJobOutcome(session) {
       return {
         perfect: session.correctCount === session.count,
-        title: session.type === 'study' ? '공부를 마쳤어요!' : '알바를 마쳤어요!',
+        title: session.type === 'study' ? '공부를 마쳤어요!' : session.type === 'school' ? '학교 수업을 마쳤어요!' : '알바를 마쳤어요!',
         correctCount: session.correctCount,
         count: session.count,
         goldEarned: session.goldEarned,
@@ -1288,7 +1340,7 @@
       // 상수
       SUBJECTS: Question.SUBJECTS, SUBJECT_KEYS: Question.SUBJECT_KEYS,
       STAT_KEYS, STAT_LABELS, GROWTH_STAT_KEYS, STAT_TIER_THRESHOLDS, STAT_TIER_COLORS,
-      WEEKS_PER_MONTH, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT,
+      WEEKS_PER_MONTH, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_SCHOOL, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT,
       QUESTIONS_PER_COMPETITION, COMPETITION_MIN_INTELLIGENCE,
       QUESTIONS_PER_CREATIVITY, CREATIVITY_MIN_CREATIVITY, QUESTIONS_PER_FAITH,
       SESSION_LENGTH_MIN, SESSION_LENGTH_MAX, sessionLengthMultiplier,
@@ -1307,10 +1359,11 @@
       // 상태 생성/이관
       makeInitialState, migrateLoadedState, makeLearningLog, RECENT_MISTAKES_LIMIT,
       // 과목/문제(질문 엔진에 위임)
-      unlockedLevelsFor, pickRandomSubjectAndLevel, subjectName,
+      unlockedLevelsFor, pickRandomSubjectAndLevel, subjectName, schoolSubjectName,
       generateEtiquetteQuestion, generateScenarioQuestion, generateNextProblem,
+      SCHOOL_SUBJECT_KEYS: Question.SCHOOL_SUBJECT_KEYS, schoolTierForRank,
       // 세션
-      startStudySession, startJobSession, startBanquetSession, startExerciseSession, startRestSession,
+      startStudySession, startJobSession, startSchoolSession, startBanquetSession, startExerciseSession, startRestSession,
       startLaundrySession, startGardenSession, startScenarioQuizSession, startCompetitionSession,
       startCreativitySession, startFaithSession,
       applyCorrect, applyWrong, isRepeatMistake,

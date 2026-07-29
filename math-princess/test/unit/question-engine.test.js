@@ -203,6 +203,49 @@ eq(Question.SUBJECTS.science.maxLevel, SUBJ.SCIENCE_LEVELS.length, '과학 maxLe
   const faithSession = { type: 'faith', askedQuestions: [] };
   const faithQ = Question.generateNextProblem(50, faithSession);
   ok(Question.FAITH_QUESTIONS.some((q) => q.question === faithQ.question), '기도와 선행 세션은 기도와 선행 문제 은행에서 나와야 함');
+
+  // "학교 수업"은 SCHOOL_SUBJECT_KEYS(수학/과학/음악)에서만 나오고, intelligence
+  // 인자와 무관하게 session.schoolTier로 정해진 레벨 범위만 따른다.
+  const schoolSession = { type: 'school', fixedSubject: 'music', schoolTier: 'elementary' };
+  const schoolQ = Question.generateNextProblem(1 /* intelligence는 학교 수업에 영향 없어야 함 */, schoolSession);
+  eq(schoolSession.currentSubject, 'music', '학교 수업 세션은 currentSubject를 fixedSubject로 채워야 함');
+  eq(schoolQ.level, 1, '평민(초등) 음악 학교 수업은 항상 레벨 1이어야 함');
+}
+
+{
+  // "학교 수업"은 영어가 없고 대신 음악이 있는, 공부/알바와는 다른 과목 세트다.
+  eq(Question.SCHOOL_SUBJECT_KEYS.sort().join(','), 'math,music,science', '학교 수업 과목은 수학/과학/음악 세 개여야 함');
+  ok(!Question.SCHOOL_SUBJECT_KEYS.includes('english'), '학교 수업에는 영어가 없어야 함(공부/알바와 구분)');
+  eq(Question.schoolSubjectName('music'), '음악', '음악 과목 이름');
+  eq(Question.schoolSubjectName('math'), '수학', '수학 과목 이름');
+  eq(Question.schoolSubjectName('science'), '과학', '과학 과목 이름');
+
+  ['elementary', 'middle', 'high'].forEach((tier) => {
+    Question.SCHOOL_SUBJECT_KEYS.forEach((subjectKey) => {
+      const range = Question.SCHOOL_LEVEL_RANGES[tier][subjectKey];
+      ok(Array.isArray(range) && range.length > 0, `${tier}/${subjectKey} 레벨 범위가 있어야 함`);
+    });
+  });
+  // 학년 단계가 올라갈수록(초등→중학→고등) 각 과목의 레벨 범위도 더 어려워져야 함
+  ['math', 'science', 'music'].forEach((subjectKey) => {
+    const elem = Question.SCHOOL_LEVEL_RANGES.elementary[subjectKey];
+    const mid = Question.SCHOOL_LEVEL_RANGES.middle[subjectKey];
+    const high = Question.SCHOOL_LEVEL_RANGES.high[subjectKey];
+    ok(Math.max(...mid) > Math.max(...elem), `${subjectKey}: 중학교 최고 레벨이 초등학교보다 높아야 함`);
+    ok(Math.max(...high) >= Math.max(...mid), `${subjectKey}: 고등학교 최고 레벨이 중학교보다 낮지 않아야 함`);
+  });
+
+  // generateSchoolProblem을 직접 호출해도 같은 계약을 지켜야 함
+  ['elementary', 'middle', 'high'].forEach((tier) => {
+    Question.SCHOOL_SUBJECT_KEYS.forEach((subjectKey) => {
+      const range = Question.SCHOOL_LEVEL_RANGES[tier][subjectKey];
+      for (let i = 0; i < 10; i++) {
+        const session = { type: 'school', fixedSubject: subjectKey, schoolTier: tier };
+        const problem = Question.generateSchoolProblem(session);
+        ok(range.includes(problem.level), `${tier}/${subjectKey}: 레벨 ${problem.level}은 허용 범위(${range.join(',')}) 안에 있어야 함`);
+      }
+    });
+  });
 }
 
 {

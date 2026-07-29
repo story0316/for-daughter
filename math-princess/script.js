@@ -438,6 +438,9 @@
   // 먼저 시도하고, 그 그림이 없으면(아직 표정 그림이 없는 인물이면) 기본
   // 그림으로, 기본 그림마저 없으면 이모지로 순서대로 대체한다.
   function npcAvatarHTML(def, sizeClass, emotion) {
+    if (!def.hasArt) {
+      return `<span class="npc-avatar ${sizeClass || ''}"><span class="npc-avatar-fallback" style="display:flex">${def.emoji}</span></span>`;
+    }
     const src = emotion ? `assets/npcs/${def.id}-${emotion}.png` : `assets/npcs/${def.id}.png`;
     return `
       <span class="npc-avatar ${sizeClass || ''}">
@@ -620,6 +623,12 @@
     nextQuizQuestion();
   }
 
+  function startSchoolSession(count) {
+    session = Engine.startSchoolSession(state, count);
+    showScreen('quiz');
+    nextQuizQuestion();
+  }
+
   function startBanquetSession(tierId) {
     session = Engine.startBanquetSession(tierId);
     showScreen('quiz');
@@ -668,23 +677,25 @@
         ? `📖 공부 중 · ${Engine.subjectName(session.currentSubject)}`
         : session.type === 'job'
           ? `💼 알바 중 · ${Engine.subjectName(session.currentSubject)}`
-          : session.type === 'banquet'
-            ? `💃 ${(BANQUET_TIERS.find((t) => t.id === session.tierId) || BANQUET_TIERS[0]).name} 참석 중`
-            : session.type === 'exercise-bonus'
-              ? `🏃 운동 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
-              : session.type === 'rest-bonus'
-                ? `🛌 휴식 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
-                : session.type === 'laundry-bonus'
-                  ? `🧺 빨래 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
-                  : session.type === 'garden-bonus'
-                    ? `🌾 텃밭 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
-                    : session.type === 'competition'
-                      ? '🏆 왕국 수학경시대회'
-                      : session.type === 'creativity'
-                        ? '🎨 창의력 올림피아드'
-                        : session.type === 'faith'
-                          ? '🙏 기도와 선행'
-                          : session.type === 'cert-exam'
+          : session.type === 'school'
+            ? `🏫 학교 수업 중 · ${Engine.schoolSubjectName(session.currentSubject)} (${(NPC_DEFS.find((n) => n.id === session.helperNpc) || {}).name || ''})`
+            : session.type === 'banquet'
+              ? `💃 ${(BANQUET_TIERS.find((t) => t.id === session.tierId) || BANQUET_TIERS[0]).name} 참석 중`
+              : session.type === 'exercise-bonus'
+                ? `🏃 운동 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
+                : session.type === 'rest-bonus'
+                  ? `🛌 휴식 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
+                  : session.type === 'laundry-bonus'
+                    ? `🧺 빨래 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
+                    : session.type === 'garden-bonus'
+                      ? `🌾 텃밭 보너스 문제 · ${Engine.subjectName(session.currentSubject)}`
+                      : session.type === 'competition'
+                        ? '🏆 왕국 수학경시대회'
+                        : session.type === 'creativity'
+                          ? '🎨 창의력 올림피아드'
+                          : session.type === 'faith'
+                            ? '🙏 기도와 선행'
+                            : session.type === 'cert-exam'
                             ? `📜 ${Engine.subjectName(session.subject)} ${session.tier.name} 인증 시험`
                             : `${session.scenario.entryEmoji} ${session.scenario.title}`;
     el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
@@ -1339,6 +1350,7 @@
     const chosenCount = state.weekPlanCount[state.weekIndex];
     if (activity === 'study') startStudySession(chosenCount);
     else if (activity === 'job') startJobSession(chosenCount);
+    else if (activity === 'school') startSchoolSession(chosenCount);
     else if (activity === 'exercise') doExercise();
     else if (activity === 'rest') doRest();
     else if (activity === 'laundry') {
@@ -1469,12 +1481,13 @@
     });
   }
 
-  // 공부/알바/왕국 수학경시대회는 문제 수를 도전자가 직접 고를 수 있다.
-  const COUNTABLE_ACTIVITIES = ['study', 'job', 'competition', 'creativity'];
+  // 공부/알바/학교 수업/왕국 수학경시대회는 문제 수를 도전자가 직접 고를 수 있다.
+  const COUNTABLE_ACTIVITIES = ['study', 'job', 'school', 'competition', 'creativity'];
 
   function activityDefaultCount(activityId) {
     if (activityId === 'study') return Engine.QUESTIONS_PER_STUDY;
     if (activityId === 'job') return Engine.QUESTIONS_PER_JOB;
+    if (activityId === 'school') return Engine.QUESTIONS_PER_SCHOOL;
     if (activityId === 'competition') return Engine.QUESTIONS_PER_COMPETITION;
     if (activityId === 'creativity') return Engine.QUESTIONS_PER_CREATIVITY;
     return null;
