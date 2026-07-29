@@ -78,7 +78,7 @@ async function testStatusScreenShowsGraceScoreAndRank() {
     const line = await page.textContent('#status-grace-line');
     ok(line.includes('66'), `품위 점수(66)가 상태 화면에 숫자로 보여야 함 (got "${line}")`);
     ok(line.includes('평민'), `귀족이 되기 전에는 "평민"으로 표시되어야 함 (got "${line}")`);
-    ok(line.includes('귀족 신분'), `다음 단계가 귀족 전용이면 그 사실이 안내되어야 함 (got "${line}")`);
+    ok(line.includes('남작 이상 신분'), `다음 단계가 귀족 전용이면 요구되는 구체적인 작위가 안내되어야 함 (got "${line}")`);
   });
   ok(errors.length === 0, `JS 에러 없어야 함(품위 표시): ${errors.join('\n')}`);
 }

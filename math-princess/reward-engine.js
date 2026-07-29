@@ -55,12 +55,12 @@
       // 의미가 없음). lengthMultiplier(도전자가 고른 문제 수)는 골드에만 적용.
       if (sessionType === 'creativity') {
         const base = creativityQuestionReward();
-        return { gold: Math.round(base.gold * lm), creativity: base.creativity };
+        return { gold: Math.round(base.gold * lm), creativity: base.creativity + itemBonusSum(items, 'creativityBonus') };
       }
       // 기도와 선행: 성경 퀴즈/어른 공경/친구 배려/기도 문제를 맞히면 행운이
       // 오르고, 차분히 돌아보는 시간이라는 뜻에서 스트레스도 살짝 줄어든다.
       if (sessionType === 'faith') {
-        return { luck: 1, stress: -1 };
+        return { luck: 1 + itemBonusSum(items, 'luckBonus'), stress: -1 };
       }
       // 인증 시험은 상금/스탯이 문제마다 붙지 않고 시험 종료 시 한 번에
       // 통과 여부로 결정되지만(certExamReward), 오답에는 그래도 체력/스트레스
@@ -79,7 +79,7 @@
       const goldMultiplier = (1 + itemBonusSum(items, 'goldBonus')) * lm;
       const gold = Math.round(problem.rewardGold * multiplier * jobBonus * goldMultiplier);
       if (sessionType === 'study') {
-        return { gold, intelligence: problem.level + itemBonusSum(items, 'intBonus'), creativity: problem.level * 0.2 };
+        return { gold, intelligence: problem.level + itemBonusSum(items, 'intBonus'), creativity: problem.level * 0.2 + itemBonusSum(items, 'creativityBonus') };
       }
       return { gold, stamina: -2 };
     }
@@ -128,8 +128,9 @@
     // 행운). "기도와 선행" 활동은 마음가짐(선행/신앙)을 통해 행운을 올리는
     // 또 다른 경로다 — 행운이 필요한 엔딩(올림피아드/스타트업 CEO/여행가)을
     // 노리는 플레이어가 텃밭 가꾸기 하나에만 의존하지 않아도 되게 한다.
-    function gardenBonusReward(bonus) {
-      const d = { stamina: -4, gold: 25, luck: 1 };
+    function gardenBonusReward(bonus, items) {
+      const luckItemBonus = itemBonusSum(items, 'luckBonus');
+      const d = { stamina: -4, gold: 25, luck: 1 + luckItemBonus };
       if (bonus) { d.gold += 15; d.luck += 1; }
       return d;
     }
@@ -150,9 +151,14 @@
     // 왕국 수학경시대회: 문제마다 난이도(레벨)가 덧셈뺄셈(레벨 1)부터 점점
     // 올라가므로, 정답 하나의 상금도 그 문제의 레벨에 비례해 커진다(일반
     // 알바보다 훨씬 큰 목돈을 벌 수 있지만, 전체 경제를 무너뜨리지 않도록
-    // 알바 대비 3~5배 수준으로만 크게 잡았다).
+    // 알바 대비 3~5배 수준으로만 크게 잡았다). 정답이어도 스태미나 소모가
+    // 없어(공부와 달리) 문제 수를 최대(15개)로 늘려 반복하면 사실상 아무
+    // 대가 없이 지능을 빠르게 만점까지 올릴 수 있었던 문제가 있었다. 경시
+    // 대회의 원래 취지는 "공부보다 훨씬 큰 돈을 버는 지름길"이지 지능 성장의
+    // 지름길이 아니므로, 지능 보상은 아주 조금만(맛보기 수준) 남기고 크게
+    // 낮췄다 — 진짜 지능 성장은 여전히 "공부"에서만 확실히 이뤄지게 한다.
     function competitionQuestionReward(level) {
-      return { gold: 10 + level * 3, intelligence: 1.5 };
+      return { gold: 10 + level * 3, intelligence: 0.3 };
     }
 
     // 문제를 전부 맞히면(만점) 붙는 보너스. 가장 어려웠던 마지막 문제의

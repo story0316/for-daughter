@@ -434,10 +434,14 @@
   }
 
   // 인물 그림(assets/npcs/{id}.png)이 있으면 그것을, 없으면 이모지를 보여준다.
-  function npcAvatarHTML(def, sizeClass) {
+  // emotion('happy'|'surprised')을 주면 그 표정 그림(assets/npcs/{id}-{emotion}.png)을
+  // 먼저 시도하고, 그 그림이 없으면(아직 표정 그림이 없는 인물이면) 기본
+  // 그림으로, 기본 그림마저 없으면 이모지로 순서대로 대체한다.
+  function npcAvatarHTML(def, sizeClass, emotion) {
+    const src = emotion ? `assets/npcs/${def.id}-${emotion}.png` : `assets/npcs/${def.id}.png`;
     return `
       <span class="npc-avatar ${sizeClass || ''}">
-        <img src="assets/npcs/${def.id}.png" alt="${def.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+        <img src="${src}" alt="${def.name}" onerror="if(this.dataset.tried){this.style.display='none';this.nextElementSibling.style.display='flex';}else{this.dataset.tried='1';this.src='assets/npcs/${def.id}.png';}" />
         <span class="npc-avatar-fallback">${def.emoji}</span>
       </span>
     `;
@@ -841,7 +845,7 @@
 
     const prince = NPC_DEFS.find((n) => n.id === 'prince');
     if (outcome.result === 'met-prince') {
-      el.eventEmoji.innerHTML = npcAvatarHTML(prince, 'npc-avatar-lg');
+      el.eventEmoji.innerHTML = npcAvatarHTML(prince, 'npc-avatar-lg', 'surprised');
       el.eventTitle.textContent = '연회에서 왕자님을 만나다';
       el.eventDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혀 예절을 뽐냈어요! 왕자님이 다가와 말을 걸어주었어요. (애정도 ${Math.round(outcome.princeAffection)})`;
     } else if (outcome.result === 'success-underdressed') {
@@ -1051,7 +1055,7 @@
 
     announceStatLevelUps(beforeTiers);
     saveGame();
-    el.eventEmoji.innerHTML = npcAvatarHTML(attempt.npcDef, 'npc-avatar-lg');
+    el.eventEmoji.innerHTML = npcAvatarHTML(attempt.npcDef, 'npc-avatar-lg', 'happy');
     el.eventTitle.textContent = `${attempt.npcDef.name}과(와)의 시간`;
     el.eventDesc.textContent = `${attempt.line} (애정도 ${Math.round(attempt.npcState.affection)} · ${Engine.affectionTierName(attempt.npcState.affection)})`;
     showScreen('event');

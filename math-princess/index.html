@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>프린세스 메이커</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👑</text></svg>" />
-<link rel="stylesheet" href="style.css" />
+<!-- CSS/JS 파일마다 ?v=YYYYMMDD 캐시 버스팅 쿼리를 붙여둔다. 빌드 과정이
+     없어 브라우저(특히 모바일 Safari)가 오래 캐시해두면 배포해도 옛날
+     코드가 계속 보이는 문제가 있었다(예: 새 구매 버튼이 안 뜨는 것처럼
+     보임). 게임 코드를 바꿀 때마다 이 페이지와 admin.html의 모든
+     ?v= 값을 같은 새 날짜로 함께 올려주면 된다. -->
+<link rel="stylesheet" href="style.css?v=20260729" />
 </head>
 <body>
   <div id="app">
@@ -453,14 +458,14 @@
     </section>
 
   </div>
-  <script src="problems.js"></script>
-  <script src="subjects.js"></script>
-  <script src="endings.js"></script>
-  <script src="portrait.js"></script>
-  <script src="scenarios.js"></script>
-  <script src="question-engine.js"></script>
-  <script src="reward-engine.js"></script>
-  <script src="game-engine.js"></script>
-  <script src="script.js"></script>
+  <script src="problems.js?v=20260729"></script>
+  <script src="subjects.js?v=20260729"></script>
+  <script src="endings.js?v=20260729"></script>
+  <script src="portrait.js?v=20260729"></script>
+  <script src="scenarios.js?v=20260729"></script>
+  <script src="question-engine.js?v=20260729"></script>
+  <script src="reward-engine.js?v=20260729"></script>
+  <script src="game-engine.js?v=20260729"></script>
+  <script src="script.js?v=20260729"></script>
 </body>
 </html>

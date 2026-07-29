@@ -274,6 +274,25 @@ html, body {
     url("assets/backgrounds/main-room.png") center 30% / cover no-repeat;
 }
 
+#screen-schedule,
+#screen-week-pick {
+  background:
+    linear-gradient(180deg, rgba(28, 20, 40, 0.55) 0%, rgba(20, 14, 30, 0.8) 65%, rgba(16, 11, 24, 0.92) 100%),
+    url("assets/backgrounds/schedule-desk.png") center / cover no-repeat;
+}
+
+#screen-shop {
+  background:
+    linear-gradient(180deg, rgba(28, 20, 40, 0.55) 0%, rgba(20, 14, 30, 0.8) 65%, rgba(16, 11, 24, 0.92) 100%),
+    url("assets/backgrounds/dressing-room.png") center / cover no-repeat;
+}
+
+#screen-banquet-tier-pick {
+  background:
+    linear-gradient(180deg, rgba(28, 20, 40, 0.5) 0%, rgba(20, 14, 30, 0.78) 65%, rgba(16, 11, 24, 0.92) 100%),
+    url("assets/backgrounds/ballroom.png") center / cover no-repeat;
+}
+
 .hud {
   flex: 0 0 auto;
   /* 오른쪽 위에 떠 있는 음소거 버튼(.btn-mute-toggle, absolute 위치)과 겹치지
@@ -1186,8 +1205,16 @@ html, body {
   padding: 14px 16px 20px;
   display: grid;
   grid-template-columns: 1fr 1fr;
+  /* grid-auto-rows 기본값(auto)에만 맡겨두면 카드 안의 overflow:hidden과
+     맞물려 행 높이가 실제 내용(그림+이름표+구매 버튼)보다 짧게 계산되는
+     문제가 있었다 — 그 결과 구매 가능한 카드의 이름표/버튼이 다음 행
+     카드에 가려지거나 잘려서, 눌러도 반응이 없는 것처럼 보였다.
+     max-content로 명시해 각 행이 그 안의 가장 큰 카드에 맞춰 제대로
+     늘어나게 한다. */
+  grid-auto-rows: max-content;
   gap: 12px;
   align-content: start;
+  align-items: start;
 }
 
 .wardrobe-card {
@@ -1227,6 +1254,22 @@ html, body {
   justify-content: center;
   font-size: 44px;
   background: #f4ecd8;
+}
+
+/* 펫 일러스트는 옷장 마네킹 그림과 달리 거의 정사각형(1:1)이라, 옷장과
+   같은 가로로 넓은 고정 높이(118px)로 자르면 다리·꼬리 등 아래쪽이 꽤
+   잘려 보였다. (aspect-ratio로 카드 너비에 맞춰 정사각형을 만들어보려
+   했지만, 이 그리드 레이아웃에서 암시적 행 높이가 aspect-ratio 계산과
+   맞물려 잘못 계산되는 브라우저 버그성 동작이 있어 카드가 서로 겹치는
+   회귀가 생겼다. 그래서 더 단순하고 안전한 고정 높이 확대로 대신한다.)
+   같은 정사각형 그림이라도 자르는 양이 확 줄어든다. */
+#pet-list .wardrobe-card img,
+#pet-list .wardrobe-card-emoji-fallback {
+  height: 165px;
+}
+
+#pet-list .wardrobe-card.locked::after {
+  height: 165px;
 }
 
 .wardrobe-card-label {
