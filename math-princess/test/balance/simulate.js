@@ -16,7 +16,7 @@ const E = require(path.join(BASE, 'endings.js'));
 const { createEngine } = require(path.join(BASE, 'game-engine.js'));
 
 const Engine = createEngine({ P, SUBJ, SC, E });
-const { STAT_KEYS, NPC_DEFS, ITEMS, OUTFIT_TIERS, WEEKS_PER_MONTH, PRINCE_MIN_TIER, BANQUET_TIERS, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT } = Engine;
+const { STAT_KEYS, NPC_DEFS, ITEMS, OUTFIT_TIERS, WEEKS_PER_MONTH, PRINCE_MIN_TIER, BANQUET_TIERS, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT, QUESTIONS_PER_CREATIVITY, QUESTIONS_PER_FAITH, CREATIVITY_MIN_CREATIVITY } = Engine;
 const GRAND_SOCIAL_TIER = BANQUET_TIERS[BANQUET_TIERS.length - 1].id;
 const TOTAL_TURNS = 48;
 
@@ -62,6 +62,27 @@ function runWeekActivity(state, activity, answerRate, log, banquetTier) {
     Engine.finishGardenBonusOutcome(state, session);
   } else if (activity === 'banquet') {
     tryRunBanquet(state, answerRate, log, banquetTier || BANQUET_TIERS[0].id);
+  } else if (activity === 'creativity') {
+    if (!Engine.creativityOlympiadUnlocked(state)) {
+      log.creativityBlockedByRequirement = (log.creativityBlockedByRequirement || 0) + 1;
+      return;
+    }
+    const session = runQuestionSession(state, 'creativity', QUESTIONS_PER_CREATIVITY, answerRate);
+    Engine.finishCreativityOutcome(state, session);
+  } else if (activity === 'faith') {
+    const session = runQuestionSession(state, 'faith', QUESTIONS_PER_FAITH, answerRate);
+    Engine.finishFaithOutcome(session);
+  }
+}
+
+// 승급 조건(성장 능력치 6개가 전부 Lv5, 값 50)을 채웠는데 아직 작위가
+// 없으면(실제 게임에서는 왕실 작위 수여 이벤트가 뜨는 시점) 곧바로 작위를
+// 받은 것으로 처리한다 — 시뮬레이터에는 UI 입력이 없으므로 즉시 승급시켜
+// 이후 로직(귀족 전용 옷 구매 등)이 정상적으로 굴러가는지 확인할 수 있게 한다.
+function maybeGrantNoblePromotion(state, log) {
+  if (Engine.noblePromotionEligible(state)) {
+    Engine.grantNobleTitle(state, '시뮬레이션 귀족');
+    log.noblePromotions = (log.noblePromotions || 0) + 1;
   }
 }
 
@@ -137,7 +158,7 @@ function maybeBuyOutfit(state) {
 
 // "균형 잡힌" 플레이어: 매주(월 4주 x 48개월 = 총 192주) 공부/알바/운동/휴식/
 // 빨래/텃밭/친구 만나기/연회를 고루 섞어서 진행한다. 친구는 6명을 순환 방문한다.
-const WEEK_ACTIVITY_PATTERN = ['study', 'friend', 'job', 'laundry', 'exercise', 'friend', 'study', 'garden', 'rest', 'banquet', 'friend', 'study'];
+const WEEK_ACTIVITY_PATTERN = ['study', 'friend', 'job', 'laundry', 'exercise', 'friend', 'study', 'garden', 'rest', 'banquet', 'friend', 'study', 'creativity', 'faith'];
 
 function simulateBalanced(answerRate) {
   const state = Engine.makeInitialState();
@@ -171,6 +192,7 @@ function simulateBalanced(answerRate) {
         runWeekActivity(state, activity, answerRate, log);
       }
       maybeBuyItems(state);
+      maybeGrantNoblePromotion(state, log);
       maybeBuyOutfit(state);
       Engine.clampStats(state);
     }
@@ -211,6 +233,7 @@ function simulatePrinceRoute(answerRate) {
       } else if (activity === 'friend-prince') meetNpc(state, 'prince', answerRate, log);
       else if (activity === 'banquet') runWeekActivity(state, activity, answerRate, log, GRAND_SOCIAL_TIER);
       else runWeekActivity(state, activity, answerRate, log);
+      maybeGrantNoblePromotion(state, log);
       maybeBuyOutfit(state);
       Engine.clampStats(state);
     }
@@ -242,13 +265,19 @@ console.log('48개월 x 4주 밸런스 시뮬레이션 (game-engine.js 실사용
 const BALANCED_TRIALS = 60;
 [0.6, 0.75, 0.9].forEach((rate) => {
   const endingCounts = {};
+  let noblePromoted = 0;
   for (let t = 0; t < BALANCED_TRIALS; t++) {
     const { state, ending, log } = simulateBalanced(rate);
     checkAnomalies(state, log, `균형 ${Math.round(rate * 100)}%`);
     endingCounts[ending.id] = (endingCounts[ending.id] || 0) + 1;
+    if (state.nobleTitle) noblePromoted++;
   }
   console.log(`  균형 플레이어 정답률 ${Math.round(rate * 100)}% (${BALANCED_TRIALS}회) 엔딩 분포:`,
     Object.entries(endingCounts).sort((a, b) => b[1] - a[1]).map(([id, n]) => `${id}:${n}`).join(', '));
+  console.log(`    귀족 승급 도달: ${noblePromoted}/${BALANCED_TRIALS} (${Math.round((noblePromoted / BALANCED_TRIALS) * 100)}%)`);
+  if (rate >= 0.75) {
+    ok(noblePromoted / BALANCED_TRIALS >= 0.5, `정답률 ${Math.round(rate * 100)}%의 균형 잡힌 플레이어는 48개월 동안 절반 이상 귀족으로 승급할 수 있어야 함(승급 조건이 과도하게 가혹하지 않은지 확인) (실제 ${Math.round((noblePromoted / BALANCED_TRIALS) * 100)}%)`);
+  }
 });
 
 // 2) 왕자님 루트: 집중 플레이 시 48개월 안에 실제로 became-a-princess 엔딩에

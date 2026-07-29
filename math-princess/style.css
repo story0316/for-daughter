@@ -726,6 +726,17 @@ html, body {
   padding: 0;
 }
 
+.status-grace-line {
+  margin-top: 4px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+}
+
 .status-npc-list,
 .status-item-list,
 .status-cert-list {
@@ -1287,6 +1298,25 @@ html, body {
   font-size: 10px;
   font-weight: 800;
   padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* 귀족 신분(state.nobleTitle)이 있어야만 살 수 있는 옷(tier 3 이상)을
+   평민도 살 수 있는 옷과 시각적으로 구분해준다. */
+.wardrobe-card.noble-tier {
+  border-color: rgba(255, 216, 115, 0.35);
+}
+
+.wardrobe-card-noble-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+  background: linear-gradient(120deg, #fff3c4, #ffd873 60%, #f5b942);
+  color: #4a3410;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 7px;
   border-radius: 999px;
 }
 
