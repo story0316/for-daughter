@@ -46,9 +46,26 @@ eq(Question.SUBJECTS.science.maxLevel, SUBJ.SCIENCE_LEVELS.length, '과학 maxLe
   ok(Number.isInteger(level) && level >= 1, '무작위로 고른 레벨은 1 이상 정수여야 함');
 }
 {
-  const { subject, level } = Question.pickRandomSubjectLevel1();
+  // "알바"는 지능이 0일 때(레벨 1만 해금)는 여전히 레벨 1만 나와야 하지만,
+  // 지능이 올라 레벨이 여럿 해금되면 레벨 1에 영원히 갇히지 않고 해금된
+  // 레벨의 하위 절반까지는 나와야 한다(그래도 최상위 레벨은 "공부"에서만
+  // 만날 수 있어야 함).
+  const { subject, level } = Question.pickJobSubjectAndLevel(0);
   ok(Question.SUBJECT_KEYS.includes(subject), '알바용 무작위 과목도 유효해야 함');
-  eq(level, 1, '알바는 항상 레벨 1');
+  eq(level, 1, '지능 0에서는 알바도 레벨 1이어야 함');
+
+  const intelligence = 100; // math 레벨 1~9 전부 해금
+  const unlocked = Question.unlockedLevelsFor(intelligence, 'math');
+  const ceiling = Math.ceil(unlocked.length / 2);
+  const seenLevels = new Set();
+  for (let i = 0; i < 500; i++) {
+    seenLevels.add(Question.pickJobLevelForSubject(intelligence, 'math'));
+  }
+  ok(seenLevels.size > 1, '지능이 충분히 오르면 알바 레벨도 매번 1로 고정되지 않고 다양해야 함');
+  seenLevels.forEach((lv) => {
+    ok(lv >= 1 && lv <= ceiling, `알바 레벨(${lv})은 해금된 레벨(${unlocked.length}개)의 하위 절반(1~${ceiling}) 안이어야 함`);
+  });
+  ok(ceiling < unlocked.length, '알바 레벨의 상한은 실제 해금된 최고 레벨보다 낮아야 함(최상위 레벨은 공부 전용)');
 }
 
 {

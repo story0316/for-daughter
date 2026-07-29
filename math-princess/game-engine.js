@@ -526,12 +526,12 @@
 
     function unlockedLevelsFor(state, subjectKey) { return Question.unlockedLevelsFor(state.stats.intelligence, subjectKey); }
     function pickRandomSubjectAndLevel(state) { return Question.pickRandomSubjectAndLevel(state.stats.intelligence); }
-    function pickRandomSubjectLevel1() { return Question.pickRandomSubjectLevel1(); }
     function subjectName(key) { return Question.subjectName(key); }
     function generateEtiquetteQuestion(session) { return Question.generateEtiquetteQuestion(session); }
     function generateScenarioQuestion(session) { return Question.generateScenarioQuestion(session); }
     function generateNextProblem(state, session) { return Question.generateNextProblem(state.stats.intelligence, session); }
     function typicalStudyLevel(state) { return Question.typicalStudyLevel(state.stats.intelligence); }
+    function typicalJobLevel(state) { return Question.typicalJobLevel(state.stats.intelligence); }
 
     // 왕국 수학경시대회에서 쓸 난이도 사다리를 만든다. 덧셈뺄셈(레벨 1)부터
     // 시작해 현재 해금된 최고 레벨까지 count개 문제에 걸쳐 고르게 올라간다.
@@ -1138,8 +1138,9 @@
       } else if (activityId === 'job') {
         const n = clampSessionLength(count != null ? count : QUESTIONS_PER_JOB);
         const lm = sessionLengthMultiplier(n, QUESTIONS_PER_JOB);
-        const level1Reward = 8 + 1 * 4;
-        d.gold += Math.round(n * r * level1Reward * EXPECTED_COMBO_MULTIPLIER * 1.5 * (1 + itemBonusSum(state, 'goldBonus')) * lm);
+        const jobLevel = typicalJobLevel(state);
+        const jobReward = 8 + jobLevel * 4;
+        d.gold += Math.round(n * r * jobReward * EXPECTED_COMBO_MULTIPLIER * 1.5 * (1 + itemBonusSum(state, 'goldBonus')) * lm);
         d.stamina += -n * r * 2 - n * (1 - r) * 3;
       } else if (activityId === 'exercise') {
         d.stamina += 8 + 2 * r;
@@ -1303,7 +1304,7 @@
       // 상태 생성/이관
       makeInitialState, migrateLoadedState, makeLearningLog, RECENT_MISTAKES_LIMIT,
       // 과목/문제(질문 엔진에 위임)
-      unlockedLevelsFor, pickRandomSubjectAndLevel, pickRandomSubjectLevel1, subjectName,
+      unlockedLevelsFor, pickRandomSubjectAndLevel, subjectName,
       generateEtiquetteQuestion, generateScenarioQuestion, generateNextProblem,
       // 세션
       startStudySession, startJobSession, startBanquetSession, startExerciseSession, startRestSession,
@@ -1328,7 +1329,7 @@
       currentWeekActivity, tryStartBanquet, banquetTierRequirementMet, competitionUnlocked, talkToDaughter,
       creativityOlympiadUnlocked,
       // 계획 미리보기
-      typicalStudyLevel, estimateActivityDelta, estimateRemainingWeeksDelta,
+      typicalStudyLevel, typicalJobLevel, estimateActivityDelta, estimateRemainingWeeksDelta,
       // 턴 진행
       applyAffectionDecay, applyServantEffects, advanceTurn, advanceWeekOrTurn,
       // 엔딩
