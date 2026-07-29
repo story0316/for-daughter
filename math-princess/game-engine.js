@@ -305,9 +305,8 @@
       // "학교 수업"에서 귀족 신분일 때 수학·과학·음악을 가르쳐주는 선생님.
       // 평민일 때는 위의 'teacher'(선생님)가 그대로 가르쳐준다(startSchoolSession
       // 참고). 언제든 만날 수 있게 unlock을 항상 참으로 둬서(teacher와 동일),
-      // 신분과 상관없이 "친구 만나기"에서도 만날 수 있다. 아직 전용
-      // 일러스트가 없어(hasArt 생략) 이모지로만 표시된다.
-      { id: 'royalScholar', emoji: '🎓', name: '왕궁 학자', desc: '귀족 자제에게 학문을 가르치는 왕궁의 학자', unlock: () => true, apply: (s) => { s.stats.intelligence += 3; s.stats.creativity += 2; }, lines: ['왕궁 학자에게서 귀한 지식을 배웠어요.', '왕궁 학자와 함께 어려운 문제를 풀어보았어요.', '왕궁 학자가 학업 성취를 칭찬해주셨어요.'] },
+      // 신분과 상관없이 "친구 만나기"에서도 만날 수 있다.
+      { id: 'royalScholar', emoji: '🎓', name: '왕궁 학자', desc: '귀족 자제에게 학문을 가르치는 왕궁의 학자', unlock: () => true, hasArt: true, apply: (s) => { s.stats.intelligence += 3; s.stats.creativity += 2; }, lines: ['왕궁 학자에게서 귀한 지식을 배웠어요.', '왕궁 학자와 함께 어려운 문제를 풀어보았어요.', '왕궁 학자가 학업 성취를 칭찬해주셨어요.'] },
     ];
 
     const ACTIVITY_DEFS = {

@@ -97,6 +97,9 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(state.weekPlan.length, Engine.WEEKS_PER_MONTH, 'weekPlan은 한 달 주 수만큼');
 }
 {
+  ok(Engine.NPC_DEFS.every((n) => n.hasArt), '모든 인물에 실제 일러스트가 있어야 함');
+}
+{
   const state = Engine.makeInitialState('  ');
   eq(state.characterName, '우리 딸', '빈 이름은 기본 이름으로 대체');
 }
