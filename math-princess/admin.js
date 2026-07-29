@@ -38,6 +38,7 @@
     faithFilter: document.getElementById('faith-filter'),
     faithList: document.getElementById('faith-list'),
     scenarioList: document.getElementById('scenario-list'),
+    learningList: document.getElementById('learning-list'),
   };
 
   function showScreen(name) {
@@ -320,10 +321,58 @@
     }).join('');
   }
 
+  /* ---------------- 학습 현황(오답 로그) ---------------- */
+
+  // 이 브라우저의 실제 저장 데이터(script.js와 같은 localStorage 키)를 읽어
+  // 온다. 콘텐츠 브라우저인 이 페이지의 다른 섹션과 달리, 여기만 유일하게
+  // "지금 이 아이가 실제로 어떻게 하고 있는지"를 보여준다.
+  function loadRealSaveState() {
+    let raw;
+    try {
+      raw = localStorage.getItem(Engine.SAVE_KEY);
+    } catch (e) {
+      return null;
+    }
+    if (!raw) return null;
+    try {
+      return Engine.migrateLoadedState(JSON.parse(raw));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function renderLearning() {
+    const state = loadRealSaveState();
+    if (!state) {
+      el.learningList.innerHTML = `<div class="admin-card-desc">아직 이 브라우저에서 게임을 이어한 기록이 없어요. 아이가 플레이한 뒤 이 페이지를 새로고침하면 여기 표시됩니다.</div>`;
+      return;
+    }
+    el.learningList.innerHTML = Engine.CERT_SUBJECT_KEYS.map((subjectKey) => {
+      const log = state.learningLog[subjectKey];
+      const subjectName = Engine.SUBJECTS[subjectKey].name;
+      const levels = Object.keys(log.byLevel).map(Number).sort((a, b) => a - b);
+      const levelRows = levels.map((level) => {
+        const { correct, wrong } = log.byLevel[level];
+        const total = correct + wrong;
+        const accuracy = total ? Math.round((correct / total) * 100) : 0;
+        const weak = total >= 3 && accuracy < 60;
+        return `<div class="admin-card-desc"${weak ? ' style="color:#e0685f;font-weight:700;"' : ''}>레벨 ${level}: 정답 ${correct} · 오답 ${wrong} (정답률 ${accuracy}%)${weak ? ' — 약한 부분일 수 있어요' : ''}</div>`;
+      }).join('');
+      const mistakeRows = log.recentMistakes.slice(0, 5).map((m) => `<div class="admin-card-desc">· [레벨 ${m.level}, ${m.turn}턴] ${m.question}</div>`).join('');
+      return `
+        <div class="admin-card">
+          <div class="admin-card-title">${subjectName}</div>
+          ${levels.length ? levelRows : '<div class="admin-card-desc">아직 이 과목의 학습 기록이 없어요.</div>'}
+          ${log.recentMistakes.length ? `<div class="admin-card-title" style="margin-top:8px;font-size:13px;">최근 오답</div>${mistakeRows}` : ''}
+        </div>`;
+    }).join('');
+  }
+
   /* ---------------- 초기화 ---------------- */
 
   function renderDashboard() {
     renderOverview();
+    renderLearning();
     renderDesignNotes();
     renderMatrix();
     renderSubjects();

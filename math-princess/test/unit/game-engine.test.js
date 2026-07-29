@@ -149,6 +149,92 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(session.correctCount, 1, '오답은 정답 카운트를 늘리지 않음');
 }
 
+/* ---------------- 학습 로그(오답/약점 기록) ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  Engine.CERT_SUBJECT_KEYS.forEach((key) => {
+    ok(state.learningLog[key], `초기 상태에 ${key} 학습 로그가 있어야 함`);
+    eq(JSON.stringify(state.learningLog[key].byLevel), '{}', `초기 상태의 ${key} byLevel은 비어있어야 함`);
+    eq(state.learningLog[key].recentMistakes.length, 0, `초기 상태의 ${key} 최근 오답은 비어있어야 함`);
+  });
+}
+{
+  // "공부"(study)는 세션이 고정한 과목(session.currentSubject)으로 기록되어야 함
+  const state = Engine.makeInitialState();
+  const session = Engine.startStudySession();
+  session.currentSubject = 'math';
+  Engine.applyCorrect(state, session, { level: 3, question: 'Q1', rewardGold: 10 });
+  Engine.applyCorrect(state, session, { level: 3, question: 'Q2', rewardGold: 10 });
+  Engine.applyWrong(state, session, { level: 3, question: 'Q3 틀린 문제' });
+  const mathLog = state.learningLog.math.byLevel[3];
+  eq(mathLog.correct, 2, '공부 세션 정답이 그 레벨의 correct 카운트에 쌓여야 함');
+  eq(mathLog.wrong, 1, '공부 세션 오답이 그 레벨의 wrong 카운트에 쌓여야 함');
+  eq(state.learningLog.math.recentMistakes.length, 1, '오답 문제가 최근 오답 목록에 기록되어야 함');
+  eq(state.learningLog.math.recentMistakes[0].question, 'Q3 틀린 문제', '최근 오답에 문제 텍스트가 그대로 기록되어야 함');
+  eq(state.learningLog.english.recentMistakes.length, 0, '다른 과목(영어) 로그는 영향받지 않아야 함');
+}
+{
+  // "알바"(job)도 session.currentSubject 기준으로 기록되어야 함
+  const state = Engine.makeInitialState();
+  const session = Engine.startJobSession();
+  session.currentSubject = 'science';
+  Engine.applyCorrect(state, session, { level: 1, question: 'JobQ' });
+  eq(state.learningLog.science.byLevel[1].correct, 1, '알바 세션도 currentSubject 기준으로 기록되어야 함');
+}
+{
+  // 왕국 수학경시대회(competition)는 항상 수학으로 기록되어야 함
+  const state = Engine.makeInitialState();
+  const session = Engine.startCompetitionSession(state, 5);
+  Engine.applyCorrect(state, session, { level: 2, question: 'CompQ' });
+  eq(state.learningLog.math.byLevel[2].correct, 1, '경시대회는 항상 수학 학습 로그에 기록되어야 함');
+}
+{
+  // 기초 과목 인증 시험(cert-exam)은 session.subject 기준으로 기록되어야 함
+  const state = Engine.makeInitialState();
+  const session = Engine.startCertExamSession(state, 'english');
+  Engine.applyWrong(state, session, { level: 1, question: 'CertQ' });
+  eq(state.learningLog.english.byLevel[1].wrong, 1, '인증 시험은 session.subject 기준으로 기록되어야 함');
+}
+{
+  // 연회/창의력/기도와 선행처럼 과목·레벨 구조가 없는 활동은 기록되면 안 됨
+  const state = Engine.makeInitialState();
+  const banquetSession = Engine.startBanquetSession('tea-party');
+  Engine.applyCorrect(state, banquetSession, { level: 0, question: 'EtiquetteQ' });
+  const creativitySession = Engine.startCreativitySession(3);
+  Engine.applyCorrect(state, creativitySession, { level: 0, question: 'CreativityQ' });
+  const faithSession = Engine.startFaithSession();
+  Engine.applyCorrect(state, faithSession, { level: 0, question: 'FaithQ' });
+  Engine.CERT_SUBJECT_KEYS.forEach((key) => {
+    eq(JSON.stringify(state.learningLog[key].byLevel), '{}', `연회/창의력/기도와 선행은 ${key} 학습 로그에 기록되면 안 됨`);
+  });
+}
+{
+  // 최근 오답 목록은 RECENT_MISTAKES_LIMIT개까지만, 최신순으로 유지되어야 함
+  const state = Engine.makeInitialState();
+  const session = Engine.startStudySession();
+  session.currentSubject = 'math';
+  for (let i = 0; i < Engine.RECENT_MISTAKES_LIMIT + 5; i++) {
+    Engine.applyWrong(state, session, { level: 1, question: `mistake-${i}` });
+  }
+  eq(state.learningLog.math.recentMistakes.length, Engine.RECENT_MISTAKES_LIMIT, `최근 오답은 최대 ${Engine.RECENT_MISTAKES_LIMIT}개까지만 유지되어야 함`);
+  eq(state.learningLog.math.recentMistakes[0].question, `mistake-${Engine.RECENT_MISTAKES_LIMIT + 4}`, '가장 최근 오답이 목록 맨 앞이어야 함');
+}
+{
+  // 옛 저장 형식(learningLog 필드 자체가 없던 시절)도 최신 형식으로 이관되어야 함
+  const migrated = Engine.migrateLoadedState({ turn: 5 });
+  Engine.CERT_SUBJECT_KEYS.forEach((key) => {
+    ok(migrated.learningLog[key], `learningLog가 없던 저장도 ${key} 로그가 새로 생성되어야 함`);
+    ok(Array.isArray(migrated.learningLog[key].recentMistakes), `${key} recentMistakes는 배열이어야 함`);
+  });
+
+  // 일부만 손상된 경우(예: byLevel이 배열로 잘못 저장됨)도 정상화되어야 함
+  const corrupted = Engine.migrateLoadedState({ turn: 5, learningLog: { math: { byLevel: [], recentMistakes: null } } });
+  eq(JSON.stringify(corrupted.learningLog.math.byLevel), '{}', '손상된 byLevel은 빈 객체로 정상화되어야 함');
+  eq(corrupted.learningLog.math.recentMistakes.length, 0, '손상된 recentMistakes는 빈 배열로 정상화되어야 함');
+  ok(corrupted.learningLog.english, '일부 과목만 있던 저장도 나머지 과목 로그가 채워져야 함');
+}
+
 {
   // 은행: 세션 도중이 아니라 세션이 끝날 때 한 번에 매력치를 반영(finishBanquetOutcome)
   // 왕자님은 최고 등급(고급 사교 모임)에서만 만날 수 있음
