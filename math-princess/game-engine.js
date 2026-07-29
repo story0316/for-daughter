@@ -250,9 +250,9 @@
       { min: 0, cost: 0, emoji: '👕', name: '평범한 옷', hasArt: true, wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
       { min: 25, cost: 400, emoji: '👚', name: '단정한 옷', hasArt: true, wardrobeDesc: '품위 25 이상에서 구매 가능' },
       { min: 50, cost: 900, emoji: '👗', name: '예쁜 드레스', hasArt: true, wardrobeDesc: '품위 50 이상에서 구매 가능' },
-      { min: 75, cost: 1800, emoji: '👑', name: '공주 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 75 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
-      { min: 90, cost: 3200, emoji: '💐', name: '무도회 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 90 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
-      { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 100(만점) + 귀족 신분에서만 구매 가능한 전설의 옷' },
+      { min: 75, cost: 1800, emoji: '👑', name: '공주 드레스', requiresNoble: true, requiredNobleRankIndex: 0, hasArt: true, wardrobeDesc: '품위 75 이상 + 남작 이상 필요(평민은 살 수 없는 옷)' },
+      { min: 90, cost: 3200, emoji: '💐', name: '무도회 드레스', requiresNoble: true, requiredNobleRankIndex: 0, hasArt: true, wardrobeDesc: '품위 90 이상 + 남작 이상 필요(평민은 살 수 없는 옷)' },
+      { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', requiresNoble: true, requiredNobleRankIndex: 0, hasArt: true, wardrobeDesc: '품위 100(만점) + 남작 이상에서만 구매 가능한 전설의 옷' },
       { min: 100, cost: 10000, emoji: '🎀', name: '자작 예복', requiresNoble: true, requiredNobleRankIndex: 1, hasArt: true, wardrobeDesc: '품위 100(만점) + 자작 이상 필요(남작만으로는 살 수 없는 예복)' },
       { min: 100, cost: 16000, emoji: '🏵️', name: '백작 예복', requiresNoble: true, requiredNobleRankIndex: 2, hasArt: true, wardrobeDesc: '품위 100(만점) + 백작 이상 필요' },
       { min: 100, cost: 24000, emoji: '🎖️', name: '후작 예복', requiresNoble: true, requiredNobleRankIndex: 3, hasArt: true, wardrobeDesc: '품위 100(만점) + 후작 이상 필요' },
@@ -1174,7 +1174,7 @@
         const perfectChance = Math.pow(r, n);
         expectedGold += perfectChance * (20 + levels[levels.length - 1] * 4) * lm;
         d.gold += Math.round(expectedGold);
-        d.intelligence += n * r * 1.5;
+        d.intelligence += n * r * 0.3;
         d.stress += n * (1 - r) * 3;
       } else if (activityId === 'creativity') {
         const n = clampSessionLength(count != null ? count : QUESTIONS_PER_CREATIVITY);
