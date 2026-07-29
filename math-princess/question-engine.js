@@ -49,6 +49,16 @@
       { id: 'honest-mistake', category: '정직과책임감', question: '실수로 친구의 물건을 망가뜨렸을 때 가장 바람직한 행동은?', choices: ['솔직히 말하고 사과한다', '모르는 척한다', '몰래 숨겨둔다', '다른 사람 탓을 한다'], answer: '솔직히 말하고 사과한다', explanation: '실수를 했을 때는 숨기기보다 솔직하게 말하고 사과하는 것이 신뢰를 지키는 방법이에요.', hint: '숨기면 그 순간은 편할 수 있지만 나중에 신뢰를 잃을 수 있어요. 정직함이 왜 중요한지 생각해보세요.' },
       { id: 'refuse-cheating', category: '정직과책임감', question: '시험 중 친구가 답을 보여달라고 할 때 가장 바람직한 행동은?', choices: ['안 된다고 부드럽게 거절한다', '몰래 보여준다', '선생님 몰래 답을 알려준다', '큰 소리로 화를 낸다'], answer: '안 된다고 부드럽게 거절한다', explanation: '부정행위는 친구를 도와주는 것이 아니라 서로에게 해가 되는 일이므로, 정중하지만 분명하게 거절해야 해요.', hint: '진짜 도움은 그 순간만 편하게 해주는 게 아니에요. 정직함을 지키면서도 친구 마음을 상하지 않게 거절하는 방법을 생각해보세요.' },
       { id: 'queue-courage', category: '환경과공공질서', question: '줄을 서 있는데 누군가 새치기를 하는 것을 봤을 때 가장 바람직한 행동은?', choices: ['정중하게 순서를 지켜달라고 말한다', '아무 말도 못 하고 참는다', '큰 소리로 화를 낸다', '나도 새치기를 한다'], answer: '정중하게 순서를 지켜달라고 말한다', explanation: '불편한 상황이라도 예의를 지키며 정중하게 말하는 것이 문제를 해결하는 용기 있는 태도예요.', hint: '화를 내거나 참기만 하는 것 말고, 침착하고 예의 바르게 내 생각을 전달하는 방법을 떠올려보세요.' },
+      { id: 'see-off-guest', category: '인사예절', question: '손님을 배웅할 때 가장 예의 바른 행동은?', choices: ['문 앞까지 나가서 인사한다', '돌아서서 바로 딴 일을 한다', '손도 안 흔들고 만다', '말없이 문만 닫는다'], answer: '문 앞까지 나가서 인사한다', explanation: '손님을 배웅할 때는 문 앞까지 나가 인사하는 것이 예의예요.', hint: '손님이 처음 왔을 때 반갑게 맞이했던 것처럼, 갈 때도 어떻게 인사하면 좋을지 생각해보세요.' },
+      { id: 'cover-sneeze', category: '식사예절', question: '식사 중 재채기나 기침이 나오려 할 때 가장 예의 바른 행동은?', choices: ['손이나 손수건으로 입을 가린다', '그냥 크게 한다', '옆 사람 쪽으로 고개를 돌려서 한다', '참지 못하고 음식을 뱉는다'], answer: '손이나 손수건으로 입을 가린다', explanation: '재채기나 기침이 나올 때는 손이나 손수건으로 입을 가리는 것이 예의예요.', hint: '갑자기 나오는 기침이나 재채기가 다른 사람에게 튀지 않게 하려면 무엇으로 가려야 할지 생각해보세요.' },
+      { id: 'late-notice', category: '시간약속', question: '약속에 늦을 것 같을 때 가장 바람직한 행동은?', choices: ['미리 연락해서 상황을 알린다', '그냥 아무 말 없이 늦게 간다', '약속을 잊은 척한다', '오지 않는다'], answer: '미리 연락해서 상황을 알린다', explanation: '늦을 것 같으면 미리 연락해서 상대방이 기다리지 않게 하는 것이 예의예요.', hint: '상대방이 무작정 기다리게 하지 않으려면, 늦기 전에 무엇을 해야 할지 생각해보세요.' },
+      { id: 'online-credit', category: '디지털시민의식', question: '인터넷에서 다른 사람의 글이나 사진을 가져다 쓸 때 가장 바람직한 행동은?', choices: ['출처를 밝히고 허락을 구한다', '그냥 마음대로 가져다 쓴다', '이름만 지우고 올린다', '아무 말 없이 내 것처럼 올린다'], answer: '출처를 밝히고 허락을 구한다', explanation: '다른 사람이 만든 글이나 사진을 쓸 때는 출처를 밝히고 허락을 구하는 것이 예의이자 규칙이에요.', hint: '내가 힘들게 만든 것을 남이 허락 없이 가져다 쓴다면 어떤 기분일지 생각해보세요.' },
+      { id: 'stranger-gift', category: '안전', question: '낯선 사람이 차에 태워주며 선물을 준다고 할 때 가장 바람직한 행동은?', choices: ['단호히 거절하고 자리를 피한다', '일단 차에 타본다', '혼자 판단해서 따라간다', '아무에게도 말하지 않는다'], answer: '단호히 거절하고 자리를 피한다', explanation: '낯선 사람의 호의는 위험할 수 있으니 단호히 거절하고 안전한 곳으로 피해야 해요.', hint: '모르는 사람이 갑자기 잘해줄 때는 조심해야 해요. 가장 안전한 행동이 무엇일지 생각해보세요.' },
+      { id: 'talk-it-out', category: '갈등해결', question: '친구와 오해가 생겼을 때 가장 바람직한 첫 행동은?', choices: ['직접 만나서 차분히 이야기해본다', 'SNS에 친구 흉을 올린다', '무조건 화부터 낸다', '아무 말 없이 관계를 끊는다'], answer: '직접 만나서 차분히 이야기해본다', explanation: '오해가 생겼을 때는 직접 만나 차분히 대화로 풀어가는 것이 가장 좋은 방법이에요.', hint: '오해는 대부분 서로 이야기를 나누면 풀려요. SNS나 화내기보다 먼저 무엇을 해야 할지 생각해보세요.' },
+      { id: 'help-slacking-teammate', category: '협력과공정', question: '모둠 발표를 준비할 때 한 친구가 자기 몫을 하지 않고 있다면?', choices: ['왜 어려운지 먼저 물어보고 함께 방법을 찾는다', '혼자 그 친구 몫까지 다 해버린다', '선생님께 이르기만 한다', '그 친구를 따돌린다'], answer: '왜 어려운지 먼저 물어보고 함께 방법을 찾는다', explanation: '먼저 이유를 물어보고 함께 해결 방법을 찾는 것이 진짜 협력이에요.', hint: '무조건 대신 해주거나 무시하기보다, 먼저 대화로 이유를 알아보는 게 어떨지 생각해보세요.' },
+      { id: 'inclusive-buddy', category: '다양성존중', question: '휠체어를 탄 친구와 함께 다닐 때 가장 바람직한 태도는?', choices: ['불편한 곳이 있는지 살피고 자연스럽게 돕는다', '불쌍하게 여기며 다 대신 해준다', '일부러 신경 쓰지 않는 척한다', '같이 다니지 않으려 한다'], answer: '불편한 곳이 있는지 살피고 자연스럽게 돕는다', explanation: '필요할 때 자연스럽게 돕는 태도가 진짜 배려예요. 과하게 동정하거나 무시하는 것 모두 좋지 않아요.', hint: '친구를 불쌍하게 여기지도, 무시하지도 않으면서 자연스럽게 도와주는 태도를 떠올려보세요.' },
+      { id: 'trash-sorting', category: '환경과공공질서', question: '여행 중 남은 쓰레기를 처리할 때 가장 바람직한 행동은?', choices: ['정해진 분리수거함에 버린다', '아무 데나 버리고 간다', '땅에 묻는다', '그냥 놔두고 간다'], answer: '정해진 분리수거함에 버린다', explanation: '쓰레기는 어디서든 정해진 곳에 분리해서 버려야 환경을 지킬 수 있어요.', hint: '집에서뿐 아니라 여행 중에도 지켜야 할 쓰레기 처리 규칙을 생각해보세요.' },
+      { id: 'honest-grades', category: '정직과책임감', question: '시험 점수를 부모님께 말씀드릴 때 가장 바람직한 태도는?', choices: ['실제 점수를 솔직하게 말씀드린다', '점수를 올려서 말한다', '시험이 없었다고 한다', '성적표를 숨긴다'], answer: '실제 점수를 솔직하게 말씀드린다', explanation: '점수가 마음에 들지 않아도 솔직하게 말씀드리는 것이 정직한 태도예요.', hint: '결과가 좋지 않아도 숨기지 않고 솔직히 말하는 것이 왜 더 나은 선택일지 생각해보세요.' },
     ];
 
     // "창의력 올림피아드" 전용 문제 은행. 수학처럼 절차적으로 생성하기 어려운
@@ -71,6 +81,16 @@
       { id: 'riddle-not-wet', category: '창의적사고', question: "물속에 넣어도 절대 젖지 않는 것은 무엇일까요?", choices: ['그림자', '돌', '종이', '나뭇잎'], answer: '그림자', explanation: '그림자는 빛이 만든 것이라 물에 넣어도 젖지 않아요.', hint: '해가 비칠 때 내 몸을 따라다니는, 만질 수 없는 검은 형태를 떠올려보세요.' },
       { id: 'riddle-teeth-no-chew', category: '창의적사고', question: "이빨(살)은 있지만 아무것도 씹지 못하는 것은 무엇일까요?", choices: ['빗', '포크', '수저', '칫솔'], answer: '빗', explanation: '빗의 뾰족한 살들을 이빨에 비유한 표현으로, 머리카락을 빗는 데만 쓰여요.', hint: '머리를 정리할 때 쓰는, 촘촘한 살들이 나란히 있는 물건을 떠올려보세요.' },
       { id: 'riddle-smaller-used', category: '창의적사고', question: "쓸수록(닳을수록) 점점 작아지는 것은 무엇일까요?", choices: ['지우개', '책', '가방', '의자'], answer: '지우개', explanation: '지우개는 쓸 때마다 조금씩 닳아서 점점 작아져요.', hint: '연필로 쓴 글씨를 지울 때 쓰는, 쓰면 쓸수록 닳는 물건을 떠올려보세요.' },
+      { id: 'pattern-square-numbers', category: '패턴찾기', question: "1, 4, 9, 16, ? 다음에 올 숫자는 무엇일까요?", choices: ['25', '20', '24', '36'], answer: '25', explanation: '1×1, 2×2, 3×3, 4×4처럼 같은 수를 두 번 곱한 값이 이어지는 규칙이라 다음은 5×5=25예요.', hint: '각 숫자가 어떤 수를 자기 자신과 곱한 값인지(1×1, 2×2, 3×3...) 생각해보세요.' },
+      { id: 'pattern-countdown-tens', category: '패턴찾기', question: "100, 90, 80, 70, ? 다음에 올 숫자는 무엇일까요?", choices: ['60', '50', '65', '75'], answer: '60', explanation: '10씩 작아지는 규칙이라 70 다음은 60이에요.', hint: '숫자가 점점 작아지고 있어요. 한 번에 얼마씩 줄어드는지 확인해보세요.' },
+      { id: 'pattern-weekdays', category: '패턴찾기', question: "월, 화, 수, 목, ? 다음에 올 요일은 무엇일까요?", choices: ['금', '토', '일', '월'], answer: '금', explanation: '월화수목금토일 순서가 반복되니 목 다음은 금이에요.', hint: '한 주의 요일이 어떤 순서로 이어지는지 떠올려보세요.' },
+      { id: 'analogy-bird-hive', category: '유추', question: "새 : 둥지 = 벌 : ?", choices: ['벌집', '거미줄', '굴', '둥지'], answer: '벌집', explanation: '새가 둥지에 살듯, 벌은 벌집에서 살아요.', hint: '앞의 관계(새와 둥지)처럼, 벌이 사는 집의 이름을 떠올려보세요.' },
+      { id: 'analogy-doctor-patient', category: '유추', question: "선생님 : 학생 = 의사 : ?", choices: ['환자', '간호사', '약사', '손님'], answer: '환자', explanation: '선생님이 학생을 가르치듯, 의사는 환자를 진찰하고 치료해요.', hint: '선생님과 학생의 관계처럼, 의사가 돌보아 주는 사람이 누구인지 생각해보세요.' },
+      { id: 'analogy-water-ice', category: '유추', question: "물 : 얼음 = 액체 : ?", choices: ['고체', '기체', '플라즈마', '에너지'], answer: '고체', explanation: '물이 얼면 얼음이 되듯, 액체가 얼면 고체가 돼요.', hint: '물을 냉동실에 넣으면 무엇으로 바뀌는지, 그 상태를 부르는 이름을 떠올려보세요.' },
+      { id: 'spatial-triangle-sides', category: '공간지각', question: "삼각형의 변은 몇 개일까요?", choices: ['3개', '4개', '2개', '5개'], answer: '3개', explanation: '삼각형은 이름 그대로 세 개의 변과 세 개의 각을 가지고 있어요.', hint: "'삼각형'이라는 이름에서 '삼'이 어떤 숫자를 뜻하는지 생각해보세요." },
+      { id: 'spatial-mirror-image', category: '공간지각', question: "거울 앞에서 오른손을 들면 거울 속 나는 어느 손을 든 것처럼 보일까요?", choices: ['왼손', '오른손', '양손 다', '손을 안 든 것처럼'], answer: '왼손', explanation: '거울은 좌우를 반대로 비추기 때문에 오른손을 들면 거울 속에서는 왼손을 든 것처럼 보여요.', hint: '거울 앞에서 손을 들어본 경험을 떠올리며, 좌우가 어떻게 바뀌는지 생각해보세요.' },
+      { id: 'riddle-piano-keys', category: '창의적사고', question: "건반(키)이 아주 많은데도 문을 열 수는 없는 것은 무엇일까요?", choices: ['피아노', '자물쇠', '열쇠고리', '문'], answer: '피아노', explanation: '피아노는 누르는 부분을 건반(키)이라고 부르지만, 문을 여는 열쇠는 아니에요.', hint: '음악을 연주할 때 손가락으로 누르는 부분을 무엇이라고 부르는지 생각해보세요.' },
+      { id: 'riddle-sponge-holes', category: '창의적사고', question: "구멍이 송송 뚫려 있는데도 물을 잔뜩 머금을 수 있는 것은 무엇일까요?", choices: ['스펀지', '체', '바구니', '그물'], answer: '스펀지', explanation: '스펀지는 작은 구멍이 많지만 그 구멍들이 오히려 물을 잔뜩 흡수해서 담아둬요.', hint: '설거지할 때 물을 잔뜩 머금는, 구멍이 송송 뚫린 말랑말랑한 물건을 떠올려보세요.' },
     ];
 
     // "기도와 선행" 전용 문제 은행. 성경 이야기(쉬운 성경 퀴즈), 어른 공경,
@@ -97,6 +117,16 @@
       { id: 'prayer-before-meal', category: '기도', question: '식사 전에 감사 기도를 드리는 이유는 무엇일까요?', choices: ['주신 음식에 감사하는 마음을 표현하려고', '그냥 습관이라서', '다른 사람이 시켜서', '시간을 보내려고'], answer: '주신 음식에 감사하는 마음을 표현하려고', explanation: '식사 전 기도는 우리에게 주어진 음식에 대한 감사를 표현하는 시간이에요.', hint: '맛있는 음식을 먹기 전에, 그 음식이 어디서 왔는지 떠올리며 드는 마음을 생각해보세요.' },
       { id: 'prayer-comfort', category: '기도', question: '힘든 일이 있을 때 기도를 하면 마음이 어떻게 될까요?', choices: ['편안해지고 위로를 받는다', '더 불안해진다', '아무 느낌이 없다', '더 화가 난다'], answer: '편안해지고 위로를 받는다', explanation: '기도는 힘든 마음을 털어놓고 위로받을 수 있는 시간이 되어줘요.', hint: '누군가에게 내 걱정을 솔직히 털어놓고 나면 마음이 어떻게 되는지 떠올려보세요.' },
       { id: 'prayer-for-others', category: '기도', question: '다른 사람이 건강하고 행복하기를 바라며 기도하는 것은 어떤 마음에서 나올까요?', choices: ['사랑과 배려하는 마음', '경쟁하는 마음', '무관심한 마음', '시기하는 마음'], answer: '사랑과 배려하는 마음', explanation: '다른 사람을 위해 기도하는 것은 그 사람을 사랑하고 배려하는 마음에서 나와요.', hint: '누군가 잘되기를 진심으로 바랄 때, 그 마음의 바탕에는 어떤 감정이 있을지 생각해보세요.' },
+      { id: 'bible-daniel-lions', category: '성경퀴즈', question: '다니엘은 기도를 멈추지 않아 벌로 어디에 갇히게 되었나요?', choices: ['사자굴', '깊은 우물', '높은 탑', '어두운 동굴'], answer: '사자굴', explanation: '다니엘은 기도를 멈추지 않아 사자굴에 갇혔지만 하나님이 지켜주셔서 다치지 않았어요.', hint: '사나운 동물들이 있어서, 사람이 갇히면 위험할 만한 장소를 떠올려보세요.' },
+      { id: 'bible-loaves-fishes', category: '성경퀴즈', question: '예수님은 빵 다섯 개와 물고기 두 마리로 몇천 명을 배불리 먹이셨나요?', choices: ['오천 명', '오백 명', '오만 명', '오십 명'], answer: '오천 명', explanation: '예수님은 적은 음식으로 오천 명이 넘는 사람들을 배불리 먹이는 기적을 보이셨어요.', hint: '아주 적은 음식으로 아주 많은 사람들이 배불리 먹었다는 이야기예요. 숫자의 크기를 생각해보세요.' },
+      { id: 'bible-lost-sheep', category: '성경퀴즈', question: '목자가 양 백 마리 중 한 마리를 잃어버렸을 때 한 행동은 무엇이었나요?', choices: ['끝까지 찾아 나섰다', '나머지 양만 챙겼다', '못 본 척했다', '다른 목자를 탓했다'], answer: '끝까지 찾아 나섰다', explanation: '목자는 한 마리의 양이라도 소중히 여겨 끝까지 찾아 나섰어요.', hint: '단 한 마리라도 소중하게 여기는 마음이 있다면 어떤 행동을 할지 생각해보세요.' },
+      { id: 'bible-lords-prayer', category: '성경퀴즈', question: '예수님이 제자들에게 직접 가르쳐주신 기도를 무엇이라고 부르나요?', choices: ['주기도문', '십계명', '팔복', '시편'], answer: '주기도문', explanation: '예수님은 제자들에게 어떻게 기도해야 하는지 직접 가르쳐주셨고, 이를 주기도문이라고 불러요.', hint: "예수님, 즉 '주님'께서 직접 가르쳐주신 기도의 이름을 떠올려보세요." },
+      { id: 'elder-help-carry', category: '어른공경', question: '무거운 짐을 든 어른을 보았을 때 가장 바람직한 행동은?', choices: ['먼저 다가가 도와드릴지 여쭤본다', '못 본 척 지나간다', '구경만 한다', '더 빨리 걸어간다'], answer: '먼저 다가가 도와드릴지 여쭤본다', explanation: '무거운 짐을 든 어른을 보면 먼저 다가가 도와드려도 되는지 여쭤보는 것이 예의예요.', hint: '누군가 힘들어 보일 때, 내가 먼저 건넬 수 있는 말이 무엇일지 생각해보세요.' },
+      { id: 'elder-greet-visit', category: '어른공경', question: '할머니, 할아버지 댁에 놀러 갔을 때 가장 먼저 해야 할 행동은?', choices: ['공손히 인사드린다', '바로 방으로 들어간다', '먼저 냉장고를 연다', '텔레비전부터 켠다'], answer: '공손히 인사드린다', explanation: '어른 댁에 도착하면 먼저 공손하게 인사드리는 것이 기본 예절이에요.', hint: '누군가의 집에 들어갈 때 가장 먼저 전해야 할 마음이 무엇일지 생각해보세요.' },
+      { id: 'friend-forgive-mistake', category: '친구배려', question: '친구가 실수로 나에게 잘못했지만 진심으로 사과했을 때 가장 바람직한 태도는?', choices: ['너그럽게 용서해준다', '계속 화를 낸다', '똑같이 되갚아준다', '다시는 안 본다고 한다'], answer: '너그럽게 용서해준다', explanation: '진심 어린 사과에는 너그럽게 용서하는 마음으로 답하는 것이 우정을 지키는 방법이에요.', hint: '나도 실수할 수 있다는 걸 생각하면, 친구의 진심 어린 사과에 어떻게 답하는 게 좋을지 떠올려보세요.' },
+      { id: 'friend-include-lonely', category: '친구배려', question: '혼자 앉아 있는 친구를 보았을 때 가장 바람직한 행동은?', choices: ['다가가서 함께 하자고 말을 건넨다', '못 본 척한다', '수군거린다', '더 멀리 떨어져 앉는다'], answer: '다가가서 함께 하자고 말을 건넨다', explanation: '혼자 있는 친구에게 먼저 다가가 함께하자고 말을 건네는 것은 따뜻한 배려예요.', hint: '내가 혼자 있을 때 누군가 다가와 준다면 어떤 기분일지 생각해보세요.' },
+      { id: 'prayer-thanks-end-day', category: '기도', question: '하루를 마치고 잠자리에 들기 전 기도를 하면 좋은 점은?', choices: ['하루를 돌아보며 감사한 마음을 갖게 된다', '잠이 더 안 온다', '시간을 낭비하게 된다', '아무 의미가 없다'], answer: '하루를 돌아보며 감사한 마음을 갖게 된다', explanation: '자기 전 기도는 하루를 돌아보고 감사한 일들을 떠올리는 좋은 시간이 돼요.', hint: '하루 동안 있었던 일들을 조용히 떠올려보는 시간이 마음에 어떤 영향을 줄지 생각해보세요.' },
+      { id: 'prayer-quiet-listening', category: '기도', question: '기도는 내가 말하는 것뿐 아니라 무엇을 하는 시간이기도 할까요?', choices: ['조용히 마음을 들여다보는 시간', '큰 소리로 떠드는 시간', '다른 사람과 경쟁하는 시간', 'TV를 보는 시간'], answer: '조용히 마음을 들여다보는 시간', explanation: '기도는 말하는 것만큼이나 조용히 내 마음을 들여다보고 차분해지는 시간이기도 해요.', hint: '누군가와 진심으로 이야기 나눌 때는 말하기만 하지 않고 가만히 마음을 살피는 시간도 필요해요.' },
     ];
 
     function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -163,26 +193,41 @@
       return { subject: randChoice(SUBJECT_KEYS), level: 1 };
     }
 
+    // 연회 예절/창의력 올림피아드/기도와 선행은 은행 크기가 20~30개뿐이라
+    // 순수 무작위 추첨만 쓰면 몇 달째 매주 반복하는 동안 같은 문제가 금방
+    // 또 나오기 쉽다. subjects.js의 study bag과 같은 원리로, 은행을 섞어
+    // "가방"에 담아두고 하나씩 꺼내 쓰다가(꺼낸 건 가방에서 사라짐) 가방이
+    // 비면 그때 다시 섞어 채운다 — 은행 전체를 한 바퀴 다 보기 전에는 같은
+    // 문제가 반복되지 않는다. 가방을 새로 섞는 경계에서 방금 막 쓴 문제가
+    // 우연히 다시 맨 위로 올 수도 있으니, 같은 세션 안에서 이미 나온
+    // 문제(session.askedQuestions)는 한 번 더 걸러내는 재시도를 덧붙인다.
+    const questionBags = { etiquette: [], creativity: [], faith: [] };
+    function nextFromBag(bagKey, bank, session) {
+      const bag = questionBags[bagKey];
+      let picked;
+      let guard = 0;
+      do {
+        if (!bag.length) bag.push(...shuffle(bank));
+        picked = bag.pop();
+        guard++;
+      } while (session.askedQuestions.includes(picked.question) && guard < bank.length);
+      return picked;
+    }
+
     function generateEtiquetteQuestion(session) {
-      const remaining = ETIQUETTE_QUESTIONS.filter((q) => !session.askedQuestions.includes(q.question));
-      const pool = remaining.length ? remaining : ETIQUETTE_QUESTIONS;
-      const picked = randChoice(pool);
+      const picked = nextFromBag('etiquette', ETIQUETTE_QUESTIONS, session);
       session.askedQuestions.push(picked.question);
       return { type: 'choice', question: picked.question, choices: shuffle(picked.choices), answer: picked.answer, explanation: picked.explanation, hint: picked.hint, rewardGold: 0, level: 0 };
     }
 
     function generateCreativityQuestion(session) {
-      const remaining = CREATIVITY_PUZZLE_BANK.filter((q) => !session.askedQuestions.includes(q.question));
-      const pool = remaining.length ? remaining : CREATIVITY_PUZZLE_BANK;
-      const picked = randChoice(pool);
+      const picked = nextFromBag('creativity', CREATIVITY_PUZZLE_BANK, session);
       session.askedQuestions.push(picked.question);
       return { type: 'choice', question: picked.question, choices: shuffle(picked.choices), answer: picked.answer, explanation: picked.explanation, hint: picked.hint, rewardGold: 0, level: 0 };
     }
 
     function generateFaithQuestion(session) {
-      const remaining = FAITH_QUESTIONS.filter((q) => !session.askedQuestions.includes(q.question));
-      const pool = remaining.length ? remaining : FAITH_QUESTIONS;
-      const picked = randChoice(pool);
+      const picked = nextFromBag('faith', FAITH_QUESTIONS, session);
       session.askedQuestions.push(picked.question);
       return { type: 'choice', question: picked.question, choices: shuffle(picked.choices), answer: picked.answer, explanation: picked.explanation, hint: picked.hint, rewardGold: 0, level: 0 };
     }

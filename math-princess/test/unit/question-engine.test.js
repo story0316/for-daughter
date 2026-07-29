@@ -52,6 +52,31 @@ eq(Question.SUBJECTS.science.maxLevel, SUBJ.SCIENCE_LEVELS.length, '과학 maxLe
 }
 
 {
+  // 셔플 가방은 세션이 아니라 모듈 전체에서 공유되어야 한다 — 실제 플레이에서는
+  // "연회 참석"/"창의력 올림피아드"/"기도와 선행"을 매번 새 세션(빈
+  // askedQuestions)으로 시작하므로, 세션 안에서만 반복을 막는 예전 방식이라면
+  // 여러 주에 걸쳐 같은 문제가 금방 다시 나올 수 있었다. 매번 새 세션 객체로
+  // 문제를 하나씩만 뽑아도(=매주 새로 시작하는 활동처럼) 은행 전체를 한 바퀴
+  // 돌기 전에는 같은 문제가 나오지 않아야 한다. 이 파일에서 이 세 함수를 맨
+  // 처음 호출하는 지점이어야(가방이 비어있는 새 상태에서 검증) 하므로 반드시
+  // 다른 generate*Question 호출보다 먼저 실행한다.
+  [
+    { name: '예절', bank: Question.ETIQUETTE_QUESTIONS, generate: Question.generateEtiquetteQuestion },
+    { name: '창의력', bank: Question.CREATIVITY_PUZZLE_BANK, generate: Question.generateCreativityQuestion },
+    { name: '기도와 선행', bank: Question.FAITH_QUESTIONS, generate: Question.generateFaithQuestion },
+  ].forEach(({ name, bank, generate }) => {
+    const seen = new Set();
+    for (let i = 0; i < bank.length; i++) {
+      const freshSession = { askedQuestions: [] }; // 매번 새 세션(=매주 새로 시작하는 활동)
+      const q = generate(freshSession);
+      ok(!seen.has(q.question), `${name}: 세션이 바뀌어도(가방이 모듈 전체에서 공유되어야) 은행을 한 바퀴 돌기 전엔 같은 문제를 반복하면 안 됨`);
+      seen.add(q.question);
+    }
+    eq(seen.size, bank.length, `${name}: 매번 새 세션으로 은행 크기만큼 뽑아도 전부 서로 다른 문제여야 함`);
+  });
+}
+
+{
   // 문제 은행을 다 소진하기 전까지는 같은 문제를 다시 내지 않아야 함
   const session = { askedQuestions: [] };
   const seen = new Set();

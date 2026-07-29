@@ -183,6 +183,19 @@
     ];
     const CERT_SUBJECT_KEYS = ['math', 'english', 'science'];
 
+    // 학습 로그: 부모(관리자)가 "어떤 과목/레벨에서 자주 틀리는지"를 실제로
+    // 확인할 수 있도록, 능력치(state.stats)와는 별도로 과목×레벨별 정답/오답
+    // 누적 횟수와 최근 오답 문제 목록을 저장한다. 능력치는 "지금 얼마나
+    // 자랐는지"만 보여주고 "무엇을 틀렸는지"는 세션이 끝나면 사라지던
+    // 문제를 보완한다(recordAnswerLog 참고). 연회/창의력/기도와 선행처럼
+    // 과목·레벨 구조가 없는 활동은 기록하지 않는다.
+    const RECENT_MISTAKES_LIMIT = 15;
+    function makeLearningLog() {
+      const log = {};
+      CERT_SUBJECT_KEYS.forEach((key) => { log[key] = { byLevel: {}, recentMistakes: [] }; });
+      return log;
+    }
+
     // 사교모임 3단계. 등급이 높을수록 입장 조건(옷차림·품위)이 까다롭고,
     // 가장 높은 등급(고급 사교 모임)에서만 왕자님을 만나는 특별 이벤트가
     // 열린다(그 아래 등급은 예절 연습·매력 획득용). 최고 등급은 품위 점수뿐
@@ -427,6 +440,7 @@
         certifications: { math: null, english: null, science: null },
         nobleTitle: null,
         nobleRankIndex: null,
+        learningLog: makeLearningLog(),
       };
     }
 
@@ -489,6 +503,21 @@
           if (GROWTH_STAT_KEYS.every((k) => (stats[k] || 0) >= rank.minAllStats)) rankIdx = i;
         });
         loaded.nobleRankIndex = rankIdx;
+      }
+      if (!loaded.learningLog || typeof loaded.learningLog !== 'object') {
+        loaded.learningLog = makeLearningLog();
+      } else {
+        CERT_SUBJECT_KEYS.forEach((key) => {
+          if (!loaded.learningLog[key] || typeof loaded.learningLog[key] !== 'object') {
+            loaded.learningLog[key] = { byLevel: {}, recentMistakes: [] };
+          }
+          if (!loaded.learningLog[key].byLevel || typeof loaded.learningLog[key].byLevel !== 'object' || Array.isArray(loaded.learningLog[key].byLevel)) {
+            loaded.learningLog[key].byLevel = {};
+          }
+          if (!Array.isArray(loaded.learningLog[key].recentMistakes)) {
+            loaded.learningLog[key].recentMistakes = [];
+          }
+        });
       }
       return loaded;
     }
@@ -580,6 +609,31 @@
 
     /* ---------------- 정답/오답 반영 (보상 엔진에 위임) ---------------- */
 
+    // learningLog에 기록할 과목을 세션 유형에서 뽑아낸다. 연회/창의력/기도와
+    // 선행/시나리오 퀴즈처럼 과목·레벨 구조가 없는 활동은 null(기록 안 함).
+    function subjectKeyForSession(session) {
+      if (Question.MULTI_SUBJECT_TYPES.includes(session.type)) return session.currentSubject;
+      if (session.type === 'competition') return 'math';
+      if (session.type === 'cert-exam') return session.subject;
+      return null;
+    }
+
+    function recordAnswerLog(state, session, problem, correct) {
+      if (!problem) return;
+      const subjectKey = subjectKeyForSession(session);
+      if (!subjectKey || !state.learningLog[subjectKey]) return;
+      const log = state.learningLog[subjectKey];
+      const level = problem.level;
+      if (!log.byLevel[level]) log.byLevel[level] = { correct: 0, wrong: 0 };
+      if (correct) {
+        log.byLevel[level].correct++;
+      } else {
+        log.byLevel[level].wrong++;
+        log.recentMistakes.unshift({ question: problem.question, level, turn: state.turn });
+        if (log.recentMistakes.length > RECENT_MISTAKES_LIMIT) log.recentMistakes.length = RECENT_MISTAKES_LIMIT;
+      }
+    }
+
     function applyCorrect(state, session, problem) {
       state.combo++;
       state.bestCombo = Math.max(state.bestCombo, state.combo);
@@ -591,12 +645,14 @@
 
       state.totalCorrect++;
       session.correctCount++;
+      recordAnswerLog(state, session, problem, true);
       clampStats(state);
     }
 
-    function applyWrong(state, session) {
+    function applyWrong(state, session, problem) {
       state.combo = 0;
       applyDelta(state, Reward.wrongAnswerPenalty(session.type));
+      recordAnswerLog(state, session, problem, false);
       clampStats(state);
     }
 
@@ -1233,7 +1289,7 @@
       graceScore, affectionTierName, currentOutfit, comboMultiplier: Reward.comboMultiplier, itemBonusSum, clampStats,
       noblePromotionEligible, grantNobleTitle, NOBLE_PROMOTION_TIER, NOBLE_RANKS, nextNobleRank, checkNobleRankPromotion,
       // 상태 생성/이관
-      makeInitialState, migrateLoadedState,
+      makeInitialState, migrateLoadedState, makeLearningLog, RECENT_MISTAKES_LIMIT,
       // 과목/문제(질문 엔진에 위임)
       unlockedLevelsFor, pickRandomSubjectAndLevel, pickRandomSubjectLevel1, subjectName,
       generateEtiquetteQuestion, generateScenarioQuestion, generateNextProblem,

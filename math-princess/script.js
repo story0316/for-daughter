@@ -774,7 +774,7 @@
       announceStatLevelUps(beforeTiers);
       el.quizFeedback.textContent = `정답이에요! 🎉 ${problem.explanation}`;
     } else {
-      Engine.applyWrong(state, session);
+      Engine.applyWrong(state, session, problem);
       el.quizFeedback.textContent = `아쉬워요! 정답: ${problem.answer}\n${problem.explanation}`;
     }
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
