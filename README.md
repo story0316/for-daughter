@@ -98,7 +98,7 @@
 - `math-princess/assets/scenarios/{id}/*.png` — 시나리오별 실제 일러스트 장면 이미지
 - `math-princess/assets/portraits/tier0~10.png` — 품위/작위 단계별 실제 일러스트 초상화(옷 11단계 전부, 옷을 갈아입으면 초상화도 그에 맞게 바뀜)
 - `math-princess/assets/wardrobe/tier0~10.png` — 옷장 탭에 쓰이는 옷 썸네일 이미지(11단계 전부)
-- `math-princess/assets/npcs/{id}.png` — 인물별 기본 초상화(친구/라이벌/선생님/사교계 친구/왕자님/왕실 스승 6명 전부 적용됨. "학교 수업"에서 귀족에게 수업하는 왕궁 학자는 아직 전용 그림이 없어 이모지로만 표시됨 — NPC_DEFS의 `hasArt` 플래그로 관리). `{id}-happy.png`/`{id}-surprised.png` 표정 그림도 있어, "친구 만나기"로 대화할 때는 기쁜 표정을, 연회에서 왕자님을 만나면 놀란 표정을 보여준다(그림이 없으면 기본 그림으로, 기본 그림도 없으면 이모지로 자동 대체)
+- `math-princess/assets/npcs/{id}.png` — 인물별 기본 초상화("학교 수업"에서 귀족에게 수업하는 왕궁 학자까지 7명 전부 적용됨 — NPC_DEFS의 `hasArt` 플래그로 관리, 그림이 없는 인물이 생기면 이모지로만 표시). `{id}-happy.png`/`{id}-surprised.png` 표정 그림도 있어, "친구 만나기"로 대화할 때는 기쁜 표정을, 연회에서 왕자님을 만나면 놀란 표정을 보여준다(그림이 없으면 기본 그림으로, 기본 그림도 없으면 이모지로 자동 대체)
 - `math-princess/assets/backgrounds/schedule-desk.png`/`dressing-room.png`/`ballroom.png` — 스케줄·상점·연회 등급 선택 화면에 각각 쓰이는 배경 일러스트(메인 화면의 서재풍 배경과 같은 톤의 반투명 그라데이션을 겹쳐 카드 가독성은 그대로 유지)
 - `math-princess/script.js` — game-engine.js를 호출해 화면을 그리는 UI 레이어. 스케줄/실행 메뉴, 옷장/상점, 상태 화면(다가오는 이야기 포함), 로컬 저장/이어하기, 배경음악 재생
 
