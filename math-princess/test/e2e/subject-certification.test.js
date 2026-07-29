@@ -131,6 +131,11 @@ async function testScienceCertExamCanReachGoldAtHighIntelligence() {
 const ENGLISH_BRONZE_VOCAB = {
   apple: '사과', dog: '개', happy: '행복한', book: '책', water: '물',
   school: '학교', friend: '친구', big: '큰', small: '작은', run: '달리다',
+  cat: '고양이', bird: '새', tree: '나무', house: '집', table: '탁자',
+  sun: '해, 태양', moon: '달', star: '별', rain: '비', snow: '눈',
+  hot: '뜨거운', cold: '차가운', fast: '빠른', slow: '느린', jump: '뛰다',
+  walk: '걷다', eat: '먹다', drink: '마시다', sleep: '자다', play: '놀다',
+  read: '읽다', write: '쓰다', teacher: '선생님', student: '학생',
 };
 
 async function answerEnglishCertQuestionCorrectly(page) {
