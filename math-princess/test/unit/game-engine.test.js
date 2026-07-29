@@ -211,7 +211,7 @@ eq(Engine.schoolTierForRank(undefined), 'elementary', 'nobleRankIndex 미설정�
     eq(session.currentSubject, fixedSubject, '학교 수업은 문제마다 과목이 바뀌지 않고 고정 과목으로 통일되어야 함');
     seenLevels.add(problem.level);
   }
-  const elementaryRanges = { math: [1, 2], science: [1, 2, 3], music: [1] };
+  const elementaryRanges = { math: [1, 2], science: [1, 2, 3], music: [1], korean: [1], art: [1], social: [1] };
   seenLevels.forEach((lv) => {
     ok(elementaryRanges[fixedSubject].includes(lv), `평민(초등학교) 학교 수업의 ${fixedSubject} 레벨은 ${elementaryRanges[fixedSubject].join(',')} 중 하나여야 함(실제: ${lv})`);
   });
@@ -225,7 +225,7 @@ eq(Engine.schoolTierForRank(undefined), 'elementary', 'nobleRankIndex 미설정�
   const session = Engine.startSchoolSession(state, 6);
   eq(session.schoolTier, 'middle', '하위 귀족은 중학교 과정이어야 함');
   eq(session.helperNpc, 'royalScholar', '귀족(하위 포함)은 왕궁 학자가 가르쳐야 함');
-  const middleRanges = { math: [3, 4, 5], science: [4, 5, 6], music: [2] };
+  const middleRanges = { math: [3, 4, 5], science: [4, 5, 6], music: [2], korean: [2], art: [2], social: [2] };
   for (let i = 0; i < 20; i++) {
     const problem = Engine.generateNextProblem(state, session);
     ok(middleRanges[session.fixedSubject].includes(problem.level), `하위 귀족(중학교) 학교 수업의 ${session.fixedSubject} 레벨은 ${middleRanges[session.fixedSubject].join(',')} 중 하나여야 함(실제: ${problem.level})`);
@@ -240,7 +240,7 @@ eq(Engine.schoolTierForRank(undefined), 'elementary', 'nobleRankIndex 미설정�
   const session = Engine.startSchoolSession(state, 6);
   eq(session.schoolTier, 'high', '상위 귀족은 고등학교 과정이어야 함');
   eq(session.helperNpc, 'royalScholar', '상위 귀족도 왕궁 학자가 가르쳐야 함');
-  const highRanges = { math: [6, 7, 8, 9], science: [7], music: [3] };
+  const highRanges = { math: [6, 7, 8, 9], science: [7], music: [3], korean: [3], art: [3], social: [3] };
   for (let i = 0; i < 20; i++) {
     const problem = Engine.generateNextProblem(state, session);
     ok(highRanges[session.fixedSubject].includes(problem.level), `상위 귀족(고등학교) 학교 수업의 ${session.fixedSubject} 레벨은 ${highRanges[session.fixedSubject].join(',')} 중 하나여야 함(실제: ${problem.level})`);

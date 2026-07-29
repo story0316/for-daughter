@@ -143,45 +143,50 @@ SUBJECTS.forEach(({ name, levels, isUnlocked, generate, expectedThresholds }) =>
   }
 }
 
-// 음악(MUSIC_BANK): "학교 수업" 전용 과목으로, 영어/과학처럼 지능으로
+// "학교 수업" 전용 과목(음악/국어/미술/사회)은 영어/과학처럼 지능으로
 // 해금되는 게 아니라 신분(평민/하위 귀족/상위 귀족)에 따라 학년 단계
 // 3개(초등/중학/고등)로만 나뉜다. 그래서 unlockIntelligence나 8단계
 // 해금 임계값 검증 없이, 내용 품질(4지선다·정답 포함·힌트 스포일러
 // 없음·중복 없음)만 확인한다.
-{
-  eq(SUBJ.MUSIC_LEVELS.length, 3, '음악은 초등/중학/고등 3단계여야 함');
-  SUBJ.MUSIC_LEVELS.forEach((level, idx) => {
+[
+  { name: '음악', levels: SUBJ.MUSIC_LEVELS, bank: SUBJ.MUSIC_BANK, generate: SUBJ.generateMusicProblem },
+  { name: '국어', levels: SUBJ.KOREAN_LEVELS, bank: SUBJ.KOREAN_BANK, generate: SUBJ.generateKoreanProblem },
+  { name: '미술', levels: SUBJ.ART_LEVELS, bank: SUBJ.ART_BANK, generate: SUBJ.generateArtProblem },
+  { name: '사회', levels: SUBJ.SOCIAL_LEVELS, bank: SUBJ.SOCIAL_BANK, generate: SUBJ.generateSocialProblem },
+].forEach(({ name, levels, bank, generate }) => {
+  eq(levels.length, 3, `${name}은 초등/중학/고등 3단계여야 함`);
+  levels.forEach((level, idx) => {
     if (idx === 0) {
-      ok(!level.concept, '음악 레벨 1(초등)은 concept 설명이 없어야 함');
+      ok(!level.concept, `${name} 레벨 1(초등)은 concept 설명이 없어야 함`);
     } else {
-      ok(typeof level.concept === 'string' && level.concept.length > 10, `음악 레벨 ${level.id}(중학교 이상)은 concept 설명이 있어야 함`);
+      ok(typeof level.concept === 'string' && level.concept.length > 10, `${name} 레벨 ${level.id}(중학교 이상)은 concept 설명이 있어야 함`);
     }
   });
 
   [1, 2, 3].forEach((level) => {
-    const bank = SUBJ.MUSIC_BANK[level];
-    const questions = bank.map((q) => q.question);
+    const levelBank = bank[level];
+    const questions = levelBank.map((q) => q.question);
     const dupes = questions.filter((q, i) => questions.indexOf(q) !== i);
-    eq(dupes.length, 0, `음악 레벨 ${level} 문제 은행에 중복 질문이 없어야 함`);
+    eq(dupes.length, 0, `${name} 레벨 ${level} 문제 은행에 중복 질문이 없어야 함`);
 
     const seen = [];
-    for (let i = 0; i < bank.length; i++) {
-      const problem = SUBJ.generateMusicProblem(level);
-      eq(problem.level, level, `음악 레벨 ${level} 문제의 level 필드`);
-      eq(problem.type, 'choice', '음악 문제는 전부 선택형이어야 함');
-      ok(Array.isArray(problem.choices) && problem.choices.length === 4, `음악 레벨 ${level} 선택지는 4개여야 함`);
-      ok(problem.choices.includes(problem.answer), `음악 레벨 ${level} choices 안에 answer 포함`);
-      ok(P.checkAnswer(problem, problem.answer), `음악 레벨 ${level} 문제는 problems.js checkAnswer로도 정답 처리되어야 함`);
-      ok(typeof problem.hint === 'string' && problem.hint.length > 5, `음악 레벨 ${level} 문제에는 풀이 힌트가 있어야 함: "${problem.question}"`);
-      ok(!problem.hint.includes(problem.answer), `음악 레벨 ${level} 힌트는 정답(${problem.answer})을 그대로 담고 있으면 안 됨(스포일러 방지): "${problem.hint}"`);
-      ok(!seen.includes(problem.question), `음악 레벨 ${level}: 셔플 가방은 은행(${bank.length}개)을 한 바퀴 돌기 전엔 같은 문제를 반복하면 안 됨`);
+    for (let i = 0; i < levelBank.length; i++) {
+      const problem = generate(level);
+      eq(problem.level, level, `${name} 레벨 ${level} 문제의 level 필드`);
+      eq(problem.type, 'choice', `${name} 문제는 전부 선택형이어야 함`);
+      ok(Array.isArray(problem.choices) && problem.choices.length === 4, `${name} 레벨 ${level} 선택지는 4개여야 함`);
+      ok(problem.choices.includes(problem.answer), `${name} 레벨 ${level} choices 안에 answer 포함`);
+      ok(P.checkAnswer(problem, problem.answer), `${name} 레벨 ${level} 문제는 problems.js checkAnswer로도 정답 처리되어야 함`);
+      ok(typeof problem.hint === 'string' && problem.hint.length > 5, `${name} 레벨 ${level} 문제에는 풀이 힌트가 있어야 함: "${problem.question}"`);
+      ok(!problem.hint.includes(problem.answer), `${name} 레벨 ${level} 힌트는 정답(${problem.answer})을 그대로 담고 있으면 안 됨(스포일러 방지): "${problem.hint}"`);
+      ok(!seen.includes(problem.question), `${name} 레벨 ${level}: 셔플 가방은 은행(${levelBank.length}개)을 한 바퀴 돌기 전엔 같은 문제를 반복하면 안 됨`);
       seen.push(problem.question);
     }
   });
 
   // askedQuestions를 명시적으로 넘기면 셔플 가방이 아니라 걸러내고 뽑는 방식이어야 함
-  const problem = SUBJ.generateMusicProblem(1, []);
-  ok(problem && typeof problem.question === 'string', '음악: askedQuestions=[]를 넘겨도 정상적으로 문제를 돌려줘야 함');
-}
+  const problem = generate(1, []);
+  ok(problem && typeof problem.question === 'string', `${name}: askedQuestions=[]를 넘겨도 정상적으로 문제를 돌려줘야 함`);
+});
 
 summary('subjects.js');

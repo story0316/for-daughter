@@ -204,8 +204,9 @@ eq(Question.SUBJECTS.science.maxLevel, SUBJ.SCIENCE_LEVELS.length, '과학 maxLe
   const faithQ = Question.generateNextProblem(50, faithSession);
   ok(Question.FAITH_QUESTIONS.some((q) => q.question === faithQ.question), '기도와 선행 세션은 기도와 선행 문제 은행에서 나와야 함');
 
-  // "학교 수업"은 SCHOOL_SUBJECT_KEYS(수학/과학/음악)에서만 나오고, intelligence
-  // 인자와 무관하게 session.schoolTier로 정해진 레벨 범위만 따른다.
+  // "학교 수업"은 SCHOOL_SUBJECT_KEYS(수학/과학/음악/국어/미술/사회)에서만
+  // 나오고, intelligence 인자와 무관하게 session.schoolTier로 정해진 레벨
+  // 범위만 따른다.
   const schoolSession = { type: 'school', fixedSubject: 'music', schoolTier: 'elementary' };
   const schoolQ = Question.generateNextProblem(1 /* intelligence는 학교 수업에 영향 없어야 함 */, schoolSession);
   eq(schoolSession.currentSubject, 'music', '학교 수업 세션은 currentSubject를 fixedSubject로 채워야 함');
@@ -213,12 +214,15 @@ eq(Question.SUBJECTS.science.maxLevel, SUBJ.SCIENCE_LEVELS.length, '과학 maxLe
 }
 
 {
-  // "학교 수업"은 영어가 없고 대신 음악이 있는, 공부/알바와는 다른 과목 세트다.
-  eq(Question.SCHOOL_SUBJECT_KEYS.sort().join(','), 'math,music,science', '학교 수업 과목은 수학/과학/음악 세 개여야 함');
+  // "학교 수업"은 영어가 없고 대신 음악·국어·미술·사회가 있는, 공부/알바와는 다른 과목 세트다.
+  eq(Question.SCHOOL_SUBJECT_KEYS.sort().join(','), 'art,korean,math,music,science,social', '학교 수업 과목은 수학/과학/음악/국어/미술/사회 여섯 개여야 함');
   ok(!Question.SCHOOL_SUBJECT_KEYS.includes('english'), '학교 수업에는 영어가 없어야 함(공부/알바와 구분)');
   eq(Question.schoolSubjectName('music'), '음악', '음악 과목 이름');
   eq(Question.schoolSubjectName('math'), '수학', '수학 과목 이름');
   eq(Question.schoolSubjectName('science'), '과학', '과학 과목 이름');
+  eq(Question.schoolSubjectName('korean'), '국어', '국어 과목 이름');
+  eq(Question.schoolSubjectName('art'), '미술', '미술 과목 이름');
+  eq(Question.schoolSubjectName('social'), '사회', '사회 과목 이름');
 
   ['elementary', 'middle', 'high'].forEach((tier) => {
     Question.SCHOOL_SUBJECT_KEYS.forEach((subjectKey) => {
@@ -227,7 +231,7 @@ eq(Question.SUBJECTS.science.maxLevel, SUBJ.SCIENCE_LEVELS.length, '과학 maxLe
     });
   });
   // 학년 단계가 올라갈수록(초등→중학→고등) 각 과목의 레벨 범위도 더 어려워져야 함
-  ['math', 'science', 'music'].forEach((subjectKey) => {
+  Question.SCHOOL_SUBJECT_KEYS.forEach((subjectKey) => {
     const elem = Question.SCHOOL_LEVEL_RANGES.elementary[subjectKey];
     const mid = Question.SCHOOL_LEVEL_RANGES.middle[subjectKey];
     const high = Question.SCHOOL_LEVEL_RANGES.high[subjectKey];
