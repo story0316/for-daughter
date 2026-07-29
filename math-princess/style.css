@@ -1653,6 +1653,25 @@ html, body {
   text-align: left;
 }
 
+.quiz-concept {
+  width: 100%;
+  max-width: 340px;
+  margin-bottom: 10px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(255, 216, 115, 0.16);
+  border: 1px solid rgba(255, 216, 115, 0.4);
+  color: #4a3a5a;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.quiz-concept b {
+  font-weight: 800;
+}
+
 .btn-quiz-next {
   max-width: 200px;
 }

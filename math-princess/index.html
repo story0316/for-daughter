@@ -81,6 +81,7 @@
         <div id="character-name" class="character-name">우리 딸</div>
         <div id="noble-title-badge" class="noble-title-badge" style="display:none">👑</div>
         <div id="outfit-badge" class="outfit-badge">👕 평범한 옷</div>
+        <div id="pet-badge" class="outfit-badge pet-badge" style="display:none">🐶 강아지</div>
         <div id="portrait-progress-label" class="portrait-progress-label">평민 → 공주 0%</div>
       </div>
 
@@ -276,6 +277,7 @@
             <div id="status-portrait" class="character-portrait"></div>
           </div>
           <div id="status-outfit-badge" class="outfit-badge">👕 평범한 옷</div>
+          <div id="status-pet-badge" class="outfit-badge pet-badge" style="display:none"></div>
           <div id="status-career-badge" class="outfit-badge" style="display:none"></div>
         </div>
         <div class="status-section-title">능력치</div>
@@ -303,11 +305,13 @@
         <div class="hud-row shop-tabs">
           <button class="shop-tab-btn active" data-tab="items">🛠️ 장비</button>
           <button class="shop-tab-btn" data-tab="wardrobe">👗 옷장</button>
+          <button class="shop-tab-btn" data-tab="pet">🐾 펫</button>
           <button class="shop-tab-btn" data-tab="career">💼 직업</button>
         </div>
       </header>
       <div id="shop-list" class="level-list shop-tab-panel"></div>
       <div id="wardrobe-list" class="wardrobe-list shop-tab-panel" style="display:none"></div>
+      <div id="pet-list" class="wardrobe-list shop-tab-panel" style="display:none"></div>
       <div id="career-list" class="level-list shop-tab-panel" style="display:none"></div>
     </section>
 
@@ -336,6 +340,7 @@
       </header>
 
       <div class="quiz-wrap">
+        <div id="quiz-concept" class="quiz-concept" style="display:none"></div>
         <div id="quiz-question" class="quiz-question">3 + 4 = ?</div>
 
         <button id="btn-quiz-hint" class="btn-hint">💡 도움 받기</button>
@@ -401,7 +406,7 @@
       <div class="card noble-promotion-card">
         <div class="title-emoji noble-promotion-emoji">👑📜</div>
         <h2>왕실에서 작위가 내려왔어요!</h2>
-        <p class="subtitle">그동안 갈고닦은 실력이 왕실의 인정을 받아, 작위 수여 기준을 모두 충족했어요. 평민에서 귀족으로 신분이 오르게 되었답니다!</p>
+        <p class="subtitle">그동안 갈고닦은 실력이 왕실의 인정을 받아, 작위 수여 기준을 모두 충족했어요. 평민에서 귀족(남작)으로 신분이 오르게 되었답니다! 앞으로 능력치가 더 오르면 자작 → 백작 → 후작 → 공작 → 대공까지 자동으로 승격해요.</p>
         <div class="name-input-wrap">
           <label for="noble-title-input" class="name-input-label">받고 싶은 작위 이름을 지어주세요</label>
           <input type="text" id="noble-title-input" class="name-input" placeholder="예: 은빛 백작" maxlength="20" autocomplete="off" />

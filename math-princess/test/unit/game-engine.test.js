@@ -259,6 +259,224 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(afterNoble && afterNoble.name, '대관식 드레스', '귀족이 되는 순간, 품위가 이미 충족된 최고 등급까지 한 번에 알림이 떠야 함');
 }
 
+/* ---------------- 작위 세분화(NOBLE_RANKS) ---------------- */
+
+{
+  eq(Engine.NOBLE_RANKS.length, 6, '작위는 남작~대공 6단계여야 함');
+  const names = Engine.NOBLE_RANKS.map((r) => r.name);
+  eq(JSON.stringify(names), JSON.stringify(['남작', '자작', '백작', '후작', '공작', '대공']), '작위 이름 순서는 남작→자작→백작→후작→공작→대공이어야 함');
+  const thresholds = Engine.NOBLE_RANKS.map((r) => r.minAllStats);
+  eq(JSON.stringify(thresholds), JSON.stringify([50, 60, 70, 80, 90, 100]), '작위 문턱은 기존 Lv 문턱(50/60/70/80/90/100)과 같아야 함');
+}
+{
+  const state = Engine.makeInitialState();
+  eq(state.nobleRankIndex, null, '초기(평민) 상태의 nobleRankIndex는 null이어야 함');
+  eq(Engine.nextNobleRank(state), null, '평민은 nextNobleRank도 null이어야 함(승급 이벤트를 먼저 거쳐야 함)');
+
+  ok(Engine.grantNobleTitle(state, '은빛 백작'), '첫 승급(작위 수여)');
+  eq(state.nobleRankIndex, 0, '첫 승급은 항상 남작(인덱스 0)에서 시작해야 함');
+  eq(Engine.nextNobleRank(state).name, '자작', '남작 다음 목표는 자작이어야 함');
+
+  eq(Engine.checkNobleRankPromotion(state), null, '아직 능력치가 자작 문턱(60)에 못 미치면 승급하면 안 됨');
+  eq(state.nobleRankIndex, 0, '승급 실패 시 인덱스가 그대로여야 함');
+
+  Engine.GROWTH_STAT_KEYS.forEach((k) => { state.stats[k] = 60; });
+  const promoted = Engine.checkNobleRankPromotion(state);
+  eq(promoted && promoted.name, '자작', '6개 성장 능력치가 전부 60에 도달하면 자작으로 승급해야 함');
+  eq(state.nobleRankIndex, 1, '승급하면 인덱스가 1(자작)로 올라가야 함');
+  eq(Engine.checkNobleRankPromotion(state), null, '이미 승급했으면 같은 문턱에서 다시 승급하면 안 됨');
+
+  Engine.GROWTH_STAT_KEYS.forEach((k) => { state.stats[k] = 100; });
+  ok(Engine.checkNobleRankPromotion(state), '능력치가 만점이면 한 단계씩 계속 승급할 수 있어야 함(1회 호출 = 1단계)');
+  ok(Engine.checkNobleRankPromotion(state), '계속 호출하면 계속 승급해야 함');
+  ok(Engine.checkNobleRankPromotion(state), '계속 호출하면 계속 승급해야 함');
+  ok(Engine.checkNobleRankPromotion(state), '계속 호출하면 계속 승급해야 함');
+  eq(state.nobleRankIndex, 5, '만점이면 결국 최고위(대공, 인덱스5)까지 승급해야 함');
+  eq(Engine.checkNobleRankPromotion(state), null, '최고위에 도달하면 더 이상 승급할 곳이 없어야 함');
+  eq(Engine.nextNobleRank(state), null, '최고위에서는 nextNobleRank도 null이어야 함');
+}
+{
+  // 옛 저장 형식(작위 세분화 이전, nobleRankIndex 필드 자체가 없던 시절)도
+  // 최신 형식으로 이관되어야 한다 — 이미 귀족이었다면 최소 남작으로,
+  // 능력치가 이미 더 높은 문턱을 넘었다면 그 작위로 곧바로 승격시킨다.
+  const highStats = { intelligence: 65, focus: 65, stamina: 65, charm: 65, creativity: 65, luck: 65, stress: 10 };
+  const migrated = Engine.migrateLoadedState({ turn: 10, nobleTitle: '옛날 귀족', stats: highStats });
+  eq(migrated.nobleRankIndex, 1, '능력치가 이미 자작 문턱(60)은 넘었지만 백작 문턱(70)엔 못 미치면 자작으로 이관되어야 함');
+
+  const commoner = Engine.migrateLoadedState({ turn: 10, nobleTitle: null, stats: highStats });
+  eq(commoner.nobleRankIndex, null, '평민이었다면 능력치가 아무리 높아도 nobleRankIndex는 null이어야 함');
+
+  // 이미 유효한 nobleRankIndex가 있으면 그대로 유지되어야 함(불필요하게 재계산해 덮어쓰지 않음)
+  const alreadySet = Engine.migrateLoadedState({ turn: 10, nobleTitle: '기존 귀족', nobleRankIndex: 0, stats: highStats });
+  eq(alreadySet.nobleRankIndex, 0, '이미 유효한 nobleRankIndex는 능력치가 더 높아도 그대로 유지되어야 함(자동 재계산은 마이그레이션 1회성 보정용)');
+}
+
+/* ---------------- 작위 세분화에 따른 상위 예복(tier 6 이상) ---------------- */
+
+{
+  eq(Engine.OUTFIT_TIERS.length, 11, '옷은 기존 6단계 + 작위별 예복 5단계 = 총 11단계여야 함');
+  ok(Engine.OUTFIT_TIERS.every((t) => t.hasArt), '모든 옷에 실제 일러스트가 있어야 함');
+  const state = Engine.makeInitialState();
+  state.gold = 1000000;
+  state.stats.charm = 100;
+  state.stats.creativity = 100;
+  state.stats.intelligence = 100; // grace = 100(만점), tier6~10은 모두 품위 요건은 충족
+  Engine.grantNobleTitle(state, '세분화 테스트'); // nobleRankIndex = 0(남작)
+
+  ok(!Engine.outfitRequirementMet(state, 6), '남작은 자작 예복(tier6)을 살 수 없어야 함');
+  ok(!Engine.buyOutfit(state, 6), '작위가 부족하면 골드/품위가 충분해도 tier6 구매가 막혀야 함');
+
+  for (let rank = 1; rank <= 5; rank++) {
+    const tierIndex = rank + 5; // rank1(자작)→tier6, rank5(대공)→tier10
+    // charm/creativity/intelligence는 품위(grace) 계산에도 쓰이므로, 문턱값으로
+    // 내리지 않고 max로만 올려서 품위 100을 계속 유지한 채 작위 문턱만 검증한다.
+    Engine.GROWTH_STAT_KEYS.forEach((k) => { state.stats[k] = Math.max(state.stats[k], Engine.NOBLE_RANKS[rank].minAllStats); });
+    const promoted = Engine.checkNobleRankPromotion(state);
+    eq(promoted.name, Engine.NOBLE_RANKS[rank].name, `단계별로 ${Engine.NOBLE_RANKS[rank].name}까지 승급해야 함`);
+    ok(Engine.outfitRequirementMet(state, tierIndex), `${Engine.NOBLE_RANKS[rank].name}이 되면 tier${tierIndex}(${Engine.OUTFIT_TIERS[tierIndex].name}) 요건을 만족해야 함`);
+    ok(Engine.buyOutfit(state, tierIndex), `${Engine.NOBLE_RANKS[rank].name}이 되면 tier${tierIndex}를 구매할 수 있어야 함`);
+    eq(state.wardrobe.equipped, tierIndex, '구매하면 바로 갈아입어야 함');
+    if (tierIndex < 10) {
+      ok(!Engine.outfitRequirementMet(state, tierIndex + 1), `아직 ${Engine.OUTFIT_TIERS[tierIndex + 1].name}(tier${tierIndex + 1})은 요건을 만족하면 안 됨`);
+    }
+  }
+}
+
+/* ---------------- 애완동물 ---------------- */
+// 옷장(구매/장착/품위 요건/알림/귀족 게이트)과 거의 같은 테스트를 그대로
+// 반복한다 — 애완동물이 옷장과 동일한 규칙으로 설계되었기 때문이다. 다른
+// 점은 기본으로 소유/장착한 펫이 없다는 것뿐이다.
+
+{
+  const state = Engine.makeInitialState();
+  eq(state.pets.equipped, null, '초기에는 장착한 펫이 없어야 함');
+  ok(Engine.PET_TIERS.every((_, i) => state.pets.owned[i] === false), '초기에는 소유한 펫이 하나도 없어야 함(옷과 달리 기본 펫이 없음)');
+  eq(state.pets.owned.length, Engine.PET_TIERS.length, 'owned 배열 길이는 PET_TIERS 개수와 같아야 함');
+}
+{
+  // 옛 저장 형식(pets 필드 자체가 없던 시절)도 최신 형식으로 이관되어야 함
+  const migrated = Engine.migrateLoadedState({ turn: 5 });
+  ok(Array.isArray(migrated.pets.owned) && migrated.pets.owned.length === Engine.PET_TIERS.length, 'pets 필드가 없던 저장도 owned 배열이 새로 생성되어야 함');
+  eq(migrated.pets.equipped, null, '옛 저장에는 장착한 펫이 없어야 함');
+
+  // owned 배열이 손상돼(길이가 안 맞게) 저장된 경우도 정상화되어야 함
+  const corrupted = Engine.migrateLoadedState({ turn: 5, pets: { owned: [true], equipped: 0 } });
+  eq(corrupted.pets.owned.length, Engine.PET_TIERS.length, '길이가 안 맞는 owned 배열은 새로 초기화되어야 함');
+  eq(corrupted.pets.equipped, null, 'owned가 초기화되면 equipped도 null로 되돌려야 함(소유하지 않은 걸 장착한 상태 방지)');
+
+  // equipped가 실제로 소유하지 않은 tier를 가리키면 null로 되돌려야 함
+  const owned = Engine.PET_TIERS.map(() => false);
+  owned[1] = true;
+  const dangling = Engine.migrateLoadedState({ turn: 5, pets: { owned, equipped: 3 } });
+  eq(dangling.pets.equipped, null, '소유하지 않은 tier를 장착 중이라고 하면 null로 되돌려야 함');
+  const valid = Engine.migrateLoadedState({ turn: 5, pets: { owned, equipped: 1 } });
+  eq(valid.pets.equipped, 1, '실제로 소유한 tier를 장착 중이면 그대로 유지되어야 함');
+}
+{
+  const state = Engine.makeInitialState();
+  state.gold = 10000;
+  state.stats.charm = 40; // grace = 16 + 기본 지능/창의력 몫 => tier0(0)~tier1(15) 요건은 충족
+  ok(Engine.buyPet(state, 0), '골드와 품위가 충분하면 펫 구매 성공');
+  eq(state.pets.equipped, 0, '펫을 사면 바로 함께하게 됨');
+  ok(state.pets.owned[0], '산 펫은 소유 목록에 표시됨');
+  ok(!Engine.buyPet(state, 0), '이미 데려온 펫은 다시 살 수 없음');
+
+  ok(Engine.buyPet(state, 1), '두 번째 펫도 조건을 만족하면 살 수 있음');
+  eq(state.pets.equipped, 1, '새 펫을 사면 그 펫으로 장착이 바뀜');
+  ok(Engine.equipPet(state, 0), '이미 소유한 펫으로 다시 장착을 바꿀 수 있음');
+  eq(state.pets.equipped, 0, '장착을 바꾸면 실제로 바뀜');
+  ok(!Engine.equipPet(state, 3), '소유하지 않은 펫은 장착할 수 없음');
+}
+{
+  // 품위는 충분해도 골드가 부족하면 여전히 구매할 수 없어야 함
+  const state = Engine.makeInitialState();
+  state.stats.charm = 40;
+  state.gold = 0;
+  ok(!Engine.buyPet(state, 0), '골드가 부족하면 구매 실패');
+}
+{
+  // 품위가 부족하면 골드가 아무리 많아도 구매할 수 없어야 함(engine 레벨에서도 강제)
+  const state = Engine.makeInitialState();
+  state.gold = 100000;
+  ok(!Engine.petRequirementMet(state, 3), '기본 상태(품위 부족)에서는 tier3(여우, 품위 50) 요건을 만족하지 못해야 함');
+  ok(!Engine.buyPet(state, 3), '품위가 부족하면 골드가 충분해도 구매할 수 없어야 함');
+}
+
+/* ---------------- 귀족 전용 펫(tier 4 이상) ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  state.gold = 100000;
+  state.stats.charm = 100;
+  state.stats.creativity = 100;
+  state.stats.intelligence = 100; // grace = 100(만점)
+  ok(Engine.petRequirementMet(state, 3), '여우(tier3)는 귀족이 아니어도 품위만 충분하면 데려올 수 있어야 함');
+  ok(!Engine.petRequirementMet(state, 4), '공작새(tier4)는 품위가 만점이어도 귀족 신분이 없으면 데려올 수 없어야 함');
+  ok(!Engine.buyPet(state, 4), '귀족이 아니면 골드/품위가 충분해도 tier4 구매가 막혀야 함');
+  eq(state.pets.owned[4], false, '구매가 막혔으면 소유 목록에 기록되면 안 됨');
+
+  ok(Engine.grantNobleTitle(state, '은빛 백작'), '작위를 받으면');
+  ok(Engine.petRequirementMet(state, 4), '귀족 신분을 얻으면 tier4 요건을 만족해야 함');
+  ok(Engine.buyPet(state, 4), '귀족이 되면 공작새를 데려올 수 있어야 함');
+  eq(state.pets.equipped, 4, '구매하면 바로 함께하게 되어야 함');
+}
+{
+  const state = Engine.makeInitialState();
+  state.stats.charm = 100;
+  state.stats.creativity = 100;
+  state.stats.intelligence = 100;
+  const beforeNoble = Engine.checkPetGraceNotification(state);
+  eq(beforeNoble && beforeNoble.name, '여우', '귀족이 아니면 품위 만점이어도 귀족 전용이 아닌 마지막 등급(여우)까지만 알림 대상이어야 함');
+  eq(Engine.checkPetGraceNotification(state), null, '같은 등급은 두 번 알리지 않아야 함');
+
+  Engine.grantNobleTitle(state, '루비 자작');
+  const afterNoble = Engine.checkPetGraceNotification(state);
+  eq(afterNoble && afterNoble.name, '유니콘', '귀족이 되는 순간, 품위가 이미 충족된 최고 등급까지 한 번에 알림이 떠야 함');
+}
+{
+  // 펫을 장착하고 있으면 매턴(applyServantEffects) 자동으로 스트레스가
+  // 줄어들어야 한다(하녀/정원사와 같은 훅).
+  const state = Engine.makeInitialState();
+  state.stats.stress = 50;
+  state.gold = 10000;
+  ok(Engine.buyPet(state, 0), '강아지 구매');
+  const stressBefore = state.stats.stress;
+  Engine.applyServantEffects(state);
+  ok(state.stats.stress < stressBefore, '펫을 장착 중이면 매턴 스트레스가 줄어야 함');
+
+  const noPetState = Engine.makeInitialState();
+  noPetState.stats.stress = 50;
+  Engine.applyServantEffects(noPetState);
+  eq(noPetState.stats.stress, 50, '펫이 없으면 스트레스가 그대로여야 함');
+}
+{
+  eq(Engine.PET_TIERS.length, 8, '애완동물은 총 8단계(요정 고양이 포함)여야 함');
+  const requiresNoble = Engine.PET_TIERS.map((t) => !!t.requiresNoble);
+  eq(JSON.stringify(requiresNoble), JSON.stringify([false, false, false, false, true, true, true, true]), '상위 4단계(공작새/백마/유니콘/요정 고양이)만 귀족 신분을 요구해야 함');
+  ok(Engine.PET_TIERS.every((t) => t.stressRelief > 0), '모든 펫은 스트레스 완화 효과가 있어야 함');
+  ok(Engine.PET_TIERS.every((t) => t.hasArt), '모든 펫에 실제 일러스트가 있어야 함');
+}
+{
+  // 요정 고양이(tier7)는 유니콘(tier6)보다도 희귀해야 한다 — 유니콘은
+  // "귀족이기만 하면" 되지만, 요정 고양이는 최고위 작위(대공)까지 요구한다.
+  const state = Engine.makeInitialState();
+  state.gold = 1000000;
+  state.stats.charm = 100;
+  state.stats.creativity = 100;
+  state.stats.intelligence = 100; // grace = 100(만점)
+  Engine.grantNobleTitle(state, '희귀 펫 테스트'); // 남작(인덱스 0)
+  ok(Engine.petRequirementMet(state, 6), '유니콘(tier6)은 남작이어도 살 수 있어야 함');
+  ok(!Engine.petRequirementMet(state, 7), '요정 고양이(tier7)는 남작으로는 살 수 없어야 함');
+  ok(!Engine.buyPet(state, 7), '작위가 부족하면 골드/품위가 충분해도 요정 고양이 구매가 막혀야 함');
+
+  Engine.GROWTH_STAT_KEYS.forEach((k) => { state.stats[k] = Math.max(state.stats[k], 100); });
+  for (let i = 0; i < 5; i++) Engine.checkNobleRankPromotion(state); // 남작 -> ... -> 대공
+  eq(state.nobleRankIndex, 5, '테스트 준비: 대공까지 승급되어야 함');
+  ok(Engine.petRequirementMet(state, 7), '대공이 되면 요정 고양이 요건을 만족해야 함');
+  ok(Engine.buyPet(state, 7), '대공이 되면 요정 고양이를 데려올 수 있어야 함');
+  eq(state.pets.equipped, 7, '구매하면 바로 함께하게 되어야 함');
+}
+
 /* ---------------- 연회 입장 게이트(사교모임 3단계) ---------------- */
 
 {
@@ -565,18 +783,27 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(Engine.nextMedalTier(state, 'math').id, 'bronze', '아직 미인증이면 다음 등급은 동메달이어야 함');
 }
 {
-  // 과학은 레벨이 4단계(중1)까지밖에 없어서, 은메달을 딴 뒤 금메달(레벨7)에는
-  // 지능이 아무리 높아도 영원히 응시할 수 없어야 한다(콘텐츠 자체가 없으므로).
+  // 과학도 이제 고1 통합과학(레벨7)까지 콘텐츠가 있으므로, 은메달을 딴 뒤
+  // 지능이 충분하면 수학/영어와 마찬가지로 금메달에 응시할 수 있어야 한다.
   const state = Engine.makeInitialState();
   state.stats.intelligence = 90;
   state.certifications.science = 'silver';
-  eq(Engine.nextMedalTier(state, 'science').id, 'gold', '은메달을 딴 뒤 다음 목표는 금메달이어야 함');
-  ok(!Engine.certExamEligible(state, 'science'), '과학은 레벨7 콘텐츠가 없어서 지능이 높아도 금메달에 응시할 수 없어야 함');
-  // 반면 수학/영어는 레벨7 콘텐츠가 있으므로 지능만 충분하면 응시 가능해야 함
   state.certifications.math = 'silver';
   state.certifications.english = 'silver';
+  eq(Engine.nextMedalTier(state, 'science').id, 'gold', '은메달을 딴 뒤 다음 목표는 금메달이어야 함');
+  ok(Engine.certExamEligible(state, 'science'), '과학은 지능이 충분하면 금메달에 응시할 수 있어야 함(레벨7 콘텐츠 존재)');
   ok(Engine.certExamEligible(state, 'math'), '수학은 지능이 충분하면 금메달에 응시할 수 있어야 함');
   ok(Engine.certExamEligible(state, 'english'), '영어는 지능이 충분하면 금메달에 응시할 수 있어야 함');
+}
+{
+  // certTierContentExists는 "콘텐츠 자체가 없는" 경우를 가려내는 일반
+  // 메커니즘이다 — 세 과목 모두 금메달까지 콘텐츠가 있는 지금은 항상
+  // true를 돌려줘야 한다(레벨이 부족해 영원히 막히는 과목이 없음을 보장).
+  Engine.MEDAL_TIERS.forEach((tier) => {
+    Engine.CERT_SUBJECT_KEYS.forEach((subjectKey) => {
+      ok(Engine.certTierContentExists(subjectKey, tier), `${subjectKey}는 ${tier.name} 콘텐츠(레벨${tier.requiredLevel})가 존재해야 함`);
+    });
+  });
 }
 {
   // 이미 금메달(최고 등급)까지 딴 과목은 더 도전할 다음 등급이 없어야 함
@@ -640,23 +867,17 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(roundTripped.math, null, '정상화된 certifications는 JSON 직렬화에도 필드가 살아남아야 함');
 }
 {
-  // 과학은 은메달을 딴 뒤 금메달 콘텐츠가 아예 없어서(레벨7 없음) 영원히
-  // 응시할 수 없는데, "곧 준비되면 도전 가능"처럼 오해를 주는 문구 대신
-  // "여기가 한계"라는 걸 UI가 구분할 수 있어야 한다.
+  // 콘텐츠는 있지만(certTierContentExists=true) 아직 지능이 부족해서 응시
+  // 못 하는 경우(예: 막 은메달을 딴 직후)와, 콘텐츠 자체가 없어서 응시
+  // 불가능한 경우는 구분되어야 한다 — "곧 준비되면 도전 가능"과 "여기가
+  // 한계"는 UI에서 다른 문구를 보여줘야 하기 때문이다. 세 과목 모두
+  // 금메달까지 콘텐츠가 있는 지금은 항상 전자(콘텐츠는 있음)에 해당한다.
   const state = Engine.makeInitialState();
-  state.stats.intelligence = 100;
-  state.certifications.science = 'silver';
-  const nextTier = Engine.nextMedalTier(state, 'science');
-  ok(!Engine.certTierContentExists('science', nextTier), '과학은 금메달 레벨(7) 콘텐츠 자체가 없어야 함');
-
-  // 반대로 수학처럼 콘텐츠는 있지만 아직 지능이 부족해서 응시 못 하는
-  // 경우는(예: 막 은메달을 딴 직후) certTierContentExists가 true여야 한다.
-  const state2 = Engine.makeInitialState();
-  state2.stats.intelligence = 30;
-  state2.certifications.math = 'silver';
-  const mathNextTier = Engine.nextMedalTier(state2, 'math');
+  state.stats.intelligence = 30;
+  state.certifications.math = 'silver';
+  const mathNextTier = Engine.nextMedalTier(state, 'math');
   ok(Engine.certTierContentExists('math', mathNextTier), '수학은 금메달 레벨(7) 콘텐츠가 실제로 존재해야 함');
-  ok(!Engine.certExamEligible(state2, 'math'), '콘텐츠는 있어도 지능이 아직 부족하면 응시는 불가능해야 함');
+  ok(!Engine.certExamEligible(state, 'math'), '콘텐츠는 있어도 지능이 아직 부족하면 응시는 불가능해야 함');
 }
 {
   // 인증 시험 오답에는 실제 대가(체력/스트레스)가 있어야 한다 - 그렇지

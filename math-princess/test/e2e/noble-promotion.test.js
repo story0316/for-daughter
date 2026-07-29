@@ -118,11 +118,52 @@ async function testPromotionCeremonyShowsBeforeEndingOnFinalTurn() {
   ok(errors.length === 0, `JS 에러 없어야 함(마지막 턴 승급 후 엔딩): ${errors.join('\n')}`);
 }
 
+// 작위 세분화(남작→자작→...→대공): 이미 귀족(남작)인 상태에서 6개 성장
+// 능력치가 전부 다음 작위 문턱을 넘은 채로 메인 화면에 들어오면, 이름을
+// 다시 짓는 큰 이벤트 없이 조용히(토스트로만) 자동 승급해야 한다.
+async function testAutoRankPromotionOnEnteringMainScreen() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({
+      stats: { intelligence: 65, focus: 65, stamina: 65, charm: 65, creativity: 65, stress: 10, luck: 65 },
+      nobleTitle: '은빛 백작',
+      nobleRankIndex: 0, // 남작인 채로, 이미 자작 문턱(60)은 넘은 상태
+    });
+    await seedAndContinue(page, state);
+    const toast = await page.textContent('#level-toast');
+    ok(toast.includes('자작') && toast.includes('승격'), `메인 화면에 들어오면 자동으로 승급 토스트가 떠야 함 (got "${toast}")`);
+    const badgeText = await page.textContent('#noble-title-badge');
+    ok(badgeText.includes('자작') && badgeText.includes('은빛 백작'), `배지에 새 작위(자작)와 기존 작위명이 함께 표시되어야 함 (got "${badgeText}")`);
+    const saved = await getSavedState(page);
+    eq(saved.nobleRankIndex, 1, '저장 데이터에도 승급한 작위 인덱스가 기록되어야 함');
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(자동 작위 승급): ${errors.join('\n')}`);
+}
+
+// 상태 화면에도 현재 작위와 다음 작위까지 필요한 능력치가 안내되어야 한다.
+async function testStatusScreenShowsRankAndNextRankRequirement() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({
+      stats: { intelligence: 65, focus: 65, stamina: 65, charm: 65, creativity: 65, stress: 10, luck: 65 },
+      nobleTitle: '은빛 백작',
+      nobleRankIndex: 1, // 자작
+    });
+    await seedAndContinue(page, state);
+    await page.click('[data-menu="status"]');
+    await page.waitForSelector('#screen-status.active');
+    const line = await page.textContent('#status-grace-line');
+    ok(line.includes('자작') && line.includes('은빛 백작'), `현재 작위(자작)와 작위명이 함께 표시되어야 함 (got "${line}")`);
+    ok(line.includes('백작') && line.includes('70'), `다음 작위(백작)와 그 문턱(70)이 안내되어야 함 (got "${line}")`);
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(작위 상태 표시): ${errors.join('\n')}`);
+}
+
 (async () => {
   console.log('noble-promotion e2e tests');
   await testBelowThresholdGoesStraightToMain();
   await testReachingAllStatsAt50TriggersPromotionCeremony();
   await testAlreadyPromotedSkipsCeremonyOnReload();
   await testPromotionCeremonyShowsBeforeEndingOnFinalTurn();
+  await testAutoRankPromotionOnEnteringMainScreen();
+  await testStatusScreenShowsRankAndNextRankRequirement();
   summary('noble-promotion.test.js');
 })();

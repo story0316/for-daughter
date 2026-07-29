@@ -7,8 +7,41 @@ const SUBJ = require(path.join(__dirname, '..', '..', 'subjects.js'));
 
 console.log('subjects.js unit tests');
 
-// 영어는 수학처럼 고등학교 수준까지 더 어려워질 수 있도록 8단계로 확장했고,
-// 과학은 기존대로 초4~중1 범위인 4단계를 유지한다.
+// "공부"/"알바"처럼 askedQuestions 없이(2번째 인자 생략) 호출하는 일반 플레이는
+// 레벨별 셔플 가방에서 뽑으므로, 그 레벨의 은행을 한 바퀴 다 돌기 전에는
+// 같은 문제가 반복되면 안 된다(순수 무작위 추첨이면 가끔 반복될 수 있지만,
+// 셔플 가방은 그러지 않아야 하는 게 이번에 올린 "출제 방식 고도화"의 핵심).
+// 이 파일에서 각 레벨의 generate()를 처음 호출하는 지점이어야 가방이
+// 비어있는 상태(=은행 전체가 새로 섞여 채워지는 시점)에서 검증할 수 있으므로
+// 반드시 다른 generate() 호출보다 먼저 실행한다.
+[
+  { name: '영어', levels: SUBJ.ENGLISH_LEVELS, bank: SUBJ.ENGLISH_BANK, generate: SUBJ.generateEnglishProblem },
+  { name: '과학', levels: SUBJ.SCIENCE_LEVELS, bank: SUBJ.SCIENCE_BANK, generate: SUBJ.generateScienceProblem },
+].forEach(({ name, levels, bank, generate }) => {
+  levels.forEach((level) => {
+    const bankSize = bank[level.id].length;
+    const seen = [];
+    for (let i = 0; i < bankSize; i++) {
+      const problem = generate(level.id);
+      ok(!seen.includes(problem.question), `${name} 레벨 ${level.id}: 셔플 가방은 은행(${bankSize}개)을 한 바퀴 돌기 전엔 같은 문제를 반복하면 안 됨`);
+      seen.push(problem.question);
+    }
+    eq(seen.length, bankSize, `${name} 레벨 ${level.id}: 은행 크기만큼 뽑으면 전부 서로 다른 문제여야 함`);
+  });
+});
+
+// askedQuestions를 명시적으로(빈 배열이라도) 넘기면, 셔플 가방이 아니라
+// 기존의 "걸러내고 무작위 추첨" 방식을 그대로 써야 한다(기초 과목 인증
+// 시험이 이 계약에 의존한다 — session.askedQuestions는 항상 []로 시작함).
+{
+  const problem = SUBJ.generateEnglishProblem(1, []);
+  ok(problem && typeof problem.question === 'string', '영어: askedQuestions=[]를 넘겨도 정상적으로 문제를 돌려줘야 함');
+  const sciProblem = SUBJ.generateScienceProblem(1, []);
+  ok(sciProblem && typeof sciProblem.question === 'string', '과학: askedQuestions=[]를 넘겨도 정상적으로 문제를 돌려줘야 함');
+}
+
+// 영어는 수학처럼 고등학교 2학년 수준까지 8단계로, 과학도 고등학교 1학년
+// (통합과학) 수준까지 7단계로 확장했다(둘 다 금메달 인증까지 도전 가능).
 const SUBJECTS = [
   {
     name: '영어', levels: SUBJ.ENGLISH_LEVELS, isUnlocked: SUBJ.isEnglishLevelUnlocked, generate: SUBJ.generateEnglishProblem,
@@ -16,7 +49,7 @@ const SUBJECTS = [
   },
   {
     name: '과학', levels: SUBJ.SCIENCE_LEVELS, isUnlocked: SUBJ.isScienceLevelUnlocked, generate: SUBJ.generateScienceProblem,
-    expectedThresholds: [0, 8, 18, 28],
+    expectedThresholds: [0, 8, 18, 28, 38, 48, 58],
   },
 ];
 
@@ -47,6 +80,31 @@ SUBJECTS.forEach(({ name, levels, isUnlocked, generate, expectedThresholds }) =>
     ok(isUnlocked(level.id, threshold), `${name} 레벨 ${level.id}은 지능 ${threshold}에서 해금`);
     if (threshold > 0) {
       ok(!isUnlocked(level.id, threshold - 1), `${name} 레벨 ${level.id}은 지능 ${threshold - 1}에서는 잠김`);
+    }
+  });
+});
+
+// 초등학생 기준 중학교 이상 범위(영어 레벨 4~8, 과학 레벨 4~7)에서는
+// problems.js와 마찬가지로 문제를 낼 때마다 concept(개념 설명)이 붙어야
+// 하고, 초등 범위(레벨 1~3)에는 없어야 한다.
+[
+  { name: '영어', levels: SUBJ.ENGLISH_LEVELS, generate: SUBJ.generateEnglishProblem, advancedIds: [4, 5, 6, 7, 8] },
+  { name: '과학', levels: SUBJ.SCIENCE_LEVELS, generate: SUBJ.generateScienceProblem, advancedIds: [4, 5, 6, 7] },
+].forEach(({ name, levels, generate, advancedIds }) => {
+  levels.forEach((level) => {
+    const isAdvanced = advancedIds.includes(level.id);
+    if (isAdvanced) {
+      ok(typeof level.concept === 'string' && level.concept.length > 10, `${name} 레벨 ${level.id}(중학교 이상)은 concept 설명이 있어야 함`);
+    } else {
+      ok(!level.concept, `${name} 레벨 ${level.id}(초등 범위)은 concept 설명이 없어야 함`);
+    }
+    for (let i = 0; i < 10; i++) {
+      const problem = generate(level.id);
+      if (isAdvanced) {
+        eq(problem.concept, level.concept, `${name} 레벨 ${level.id} 문제에는 그 레벨의 개념 설명이 그대로 붙어야 함`);
+      } else {
+        ok(!problem.concept, `${name} 레벨 ${level.id}(초등) 문제에는 concept 필드가 없어야 함`);
+      }
     }
   });
 });

@@ -16,7 +16,7 @@ const E = require(path.join(BASE, 'endings.js'));
 const { createEngine } = require(path.join(BASE, 'game-engine.js'));
 
 const Engine = createEngine({ P, SUBJ, SC, E });
-const { STAT_KEYS, NPC_DEFS, ITEMS, OUTFIT_TIERS, WEEKS_PER_MONTH, PRINCE_MIN_TIER, BANQUET_TIERS, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT, QUESTIONS_PER_CREATIVITY, QUESTIONS_PER_FAITH, CREATIVITY_MIN_CREATIVITY } = Engine;
+const { STAT_KEYS, NPC_DEFS, ITEMS, OUTFIT_TIERS, PET_TIERS, NOBLE_RANKS, WEEKS_PER_MONTH, PRINCE_MIN_TIER, BANQUET_TIERS, QUESTIONS_PER_STUDY, QUESTIONS_PER_JOB, QUESTIONS_PER_BANQUET, BANQUET_PASS_COUNT, QUESTIONS_PER_CREATIVITY, QUESTIONS_PER_FAITH, CREATIVITY_MIN_CREATIVITY } = Engine;
 const GRAND_SOCIAL_TIER = BANQUET_TIERS[BANQUET_TIERS.length - 1].id;
 const TOTAL_TURNS = 48;
 
@@ -83,6 +83,11 @@ function maybeGrantNoblePromotion(state, log) {
   if (Engine.noblePromotionEligible(state)) {
     Engine.grantNobleTitle(state, '시뮬레이션 귀족');
     log.noblePromotions = (log.noblePromotions || 0) + 1;
+  }
+  // 작위(남작→자작→...→대공) 세분화 승급도 실제 게임과 같은 함수로 확인한다.
+  const promotedRank = Engine.checkNobleRankPromotion(state);
+  if (promotedRank) {
+    log.rankPromotions = (log.rankPromotions || 0) + 1;
   }
 }
 
@@ -154,6 +159,17 @@ function maybeBuyOutfit(state) {
   }
 }
 
+// 옷과 같은 정책: 요건을 갖춘 가장 좋은(높은) 등급의 펫으로 갖거나 갈아탄다.
+// currentOutfit 같은 "grace만으로 도달 가능한 최고 tier" 헬퍼가 펫에는 없어서,
+// 대신 맨 위 tier부터 내려오며 petRequirementMet/buyPet이 알아서 걸러내게 한다.
+function maybeBuyPet(state) {
+  const top = state.pets.equipped == null ? -1 : state.pets.equipped;
+  for (let t = PET_TIERS.length - 1; t > top; t--) {
+    if (state.pets.owned[t]) { Engine.equipPet(state, t); return; }
+    if (Engine.buyPet(state, t)) return;
+  }
+}
+
 /* ---------------- 플레이어 정책 ---------------- */
 
 // "균형 잡힌" 플레이어: 매주(월 4주 x 48개월 = 총 192주) 공부/알바/운동/휴식/
@@ -194,6 +210,7 @@ function simulateBalanced(answerRate) {
       maybeBuyItems(state);
       maybeGrantNoblePromotion(state, log);
       maybeBuyOutfit(state);
+      maybeBuyPet(state);
       Engine.clampStats(state);
     }
     // 월말(advanceTurn)에만 한 번 적용되는 것들
@@ -235,6 +252,7 @@ function simulatePrinceRoute(answerRate) {
       else runWeekActivity(state, activity, answerRate, log);
       maybeGrantNoblePromotion(state, log);
       maybeBuyOutfit(state);
+      maybeBuyPet(state);
       Engine.clampStats(state);
     }
     Engine.applyServantEffects(state);
@@ -257,6 +275,9 @@ function checkAnomalies(state, log, trialLabel) {
   });
   const dup = log.scenariosCompleted.filter((id, i) => log.scenariosCompleted.indexOf(id) !== i);
   ok(dup.length === 0, `[${trialLabel}] 같은 시나리오가 중복 완료되면 안 됨: ${dup.join(',')}`);
+  ok(state.pets.equipped === null || (state.pets.equipped >= 0 && state.pets.equipped < PET_TIERS.length), `[${trialLabel}] 장착한 펫 인덱스가 유효한 범위여야 함 (got ${state.pets.equipped})`);
+  ok(state.nobleRankIndex === null || (state.nobleRankIndex >= 0 && state.nobleRankIndex < NOBLE_RANKS.length), `[${trialLabel}] 작위 인덱스가 유효한 범위여야 함 (got ${state.nobleRankIndex})`);
+  ok((state.nobleRankIndex === null) === !state.nobleTitle, `[${trialLabel}] 작위 인덱스와 작위명 유무가 서로 일치해야 함 (nobleRankIndex=${state.nobleRankIndex}, nobleTitle=${state.nobleTitle})`);
 }
 
 console.log('48개월 x 4주 밸런스 시뮬레이션 (game-engine.js 실사용)');
@@ -266,17 +287,24 @@ const BALANCED_TRIALS = 60;
 [0.6, 0.75, 0.9].forEach((rate) => {
   const endingCounts = {};
   let noblePromoted = 0;
+  let petOwned = 0;
+  let rankSum = 0;
   for (let t = 0; t < BALANCED_TRIALS; t++) {
     const { state, ending, log } = simulateBalanced(rate);
     checkAnomalies(state, log, `균형 ${Math.round(rate * 100)}%`);
     endingCounts[ending.id] = (endingCounts[ending.id] || 0) + 1;
     if (state.nobleTitle) noblePromoted++;
+    if (state.pets.equipped !== null) petOwned++;
+    rankSum += state.nobleRankIndex != null ? state.nobleRankIndex + 1 : 0; // 0=평민, 1=남작...6=대공
   }
   console.log(`  균형 플레이어 정답률 ${Math.round(rate * 100)}% (${BALANCED_TRIALS}회) 엔딩 분포:`,
     Object.entries(endingCounts).sort((a, b) => b[1] - a[1]).map(([id, n]) => `${id}:${n}`).join(', '));
   console.log(`    귀족 승급 도달: ${noblePromoted}/${BALANCED_TRIALS} (${Math.round((noblePromoted / BALANCED_TRIALS) * 100)}%)`);
+  console.log(`    펫 보유: ${petOwned}/${BALANCED_TRIALS} (${Math.round((petOwned / BALANCED_TRIALS) * 100)}%)`);
+  console.log(`    평균 작위 단계: ${(rankSum / BALANCED_TRIALS).toFixed(2)}/6 (0=평민, 6=대공)`);
   if (rate >= 0.75) {
     ok(noblePromoted / BALANCED_TRIALS >= 0.5, `정답률 ${Math.round(rate * 100)}%의 균형 잡힌 플레이어는 48개월 동안 절반 이상 귀족으로 승급할 수 있어야 함(승급 조건이 과도하게 가혹하지 않은지 확인) (실제 ${Math.round((noblePromoted / BALANCED_TRIALS) * 100)}%)`);
+    ok(petOwned / BALANCED_TRIALS >= 0.5, `정답률 ${Math.round(rate * 100)}%의 균형 잡힌 플레이어는 48개월 동안 절반 이상 펫을 하나라도 데려올 수 있어야 함(가격이 과도하게 비싸지 않은지 확인) (실제 ${Math.round((petOwned / BALANCED_TRIALS) * 100)}%)`);
   }
 });
 

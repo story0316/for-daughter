@@ -58,6 +58,22 @@
     ];
     const NOBLE_PROMOTION_TIER = 5; // STAT_TIER_THRESHOLDS[5]=50: 이 값에 도달하면 "Lv5를 다 채움"(Lv6 문턱)
 
+    // 귀족이 된 뒤에도 성장은 계속되므로, 작위 자체를 6단계로 세분화했다.
+    // 남작(첫 승급, 기존 방식대로 이름을 직접 지음)부터 시작해서, 그 뒤로는
+    // 6개 성장 능력치가 전부 다음 문턱(STAT_TIER_THRESHOLDS와 완전히 같은
+    // 값들: 60/70/80/90/100)에 도달할 때마다 이름을 새로 짓지 않고도 자동으로
+    // 다음 작위로 승격한다(checkNobleRankPromotion). state.nobleRankIndex가
+    // 이 배열의 인덱스를 가리키며(null이면 아직 평민), 옷장의 상위 등급
+    // (tier6~10)이 특정 작위 이상을 요구할 때도 이 인덱스로 비교한다.
+    const NOBLE_RANKS = [
+      { id: 'baron', name: '남작', minAllStats: 50 },
+      { id: 'viscount', name: '자작', minAllStats: 60 },
+      { id: 'count', name: '백작', minAllStats: 70 },
+      { id: 'marquis', name: '후작', minAllStats: 80 },
+      { id: 'duke', name: '공작', minAllStats: 90 },
+      { id: 'grandDuke', name: '대공', minAllStats: 100 },
+    ];
+
     const WEEKS_PER_MONTH = 4;
     const QUESTIONS_PER_STUDY = 4;
     const QUESTIONS_PER_JOB = 3;
@@ -209,13 +225,44 @@
     // 살 수 없고 왕실 작위(귀족 신분, state.nobleTitle)를 받아야만 구매할 수
     // 있다(requiresNoble). 왕자님을 만나는 데 필요한 최소 등급(PRINCE_MIN_TIER
     // = tier 2)은 이 요건보다 낮아 왕자님 루트 자체에는 영향이 없다.
+    // tier6 이상은 품위가 이미 만점(100)인 상태에서, 작위가 세분화된 만큼
+    // (NOBLE_RANKS 참고) 더 높은 작위일수록 더 화려한 예복을 입을 수 있게
+    // 한 것이다. requiredNobleRankIndex는 NOBLE_RANKS의 인덱스로, 그 작위
+    // "이상"이어야 구매 가능하다(예: requiredNobleRankIndex:1은 자작 이상).
+    // tier3~5는 기존처럼 "귀족이기만 하면"(남작 이상, requiresNoble만 확인)
+    // 구매 가능하고 특정 작위를 요구하지 않는다 — 이미 출시되어 저장 데이터가
+    // 쌓인 등급이라 요건을 더 엄격하게 바꾸지 않았다.
+    // hasArt: assets/wardrobe/tierN.png로 실제 그린 일러스트가 있는지 여부.
     const OUTFIT_TIERS = [
-      { min: 0, cost: 0, emoji: '👕', name: '평범한 옷', wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
-      { min: 25, cost: 400, emoji: '👚', name: '단정한 옷', wardrobeDesc: '품위 25 이상에서 구매 가능' },
-      { min: 50, cost: 900, emoji: '👗', name: '예쁜 드레스', wardrobeDesc: '품위 50 이상에서 구매 가능' },
-      { min: 75, cost: 1800, emoji: '👑', name: '공주 드레스', requiresNoble: true, wardrobeDesc: '품위 75 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
-      { min: 90, cost: 3200, emoji: '💐', name: '무도회 드레스', requiresNoble: true, wardrobeDesc: '품위 90 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
-      { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', requiresNoble: true, wardrobeDesc: '품위 100(만점) + 귀족 신분에서만 구매 가능한 전설의 옷' },
+      { min: 0, cost: 0, emoji: '👕', name: '평범한 옷', hasArt: true, wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
+      { min: 25, cost: 400, emoji: '👚', name: '단정한 옷', hasArt: true, wardrobeDesc: '품위 25 이상에서 구매 가능' },
+      { min: 50, cost: 900, emoji: '👗', name: '예쁜 드레스', hasArt: true, wardrobeDesc: '품위 50 이상에서 구매 가능' },
+      { min: 75, cost: 1800, emoji: '👑', name: '공주 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 75 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
+      { min: 90, cost: 3200, emoji: '💐', name: '무도회 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 90 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
+      { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 100(만점) + 귀족 신분에서만 구매 가능한 전설의 옷' },
+      { min: 100, cost: 10000, emoji: '🎀', name: '자작 예복', requiresNoble: true, requiredNobleRankIndex: 1, hasArt: true, wardrobeDesc: '품위 100(만점) + 자작 이상 필요(남작만으로는 살 수 없는 예복)' },
+      { min: 100, cost: 16000, emoji: '🏵️', name: '백작 예복', requiresNoble: true, requiredNobleRankIndex: 2, hasArt: true, wardrobeDesc: '품위 100(만점) + 백작 이상 필요' },
+      { min: 100, cost: 24000, emoji: '🎖️', name: '후작 예복', requiresNoble: true, requiredNobleRankIndex: 3, hasArt: true, wardrobeDesc: '품위 100(만점) + 후작 이상 필요' },
+      { min: 100, cost: 34000, emoji: '💎', name: '공작 예복', requiresNoble: true, requiredNobleRankIndex: 4, hasArt: true, wardrobeDesc: '품위 100(만점) + 공작 이상 필요' },
+      { min: 100, cost: 48000, emoji: '🌟', name: '대공 예복', requiresNoble: true, requiredNobleRankIndex: 5, hasArt: true, wardrobeDesc: '품위 100(만점) + 대공(최고위 작위)에서만 구매 가능한 전설의 예복' },
+    ];
+
+    // 옷장과 같은 구조(품위 요건 + 상위 등급은 귀족 신분까지 필요)를 그대로
+    // 따르는 애완동물 목록. 옷과 달리 시작할 때 기본으로 갖고 있는 펫은
+    // 없다(owned가 전부 false로 시작 — makeInitialState 참고). petDesc는
+    // 옷장의 wardrobeDesc와 같은 역할(카드 하단 안내 문구). stressRelief는
+    // 그 펫을 착용(equipped) 중일 때 매턴 자동으로 줄어드는 스트레스 양이다
+    // (applyServantEffects에서 적용 — 하녀/정원사 같은 고용인 효과와 동일한 훅).
+    // hasArt: assets/pets/tierN.png로 실제 그린 일러스트가 있는지 여부.
+    const PET_TIERS = [
+      { min: 0, cost: 300, emoji: '🐶', name: '강아지', stressRelief: 1, hasArt: true, petDesc: '누구나 바로 데려올 수 있는 든든한 첫 반려동물' },
+      { min: 15, cost: 600, emoji: '🐱', name: '고양이', stressRelief: 1, hasArt: true, petDesc: '품위 15 이상에서 데려올 수 있음' },
+      { min: 30, cost: 1100, emoji: '🐰', name: '토끼', stressRelief: 2, hasArt: true, petDesc: '품위 30 이상에서 데려올 수 있음' },
+      { min: 50, cost: 1900, emoji: '🦊', name: '여우', stressRelief: 2, hasArt: true, petDesc: '품위 50 이상에서 데려올 수 있음' },
+      { min: 65, cost: 3200, emoji: '🦚', name: '공작새', stressRelief: 3, requiresNoble: true, hasArt: true, petDesc: '품위 65 이상 + 귀족 신분 필요(평민은 키울 수 없는 새)' },
+      { min: 85, cost: 5500, emoji: '🐎', name: '백마', stressRelief: 3, requiresNoble: true, hasArt: true, petDesc: '품위 85 이상 + 귀족 신분 필요(평민은 탈 수 없는 말)' },
+      { min: 100, cost: 9500, emoji: '🦄', name: '유니콘', stressRelief: 4, requiresNoble: true, hasArt: true, petDesc: '품위 100(만점) + 귀족 신분에서만 만날 수 있는 전설의 동물' },
+      { min: 100, cost: 15000, emoji: '🧚', name: '요정 고양이', stressRelief: 5, requiresNoble: true, requiredNobleRankIndex: 5, hasArt: true, petDesc: '품위 100(만점) + 대공(최고위 작위)에서만 만날 수 있는, 유니콘보다도 희귀한 전설의 요정 고양이' },
     ];
 
     const NPC_DEFS = [
@@ -301,7 +348,26 @@
       if (!trimmed) return false;
       if (state.nobleTitle) return false;
       state.nobleTitle = trimmed.slice(0, 20);
+      state.nobleRankIndex = 0; // 첫 승급은 항상 최소 작위(남작)에서 시작
       return true;
+    }
+
+    // 다음으로 승급할 수 있는 작위를 돌려준다(이미 최고위거나 아직 평민이면 null).
+    function nextNobleRank(state) {
+      if (state.nobleRankIndex === null || state.nobleRankIndex === undefined) return null;
+      return NOBLE_RANKS[state.nobleRankIndex + 1] || null;
+    }
+
+    // 귀족이 된 뒤에도 성장은 계속되므로, 매턴 6개 성장 능력치가 전부 다음
+    // 작위의 문턱을 넘었는지 확인해 자동으로 승격시킨다(이름을 다시 짓는
+    // 첫 승급 이벤트와 달리, 조용히 승격되고 UI가 토스트로만 알려준다).
+    function checkNobleRankPromotion(state) {
+      const next = nextNobleRank(state);
+      if (!next) return null;
+      const met = GROWTH_STAT_KEYS.every((k) => state.stats[k] >= next.minAllStats);
+      if (!met) return null;
+      state.nobleRankIndex++;
+      return next;
     }
 
     function affectionTierName(value) {
@@ -350,6 +416,7 @@
         items: {},
         npcs: NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 })),
         wardrobe: { equipped: 0, owned: OUTFIT_TIERS.map((_, i) => i === 0), notifiedGraceTier: 0 },
+        pets: { equipped: null, owned: PET_TIERS.map(() => false), notifiedGraceTier: 0 },
         weekPlan: new Array(WEEKS_PER_MONTH).fill(null),
         weekPlanCount: new Array(WEEKS_PER_MONTH).fill(null),
         weekPlanBanquetTier: new Array(WEEKS_PER_MONTH).fill(null),
@@ -359,6 +426,7 @@
         career: null,
         certifications: { math: null, english: null, science: null },
         nobleTitle: null,
+        nobleRankIndex: null,
       };
     }
 
@@ -377,6 +445,12 @@
       }
       delete loaded.wardrobe.unlockedMax;
       if (typeof loaded.wardrobe.notifiedGraceTier !== 'number') loaded.wardrobe.notifiedGraceTier = 0;
+      loaded.pets = loaded.pets || { equipped: null, owned: PET_TIERS.map(() => false), notifiedGraceTier: 0 };
+      if (!Array.isArray(loaded.pets.owned) || loaded.pets.owned.length !== PET_TIERS.length) {
+        loaded.pets.owned = PET_TIERS.map(() => false);
+      }
+      if (typeof loaded.pets.equipped !== 'number' || !loaded.pets.owned[loaded.pets.equipped]) loaded.pets.equipped = null;
+      if (typeof loaded.pets.notifiedGraceTier !== 'number') loaded.pets.notifiedGraceTier = 0;
       if (typeof loaded.characterName !== 'string' || !loaded.characterName.trim()) loaded.characterName = '우리 딸';
       if (!Array.isArray(loaded.weekPlan) || loaded.weekPlan.length !== WEEKS_PER_MONTH) {
         loaded.weekPlan = new Array(WEEKS_PER_MONTH).fill(null);
@@ -402,6 +476,20 @@
         if (value !== null && !MEDAL_TIERS.some((t) => t.id === value)) loaded.certifications[key] = null;
       });
       if (typeof loaded.nobleTitle !== 'string' && loaded.nobleTitle !== null) loaded.nobleTitle = null;
+      if (!loaded.nobleTitle) {
+        loaded.nobleRankIndex = null;
+      } else if (typeof loaded.nobleRankIndex !== 'number' || loaded.nobleRankIndex < 0 || loaded.nobleRankIndex >= NOBLE_RANKS.length) {
+        // 작위 세분화(NOBLE_RANKS) 이전 저장 데이터: 이미 귀족이었다면 최소
+        // 남작(0)으로 잡고, 지금 능력치가 이미 더 높은 작위 문턱을 넘었다면
+        // (성장 능력치는 줄어들지 않으므로 과거에도 넘었을 것) 그 작위로
+        // 곧바로 올려준다 — 강등처럼 느껴지지 않도록 하기 위함이다.
+        const stats = loaded.stats || {};
+        let rankIdx = 0;
+        NOBLE_RANKS.forEach((rank, i) => {
+          if (GROWTH_STAT_KEYS.every((k) => (stats[k] || 0) >= rank.minAllStats)) rankIdx = i;
+        });
+        loaded.nobleRankIndex = rankIdx;
+      }
       return loaded;
     }
 
@@ -746,12 +834,16 @@
       return true;
     }
 
-    // 그 옷을 "살 수 있는" 요건(품위, 그리고 tier 3 이상은 귀족 신분까지)을
-    // 갖췄는지 확인한다. 골드/이미 소유 여부는 별개(buyOutfit이 따로 확인).
+    // 그 옷을 "살 수 있는" 요건(품위, 그리고 tier 3 이상은 귀족 신분까지,
+    // tier6 이상은 특정 작위 이상까지)을 갖췄는지 확인한다. 골드/이미 소유
+    // 여부는 별개(buyOutfit이 따로 확인).
     function outfitRequirementMet(state, tierIndex) {
       const tier = OUTFIT_TIERS[tierIndex];
       if (graceScore(state.stats) < tier.min) return false;
       if (tier.requiresNoble && !state.nobleTitle) return false;
+      if (typeof tier.requiredNobleRankIndex === 'number') {
+        if (state.nobleRankIndex === null || state.nobleRankIndex === undefined || state.nobleRankIndex < tier.requiredNobleRankIndex) return false;
+      }
       return true;
     }
 
@@ -774,6 +866,47 @@
       if (tierIndex > state.wardrobe.notifiedGraceTier) {
         state.wardrobe.notifiedGraceTier = tierIndex;
         return OUTFIT_TIERS[tierIndex];
+      }
+      return null;
+    }
+
+    /* ---------------- 애완동물 ---------------- */
+    // 옷장(구매/장착/품위 요건/알림)과 완전히 같은 구조를 따른다. 다른 점은
+    // 딱 하나, 기본으로 소유한 펫이 없다는 것(equipped: null로 시작 —
+    // makeInitialState 참고). 함수 이름도 옷장 쪽과 나란히 대응된다.
+
+    function equipPet(state, tierIndex) {
+      if (!state.pets.owned[tierIndex]) return false;
+      state.pets.equipped = tierIndex;
+      return true;
+    }
+
+    function petRequirementMet(state, tierIndex) {
+      const tier = PET_TIERS[tierIndex];
+      if (graceScore(state.stats) < tier.min) return false;
+      if (tier.requiresNoble && !state.nobleTitle) return false;
+      if (typeof tier.requiredNobleRankIndex === 'number') {
+        if (state.nobleRankIndex === null || state.nobleRankIndex === undefined || state.nobleRankIndex < tier.requiredNobleRankIndex) return false;
+      }
+      return true;
+    }
+
+    function buyPet(state, tierIndex) {
+      const tier = PET_TIERS[tierIndex];
+      if (state.pets.owned[tierIndex] || state.gold < tier.cost) return false;
+      if (!petRequirementMet(state, tierIndex)) return false;
+      state.gold -= tier.cost;
+      state.pets.owned[tierIndex] = true;
+      state.pets.equipped = tierIndex;
+      return true;
+    }
+
+    function checkPetGraceNotification(state) {
+      let tierIndex = 0;
+      PET_TIERS.forEach((tier, i) => { if (petRequirementMet(state, i)) tierIndex = i; });
+      if (tierIndex > state.pets.notifiedGraceTier) {
+        state.pets.notifiedGraceTier = tierIndex;
+        return PET_TIERS[tierIndex];
       }
       return null;
     }
@@ -821,8 +954,10 @@
     }
 
     // 다음 등급 시험에 응시할 수 있으려면, 그 등급이 요구하는 레벨이 지금
-    // 지능으로 이미 해금되어 있어야 한다(과학처럼 레벨 자체가 부족한 과목은
-    // 애초에 해당 등급이 영원히 해금되지 않을 수 있다).
+    // 지능으로 이미 해금되어 있어야 한다(어떤 과목이 그 레벨 자체를 아직
+    // 만들어두지 않았다면 애초에 해당 등급이 영원히 해금되지 않을 수도
+    // 있다 — 세 과목 모두 금메달까지 콘텐츠가 있는 지금은 해당하지 않지만,
+    // 앞으로 과목이 더 늘어날 경우를 대비한 방어 로직이다).
     function certExamEligible(state, subjectKey) {
       const tier = nextMedalTier(state, subjectKey);
       if (!tier) return false;
@@ -830,11 +965,11 @@
       return subject.isLevelUnlocked(tier.requiredLevel, state.stats.intelligence);
     }
 
-    // 과학처럼 그 과목 자체에 해당 레벨 콘텐츠가 아예 없는 경우(지능이
-    // 아무리 높아도 영원히 해금될 수 없음)를 가려낸다. isLevelUnlocked를
-    // 무한대 지능으로 호출해서 "언젠가는 해금 가능"인지 "애초에 그런 레벨이
-    // 없음"인지 구분한다. UI가 "곧 도전 가능"과 "이 과목은 여기까지가
-    // 한계"를 다른 문구로 보여줄 수 있게 해준다.
+    // 어떤 과목이 그 등급이 요구하는 레벨 콘텐츠를 아예 만들어두지 않은
+    // 경우(지능이 아무리 높아도 영원히 해금될 수 없음)를 가려낸다.
+    // isLevelUnlocked를 무한대 지능으로 호출해서 "언젠가는 해금 가능"인지
+    // "애초에 그런 레벨이 없음"인지 구분한다. UI가 "곧 도전 가능"과 "이
+    // 과목은 여기까지가 한계"를 다른 문구로 보여줄 수 있게 해준다.
     function certTierContentExists(subjectKey, tier) {
       return Question.SUBJECTS[subjectKey].isLevelUnlocked(tier.requiredLevel, Infinity);
     }
@@ -1016,6 +1151,9 @@
     function applyServantEffects(state) {
       if (state.items.maid) state.stats.stress = Math.max(0, state.stats.stress - 2);
       if (state.items.gardener) { state.gold += 10; state.stats.luck += 1; }
+      if (state.pets.equipped !== null) {
+        state.stats.stress = Math.max(0, state.stats.stress - PET_TIERS[state.pets.equipped].stressRelief);
+      }
 
       let princeEncounter = false;
       if (state.career) {
@@ -1087,13 +1225,13 @@
       BANQUET_TIERS, PRINCE_MIN_TIER,
       STRESS_OVERFLOW_THRESHOLD, NPC_HINT_AFFECTION, NPC_LENIENT_AFFECTION, CAREER_DEFS,
       MEDAL_TIERS, CERT_SUBJECT_KEYS,
-      AFFECTION_TIERS, AFFECTION_DECAY_GRACE_TURNS, AFFECTION_DECAY_AMOUNT, OUTFIT_TIERS, NPC_DEFS, ACTIVITY_DEFS,
+      AFFECTION_TIERS, AFFECTION_DECAY_GRACE_TURNS, AFFECTION_DECAY_AMOUNT, OUTFIT_TIERS, PET_TIERS, NPC_DEFS, ACTIVITY_DEFS,
       MULTI_SUBJECT_TYPES: Question.MULTI_SUBJECT_TYPES, BONUS_QUIZ_TYPES: Reward.DEFERRED_REWARD_TYPES,
       ASSUMED_CORRECT_RATE, EXPECTED_COMBO_MULTIPLIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS,
       // 기본 헬퍼
       randInt, randChoice, shuffle, statTierIndex, snapshotGrowthTiers, leveledUpStats,
       graceScore, affectionTierName, currentOutfit, comboMultiplier: Reward.comboMultiplier, itemBonusSum, clampStats,
-      noblePromotionEligible, grantNobleTitle, NOBLE_PROMOTION_TIER,
+      noblePromotionEligible, grantNobleTitle, NOBLE_PROMOTION_TIER, NOBLE_RANKS, nextNobleRank, checkNobleRankPromotion,
       // 상태 생성/이관
       makeInitialState, migrateLoadedState,
       // 과목/문제(질문 엔진에 위임)
@@ -1112,6 +1250,8 @@
       resolveScenarioOutcome, resolveBranchingOption, resolveNarrativeScenario, finishScenarioQuizOutcome,
       // 상점/옷장
       buyItem, equipOutfit, buyOutfit, checkWardrobeGraceNotification, outfitRequirementMet,
+      // 애완동물
+      equipPet, buyPet, checkPetGraceNotification, petRequirementMet,
       // 직업
       careerRequirementMet, unlockedCareers, applyForCareer, resignCareer,
       // 기초 과목 등급 인증

@@ -1,8 +1,10 @@
 // 기초 과목(수학/영어/과학) 등급 인증(동/은/금메달) 시스템: 상태 화면에 표시,
 // 시험 응시 흐름(주/달을 소모하지 않고 상태 화면으로 돌아옴), 실패해도 기존
 // 등급이 유지되는지, 과목별 진행 상황이 올바르게 표시되는지 검증한다.
+const path = require('path');
 const { ok, eq, summary } = require('../helpers/assert');
 const { withPage, seedAndContinue, makeState, getSavedState, activeScreenId } = require('./helpers');
+const SUBJ = require(path.join(__dirname, '..', '..', 'subjects.js'));
 
 async function openStatus(page) {
   await page.click('[data-menu="status"]');
@@ -78,23 +80,50 @@ async function testDisplaysExistingMedalsAndNextTierCorrectly() {
   ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
 }
 
-async function testScienceCannotReachGoldEvenAtHighIntelligence() {
+// 과학도 고1 통합과학(레벨7)까지 콘텐츠가 생겨서, 수학/영어와 마찬가지로
+// 지능이 충분하면 금메달 시험에 응시해서 실제로 딸 수 있어야 한다.
+async function testScienceCertExamCanReachGoldAtHighIntelligence() {
   const errors = await withPage(async (page) => {
     const state = makeState({
+      weekIndex: 3,
       stats: { intelligence: 95, focus: 80, stamina: 60, charm: 60, creativity: 40, stress: 10, luck: 30 },
       certifications: { math: null, english: null, science: 'silver' },
     });
     await seedAndContinue(page, state);
     await openStatus(page);
-    const scienceRow = (await page.$$eval('.status-cert-row', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()))).find((r) => r.startsWith('과학'));
-    ok(scienceRow.includes('은메달'), '과학은 은메달 상태를 유지해야 함');
-    ok(!scienceRow.includes('금메달 시험 보기'), `과학은 금메달 콘텐츠가 없어서 지능이 아무리 높아도 시험 버튼이 뜨면 안 됨 (got "${scienceRow}")`);
-    // "곧 준비되면 도전 가능"처럼 오해를 주는 잠김 문구가 아니라, 콘텐츠 자체가
-    // 없어서 여기가 한계라는 걸 명확히 알려주는 문구가 떠야 한다.
-    ok(scienceRow.includes('최고 등급이에요'), `과학의 금메달은 "여기가 한계"라는 안내가 떠야 함(잠김 문구가 아니라) (got "${scienceRow}")`);
-    ok(!scienceRow.includes('준비가 더 필요'), `과학의 금메달은 "준비가 더 필요"(곧 될 것 같은 문구)가 뜨면 안 됨 (got "${scienceRow}")`);
+    const scienceRowBefore = (await page.$$eval('.status-cert-row', (els) => els.map((e) => e.textContent.replace(/\s+/g, ' ').trim()))).find((r) => r.startsWith('과학'));
+    ok(scienceRowBefore.includes('은메달'), '과학은 은메달 상태를 유지해야 함');
+    ok(scienceRowBefore.includes('금메달 시험 보기'), `과학도 지능이 충분하면 다른 과목처럼 금메달 시험 버튼이 떠야 함 (got "${scienceRowBefore}")`);
+
+    await page.click('.status-cert-btn[data-subject="science"]');
+    await page.waitForSelector('#screen-quiz.active');
+    eq(await page.textContent('#quiz-session-label'), '📜 과학 금메달 인증 시험', '세션 라벨이 인증 시험을 보여줘야 함');
+
+    const answerBank = {};
+    SUBJ.SCIENCE_BANK[7].forEach((item) => { answerBank[item.question] = item.answer; });
+
+    for (let i = 0; i < 5; i++) {
+      const active = await page.evaluate(() => document.querySelector('.screen.active').id);
+      if (active !== 'screen-quiz') break;
+      const question = await page.textContent('#quiz-question');
+      const answer = answerBank[question];
+      ok(answer, `테스트가 아는 문제여야 함(subjects.js SCIENCE_BANK[7]와 동기화 필요): "${question}"`);
+      await page.click(`.choice-btn:text-is("${answer}")`);
+      await page.waitForSelector('#btn-quiz-next', { state: 'visible' });
+      await page.click('#btn-quiz-next');
+      await page.waitForTimeout(150);
+    }
+    await page.waitForSelector('#screen-session-summary.active');
+    ok(!(await page.textContent('#summary-title')).includes('아직이에요'), '전부 정답을 맞히면 통과해야 함');
+
+    await page.click('#btn-summary-confirm');
+    await page.waitForSelector('#screen-status.active', { timeout: 8000 });
+
+    const saved = await getSavedState(page);
+    eq(saved.certifications.science, 'gold', '통과하면 과학도 금메달이 인증되어야 함');
+    eq(saved.weekIndex, 3, '인증 시험은 주/달을 소모하면 안 됨(weekIndex가 그대로여야 함)');
   });
-  ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
+  ok(errors.length === 0, `JS 에러 없어야 함(과학 금메달 인증): ${errors.join('\n')}`);
 }
 
 // subjects.js의 ENGLISH_VOCAB_BANK[1](동메달 레벨) 정답 목록. 화면에 뜬 단어를
@@ -149,7 +178,7 @@ async function testEnglishCertExamUsesVocabMatchFormatAndAwardsMedal() {
   await testShowsUncertifiedWithButtonByDefault();
   await testFailingExamKeepsNullAndReturnsToStatusWithoutConsumingWeek();
   await testDisplaysExistingMedalsAndNextTierCorrectly();
-  await testScienceCannotReachGoldEvenAtHighIntelligence();
+  await testScienceCertExamCanReachGoldAtHighIntelligence();
   await testEnglishCertExamUsesVocabMatchFormatAndAwardsMedal();
   summary('subject-certification.test.js');
 })();

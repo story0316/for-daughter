@@ -18,7 +18,7 @@
     const SUBJECTS = {
       math: { name: '수학', isLevelUnlocked: P.isLevelUnlocked, generateProblem: P.generateProblem, maxLevel: 9 },
       english: { name: '영어', isLevelUnlocked: SUBJ.isEnglishLevelUnlocked, generateProblem: SUBJ.generateEnglishProblem, maxLevel: 8 },
-      science: { name: '과학', isLevelUnlocked: SUBJ.isScienceLevelUnlocked, generateProblem: SUBJ.generateScienceProblem, maxLevel: 4 },
+      science: { name: '과학', isLevelUnlocked: SUBJ.isScienceLevelUnlocked, generateProblem: SUBJ.generateScienceProblem, maxLevel: 7 },
     };
     const SUBJECT_KEYS = Object.keys(SUBJECTS);
 
@@ -101,6 +101,20 @@
 
     function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
     function randChoice(arr) { return arr[randInt(0, arr.length - 1)]; }
+    // items가 [쉬움 ... 어려움] 순서로 정렬돼 있다고 보고, 뒤로 갈수록(더
+    // 어려울수록) 뽑힐 확률이 선형으로 커지게 뽑는다(가중치 1,2,3,...).
+    // pickLevelForSubject가 "최근 해금된 3개 레벨" 중 가장 어려운(가장
+    // 최근에 해금된) 레벨을 더 자주 내도록 쓴다.
+    function weightedChoice(items) {
+      const totalWeight = (items.length * (items.length + 1)) / 2;
+      let r = randInt(1, totalWeight);
+      for (let i = 0; i < items.length; i++) {
+        const weight = i + 1;
+        if (r <= weight) return items[i];
+        r -= weight;
+      }
+      return items[items.length - 1];
+    }
     function shuffle(arr) {
       const a = arr.slice();
       for (let i = a.length - 1; i > 0; i--) {
@@ -127,12 +141,16 @@
       return unlocked.length ? unlocked[unlocked.length - 1] : 1;
     }
 
-    // 레벨은 방금 해금된 것 위주(최근 3개)로 뽑아 너무 쉬운 문제만
-    // 반복되지 않게 한다.
+    // 레벨은 방금 해금된 것 위주(최근 3개)로 뽑되, 그중에서도 균등하게
+    // 고르지 않고 가장 어려운(가장 최근에 해금된) 쪽에 가중치를 둬서 더
+    // 자주 나오게 한다 — 지능이 오를수록 실제로 체감하는 난이도도 함께
+    // 올라가게 하려는 의도다(예전에는 3개 레벨이 똑같은 확률이라 지능이
+    // 아무리 높아져도 가장 쉬운 레벨만 자주 걸릴 수 있었다). 그래도 가끔은
+    // 살짝 쉬운 레벨도 섞여 나와 복습 효과를 준다.
     function pickLevelForSubject(intelligence, subjectKey) {
       const unlocked = unlockedLevelsFor(intelligence, subjectKey);
       const recentBand = unlocked.slice(-3);
-      return randChoice(recentBand.length ? recentBand : [1]);
+      return recentBand.length ? weightedChoice(recentBand) : 1;
     }
 
     // 과목은 무작위로, 레벨은 방금 해금된 것 위주로 뽑는다.
@@ -229,8 +247,8 @@
     return {
       SUBJECTS, SUBJECT_KEYS, MULTI_SUBJECT_TYPES, ETIQUETTE_QUESTIONS,
       CREATIVITY_PUZZLE_BANK, FAITH_QUESTIONS,
-      randInt, randChoice, shuffle,
-      subjectName, unlockedLevelsFor, typicalStudyLevel,
+      randInt, randChoice, shuffle, weightedChoice,
+      subjectName, unlockedLevelsFor, typicalStudyLevel, pickLevelForSubject,
       pickRandomSubjectAndLevel, pickRandomSubjectLevel1,
       generateEtiquetteQuestion, generateCreativityQuestion, generateFaithQuestion,
       generateScenarioQuestion, generateNextProblem,

@@ -104,7 +104,7 @@ async function testSubjectAndCertSectionsReflectRealBankSizes() {
     const subjectCards = await page.$$eval('#subject-list .admin-card-title', (els) => els.map((e) => e.textContent));
     ok(subjectCards.some((t) => t.includes('수학') && t.includes('9단계')), `수학 카드에 9단계가 표시되어야 함 (got ${JSON.stringify(subjectCards)})`);
     ok(subjectCards.some((t) => t.includes('영어') && t.includes('총 72문제')), `영어 카드에 총 문제 수(72)가 표시되어야 함 (got ${JSON.stringify(subjectCards)})`);
-    ok(subjectCards.some((t) => t.includes('과학') && t.includes('총 36문제')), `과학 카드에 총 문제 수(36)가 표시되어야 함 (got ${JSON.stringify(subjectCards)})`);
+    ok(subjectCards.some((t) => t.includes('과학') && t.includes('총 63문제')), `과학 카드에 총 문제 수(63)가 표시되어야 함 (got ${JSON.stringify(subjectCards)})`);
 
     const certCards = await page.$$eval('#cert-list .admin-card-title', (els) => els.map((e) => e.textContent));
     eq(certCards.length, 3, '기초 과목 인증은 동/은/금메달 3단계여야 함');
