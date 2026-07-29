@@ -194,7 +194,8 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
 {
   const state = Engine.makeInitialState();
   state.gold = 10000;
-  ok(Engine.buyOutfit(state, 1), '골드가 충분하면 옷 구매 성공');
+  state.stats.charm = 40; // grace = 40*.4 = 16 + 기본 지능/창의력 몫 => tier1(25) 이상
+  ok(Engine.buyOutfit(state, 1), '골드와 품위가 충분하면 옷 구매 성공');
   eq(state.wardrobe.equipped, 1, '옷을 사면 바로 갈아입음');
   ok(state.wardrobe.owned[1], '산 옷은 소유 목록에 표시됨');
   ok(!Engine.buyOutfit(state, 1), '이미 산 옷은 다시 살 수 없음');
@@ -202,6 +203,60 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   ok(Engine.equipOutfit(state, 0), '이미 소유한(0번) 옷은 다시 갈아입을 수 있음');
   eq(state.wardrobe.equipped, 0, '갈아입으면 착장이 바뀜');
   ok(!Engine.equipOutfit(state, 3), '소유하지 않은 옷은 입을 수 없음');
+}
+{
+  // 품위는 충분해도 골드가 부족하면 여전히 구매할 수 없어야 함(회귀 확인)
+  const state = Engine.makeInitialState();
+  state.stats.charm = 40;
+  state.gold = 0;
+  ok(!Engine.buyOutfit(state, 1), '품위가 충분해도 골드가 부족하면 구매 실패');
+}
+{
+  // 품위가 부족하면 골드가 아무리 많아도 구매할 수 없어야 함(engine 레벨에서도 강제)
+  const state = Engine.makeInitialState();
+  state.gold = 100000;
+  ok(!Engine.outfitRequirementMet(state, 1), '기본 상태(품위 부족)에서는 tier1 요건을 만족하지 못해야 함');
+  ok(!Engine.buyOutfit(state, 1), '품위가 부족하면 골드가 충분해도 구매할 수 없어야 함');
+}
+
+/* ---------------- 귀족 전용 옷(tier 3 이상) ---------------- */
+
+{
+  const state = Engine.makeInitialState();
+  state.gold = 100000;
+  state.stats.charm = 100;
+  state.stats.creativity = 100;
+  state.stats.intelligence = 100; // grace = 100(만점)
+  ok(Engine.outfitRequirementMet(state, 2), '예쁜 드레스(tier2)는 귀족이 아니어도 품위만 충분하면 구매 가능해야 함');
+  ok(!Engine.outfitRequirementMet(state, 3), '공주 드레스(tier3)는 품위가 만점이어도 귀족 신분이 없으면 구매 불가해야 함');
+  ok(!Engine.buyOutfit(state, 3), '귀족이 아니면 골드/품위가 충분해도 tier3 구매가 막혀야 함');
+  eq(state.wardrobe.owned[3], false, '구매가 막혔으면 소유 목록에 기록되면 안 됨');
+
+  ok(Engine.grantNobleTitle(state, '은빛 백작'), '작위를 받으면');
+  ok(Engine.outfitRequirementMet(state, 3), '귀족 신분을 얻으면 tier3 요건을 만족해야 함');
+  ok(Engine.buyOutfit(state, 3), '귀족이 되면 공주 드레스를 구매할 수 있어야 함');
+  eq(state.wardrobe.equipped, 3, '구매하면 바로 갈아입어야 함');
+}
+{
+  // 왕자님을 만나는 데 필요한 최소 등급(PRINCE_MIN_TIER=2)은 귀족 전용
+  // 등급보다 낮아야 한다 — 왕자님 루트 자체가 귀족 신분을 요구하면 안 됨.
+  ok(Engine.PRINCE_MIN_TIER < 3, 'PRINCE_MIN_TIER는 귀족 전용 등급(tier3)보다 낮아야 함(왕자님 루트 영향 없음 보장)');
+  ok(!Engine.OUTFIT_TIERS[Engine.PRINCE_MIN_TIER].requiresNoble, '왕자님을 만나는 데 필요한 등급 자체는 귀족 신분을 요구하면 안 됨');
+}
+{
+  // 품위가 이미 tier3+ 기준을 넘었어도 귀족이 아니면 "구매 가능!" 알림이
+  // 뜨면 안 되고, 귀족이 된 순간에야 그 등급 알림이 떠야 한다.
+  const state = Engine.makeInitialState();
+  state.stats.charm = 100;
+  state.stats.creativity = 100;
+  state.stats.intelligence = 100;
+  const beforeNoble = Engine.checkWardrobeGraceNotification(state);
+  eq(beforeNoble && beforeNoble.name, '예쁜 드레스', '귀족이 아니면 품위 만점이어도 귀족 전용이 아닌 마지막 등급(예쁜 드레스)까지만 알림 대상이어야 함');
+  eq(Engine.checkWardrobeGraceNotification(state), null, '같은 등급은 두 번 알리지 않아야 함');
+
+  Engine.grantNobleTitle(state, '루비 자작');
+  const afterNoble = Engine.checkWardrobeGraceNotification(state);
+  eq(afterNoble && afterNoble.name, '대관식 드레스', '귀족이 되는 순간, 품위가 이미 충족된 최고 등급까지 한 번에 알림이 떠야 함');
 }
 
 /* ---------------- 연회 입장 게이트(사교모임 3단계) ---------------- */

@@ -204,13 +204,18 @@
     const AFFECTION_DECAY_GRACE_TURNS = 3;
     const AFFECTION_DECAY_AMOUNT = 1;
 
+    // 품위(min)만으로 살 수 있는 옷은 tier 2(예쁜 드레스)까지다. tier 3부터는
+    // "공주 드레스"라는 이름 그대로, 아무리 품위가 높아도 평민 신분으로는
+    // 살 수 없고 왕실 작위(귀족 신분, state.nobleTitle)를 받아야만 구매할 수
+    // 있다(requiresNoble). 왕자님을 만나는 데 필요한 최소 등급(PRINCE_MIN_TIER
+    // = tier 2)은 이 요건보다 낮아 왕자님 루트 자체에는 영향이 없다.
     const OUTFIT_TIERS = [
       { min: 0, cost: 0, emoji: '👕', name: '평범한 옷', wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
       { min: 25, cost: 400, emoji: '👚', name: '단정한 옷', wardrobeDesc: '품위 25 이상에서 구매 가능' },
       { min: 50, cost: 900, emoji: '👗', name: '예쁜 드레스', wardrobeDesc: '품위 50 이상에서 구매 가능' },
-      { min: 75, cost: 1800, emoji: '👑', name: '공주 드레스', wardrobeDesc: '품위 75 이상에서 구매 가능' },
-      { min: 90, cost: 3200, emoji: '💐', name: '무도회 드레스', wardrobeDesc: '품위 90 이상에서 구매 가능' },
-      { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', wardrobeDesc: '품위 100(만점)에서만 구매 가능한 전설의 옷' },
+      { min: 75, cost: 1800, emoji: '👑', name: '공주 드레스', requiresNoble: true, wardrobeDesc: '품위 75 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
+      { min: 90, cost: 3200, emoji: '💐', name: '무도회 드레스', requiresNoble: true, wardrobeDesc: '품위 90 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
+      { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', requiresNoble: true, wardrobeDesc: '품위 100(만점) + 귀족 신분에서만 구매 가능한 전설의 옷' },
     ];
 
     const NPC_DEFS = [
@@ -741,19 +746,31 @@
       return true;
     }
 
+    // 그 옷을 "살 수 있는" 요건(품위, 그리고 tier 3 이상은 귀족 신분까지)을
+    // 갖췄는지 확인한다. 골드/이미 소유 여부는 별개(buyOutfit이 따로 확인).
+    function outfitRequirementMet(state, tierIndex) {
+      const tier = OUTFIT_TIERS[tierIndex];
+      if (graceScore(state.stats) < tier.min) return false;
+      if (tier.requiresNoble && !state.nobleTitle) return false;
+      return true;
+    }
+
     function buyOutfit(state, tierIndex) {
       const tier = OUTFIT_TIERS[tierIndex];
       if (state.wardrobe.owned[tierIndex] || state.gold < tier.cost) return false;
+      if (!outfitRequirementMet(state, tierIndex)) return false;
       state.gold -= tier.cost;
       state.wardrobe.owned[tierIndex] = true;
       state.wardrobe.equipped = tierIndex;
       return true;
     }
 
-    // 품위가 새 단계에 닿으면 알림 대상 tier를 갱신하고 그 tier를 돌려준다
-    // (UI가 토스트를 띄울 수 있도록). 이미 알림을 준 단계면 null.
+    // 품위(+ 필요하면 귀족 신분까지)가 새 단계에 닿으면 알림 대상 tier를
+    // 갱신하고 그 tier를 돌려준다(UI가 토스트를 띄울 수 있도록). 이미
+    // 알림을 준 단계면 null.
     function checkWardrobeGraceNotification(state) {
-      const tierIndex = currentOutfit(state.stats).tierIndex;
+      let tierIndex = 0;
+      OUTFIT_TIERS.forEach((tier, i) => { if (outfitRequirementMet(state, i)) tierIndex = i; });
       if (tierIndex > state.wardrobe.notifiedGraceTier) {
         state.wardrobe.notifiedGraceTier = tierIndex;
         return OUTFIT_TIERS[tierIndex];
@@ -1094,7 +1111,7 @@
       scenarioUnlocked, findActiveScenario, applyStatNpcEffects, meetNpcAttempt,
       resolveScenarioOutcome, resolveBranchingOption, resolveNarrativeScenario, finishScenarioQuizOutcome,
       // 상점/옷장
-      buyItem, equipOutfit, buyOutfit, checkWardrobeGraceNotification,
+      buyItem, equipOutfit, buyOutfit, checkWardrobeGraceNotification, outfitRequirementMet,
       // 직업
       careerRequirementMet, unlockedCareers, applyForCareer, resignCareer,
       // 기초 과목 등급 인증

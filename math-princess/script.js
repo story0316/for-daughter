@@ -86,6 +86,7 @@
     statusOutfitBadge: document.getElementById('status-outfit-badge'),
     statusCareerBadge: document.getElementById('status-career-badge'),
     statusStatPanel: document.getElementById('status-stat-panel'),
+    statusGraceLine: document.getElementById('status-grace-line'),
     statusCertList: document.getElementById('status-cert-list'),
     statusNpcList: document.getElementById('status-npc-list'),
     statusItemList: document.getElementById('status-item-list'),
@@ -1123,16 +1124,16 @@
 
   function renderWardrobeList() {
     el.wardrobeList.innerHTML = '';
-    const graceTier = Engine.currentOutfit(state.stats).tierIndex;
     OUTFIT_TIERS.forEach((tier, tierIndex) => {
       const owned = state.wardrobe.owned[tierIndex];
-      const purchasable = !owned && tierIndex <= graceTier;
+      const purchasable = !owned && Engine.outfitRequirementMet(state, tierIndex);
       const equipped = tierIndex === state.wardrobe.equipped;
       const canAfford = state.gold >= tier.cost;
       const card = document.createElement('div');
-      card.className = `wardrobe-card${owned ? '' : purchasable ? ' purchasable' : ' locked'}${equipped ? ' equipped' : ''}`;
+      card.className = `wardrobe-card${owned ? '' : purchasable ? ' purchasable' : ' locked'}${equipped ? ' equipped' : ''}${tier.requiresNoble ? ' noble-tier' : ''}`;
       card.innerHTML = `
         ${equipped ? '<span class="wardrobe-card-badge">착용 중</span>' : ''}
+        ${tier.requiresNoble ? '<span class="wardrobe-card-noble-badge">👑 귀족 전용</span>' : ''}
         <span class="wardrobe-card-img-wrap">
           <img src="assets/wardrobe/tier${tierIndex}.png" alt="${tier.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
           <span class="wardrobe-card-emoji-fallback">${tier.emoji}</span>
@@ -1554,6 +1555,29 @@
     showScreen('status');
   }
 
+  // 품위(graceScore)는 매력·창의력·지능을 섞은 계산값이라 state.stats에
+  // 직접 저장되는 숫자가 아니다 보니(포토상 초상화 링에는 %만 보임)
+  // "역량" 탭에서 실제 몇 점인지, 다음 옷 단계까지 뭐가 더 필요한지(품위만
+  // 부족한지, 귀족 신분도 필요한지)를 숫자로 바로 확인할 수 있게 보여준다.
+  function renderGraceLine() {
+    const grace = Math.round(Engine.graceScore(state.stats));
+    const rankText = state.nobleTitle ? `👑 귀족(${state.nobleTitle})` : '평민';
+    let nextTierIndex = -1;
+    for (let i = 0; i < OUTFIT_TIERS.length; i++) {
+      if (!Engine.outfitRequirementMet(state, i)) { nextTierIndex = i; break; }
+    }
+    let detail;
+    if (nextTierIndex === -1) {
+      detail = '모든 옷 단계의 요건을 갖췄어요!';
+    } else {
+      const tier = OUTFIT_TIERS[nextTierIndex];
+      const needs = [`품위 ${tier.min} 이상(현재 ${grace})`];
+      if (tier.requiresNoble && !state.nobleTitle) needs.push('귀족 신분');
+      detail = `다음 단계 ${tier.emoji} ${tier.name}: ${needs.join(' · ')} 필요`;
+    }
+    el.statusGraceLine.innerHTML = `🎀 품위 ${grace} · ${rankText}<br>${detail}`;
+  }
+
   function renderStatusScreen() {
     const outfit = OUTFIT_TIERS[state.wardrobe.equipped];
     renderPortraitInto(el.statusPortrait, state.wardrobe.equipped, 'status');
@@ -1566,6 +1590,7 @@
       el.statusCareerBadge.style.display = 'none';
     }
     renderStatPanel(el.statusStatPanel, state.stats);
+    renderGraceLine();
     renderCertificationSection();
 
     el.statusNpcList.innerHTML = '';

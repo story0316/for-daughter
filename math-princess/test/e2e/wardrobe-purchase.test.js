@@ -3,8 +3,103 @@
 const { ok, eq, summary } = require('../helpers/assert');
 const { withPage, seedAndContinue, makeState, getSavedState } = require('./helpers');
 
-(async () => {
-  console.log('wardrobe-purchase e2e tests');
+// tier3 이상(공주 드레스/무도회 드레스/대관식 드레스)은 품위가 아무리
+// 높아도 귀족 신분(state.nobleTitle)이 없으면 살 수 없어야 한다.
+async function testTopTiersRequireNobleTitle() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({
+      gold: 100000,
+      // grace = 100*.4 + 100*.3 + 100*.3 = 100(만점) — tier3~5 품위 요건은 전부 충족
+      stats: { intelligence: 100, focus: 40, stamina: 60, charm: 100, creativity: 100, stress: 20, luck: 30 },
+    });
+    await seedAndContinue(page, state);
+    await page.click('[data-menu="wardrobe"]');
+    await page.waitForSelector('#screen-shop.active');
+    await page.click('.shop-tab-btn[data-tab="wardrobe"]');
+    await page.waitForTimeout(150);
+
+    const cardStates = await page.$$eval('.wardrobe-card', (cards) => cards.map((c) => ({
+      classes: c.className,
+      hasBuyBtn: !!c.querySelector('.wardrobe-buy-btn'),
+      hasNobleBadge: !!c.querySelector('.wardrobe-card-noble-badge'),
+    })));
+    ok(cardStates[2].classes.includes('purchasable'), '예쁜 드레스(tier2)는 귀족이 아니어도 품위만 충분하면 구매 가능해야 함');
+    [3, 4, 5].forEach((i) => {
+      ok(cardStates[i].classes.includes('locked') && !cardStates[i].hasBuyBtn, `tier${i}는 품위가 만점이어도 귀족이 아니면 잠겨 있어야 함`);
+      ok(cardStates[i].hasNobleBadge, `tier${i} 카드에는 "귀족 전용" 표시가 있어야 함`);
+    });
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(귀족 전용 옷): ${errors.join('\n')}`);
+}
+
+// 귀족 신분(state.nobleTitle)을 이미 갖고 시작하면, 같은 품위로도
+// tier3 이상을 구매하고 착용할 수 있어야 한다.
+// (mid-session에 localStorage를 직접 패치하고 reload하면 pagehide 시점의
+// 자동 저장(flushSaveIfStarted)이 in-memory state로 그 패치를 덮어써버리므로,
+// 처음부터 nobleTitle을 가진 상태로 seedAndContinue해서 그 문제를 피한다.)
+async function testNobleCanBuyTopTiers() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({
+      gold: 100000,
+      stats: { intelligence: 100, focus: 40, stamina: 60, charm: 100, creativity: 100, stress: 20, luck: 30 },
+      nobleTitle: '별빛 자작',
+    });
+    await seedAndContinue(page, state);
+    await page.click('[data-menu="wardrobe"]');
+    await page.waitForSelector('#screen-shop.active');
+    await page.click('.shop-tab-btn[data-tab="wardrobe"]');
+    await page.waitForTimeout(150);
+
+    const cardStates = await page.$$eval('.wardrobe-card', (cards) => cards.map((c) => ({
+      classes: c.className,
+      hasBuyBtn: !!c.querySelector('.wardrobe-buy-btn'),
+    })));
+    ok(cardStates[3].classes.includes('purchasable') && cardStates[3].hasBuyBtn, '귀족이면 공주 드레스(tier3)를 살 수 있어야 함');
+
+    const buyBtns = await page.$$('.wardrobe-card:nth-child(4) .wardrobe-buy-btn');
+    await buyBtns[0].click();
+    await page.waitForTimeout(200);
+    const saved = await getSavedState(page);
+    eq(saved.wardrobe.owned[3], true, '귀족 신분으로 구매하면 실제로 소유 목록에 기록되어야 함');
+    eq(saved.wardrobe.equipped, 3, '구매하면 바로 갈아입어야 함');
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(귀족 구매): ${errors.join('\n')}`);
+}
+
+// "역량"(능력치) 탭인 상태 화면에서 품위 점수를 숫자로 직접 확인할 수 있어야 한다.
+async function testStatusScreenShowsGraceScoreAndRank() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({
+      stats: { intelligence: 40, focus: 20, stamina: 50, charm: 90, creativity: 60, stress: 10, luck: 20 },
+    });
+    await seedAndContinue(page, state);
+    await page.click('[data-menu="status"]');
+    await page.waitForSelector('#screen-status.active');
+    const line = await page.textContent('#status-grace-line');
+    ok(line.includes('66'), `품위 점수(66)가 상태 화면에 숫자로 보여야 함 (got "${line}")`);
+    ok(line.includes('평민'), `귀족이 되기 전에는 "평민"으로 표시되어야 함 (got "${line}")`);
+    ok(line.includes('귀족 신분'), `다음 단계가 귀족 전용이면 그 사실이 안내되어야 함 (got "${line}")`);
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(품위 표시): ${errors.join('\n')}`);
+}
+
+async function testStatusScreenShowsNobleRankWhenPromoted() {
+  const errors = await withPage(async (page) => {
+    const state = makeState({
+      stats: { intelligence: 40, focus: 20, stamina: 50, charm: 90, creativity: 60, stress: 10, luck: 20 },
+      nobleTitle: '은빛 백작',
+    });
+    await seedAndContinue(page, state);
+    await page.click('[data-menu="status"]');
+    await page.waitForSelector('#screen-status.active');
+    const line = await page.textContent('#status-grace-line');
+    ok(line.includes('은빛 백작'), `귀족이 된 뒤에는 작위명이 상태 화면에 표시되어야 함 (got "${line}")`);
+    ok(!line.includes('평민'), `귀족이 된 뒤에는 "평민"으로 표시되면 안 됨 (got "${line}")`);
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(귀족 표시): ${errors.join('\n')}`);
+}
+
+async function testBasicPurchaseFlow() {
   const errors = await withPage(async (page) => {
     const state = makeState({
       gold: 2000,
@@ -47,5 +142,14 @@ const { withPage, seedAndContinue, makeState, getSavedState } = require('./helpe
     ok(badgeAfter.includes('단정한 옷'), '구매 후 메인 화면 옷 배지가 갱신되어야 함');
   });
   ok(errors.length === 0, `JS 에러 없어야 함: ${errors.join('\n')}`);
+}
+
+(async () => {
+  console.log('wardrobe-purchase e2e tests');
+  await testBasicPurchaseFlow();
+  await testTopTiersRequireNobleTitle();
+  await testNobleCanBuyTopTiers();
+  await testStatusScreenShowsGraceScoreAndRank();
+  await testStatusScreenShowsNobleRankWhenPromoted();
   summary('wardrobe-purchase.test.js');
 })();
