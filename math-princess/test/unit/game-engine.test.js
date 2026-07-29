@@ -315,6 +315,7 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
 
 {
   eq(Engine.OUTFIT_TIERS.length, 11, '옷은 기존 6단계 + 작위별 예복 5단계 = 총 11단계여야 함');
+  ok(Engine.OUTFIT_TIERS.every((t) => t.hasArt), '모든 옷에 실제 일러스트가 있어야 함');
   const state = Engine.makeInitialState();
   state.gold = 1000000;
   state.stats.charm = 100;
@@ -449,10 +450,31 @@ approx(Engine.graceScore({ charm: 0, creativity: 0, intelligence: 100 }), 30, 0.
   eq(noPetState.stats.stress, 50, '펫이 없으면 스트레스가 그대로여야 함');
 }
 {
-  eq(Engine.PET_TIERS.length, 7, '애완동물은 총 7단계여야 함');
+  eq(Engine.PET_TIERS.length, 8, '애완동물은 총 8단계(요정 고양이 포함)여야 함');
   const requiresNoble = Engine.PET_TIERS.map((t) => !!t.requiresNoble);
-  eq(JSON.stringify(requiresNoble), JSON.stringify([false, false, false, false, true, true, true]), '상위 3단계(공작새/백마/유니콘)만 귀족 신분을 요구해야 함');
+  eq(JSON.stringify(requiresNoble), JSON.stringify([false, false, false, false, true, true, true, true]), '상위 4단계(공작새/백마/유니콘/요정 고양이)만 귀족 신분을 요구해야 함');
   ok(Engine.PET_TIERS.every((t) => t.stressRelief > 0), '모든 펫은 스트레스 완화 효과가 있어야 함');
+  ok(Engine.PET_TIERS.every((t) => t.hasArt), '모든 펫에 실제 일러스트가 있어야 함');
+}
+{
+  // 요정 고양이(tier7)는 유니콘(tier6)보다도 희귀해야 한다 — 유니콘은
+  // "귀족이기만 하면" 되지만, 요정 고양이는 최고위 작위(대공)까지 요구한다.
+  const state = Engine.makeInitialState();
+  state.gold = 1000000;
+  state.stats.charm = 100;
+  state.stats.creativity = 100;
+  state.stats.intelligence = 100; // grace = 100(만점)
+  Engine.grantNobleTitle(state, '희귀 펫 테스트'); // 남작(인덱스 0)
+  ok(Engine.petRequirementMet(state, 6), '유니콘(tier6)은 남작이어도 살 수 있어야 함');
+  ok(!Engine.petRequirementMet(state, 7), '요정 고양이(tier7)는 남작으로는 살 수 없어야 함');
+  ok(!Engine.buyPet(state, 7), '작위가 부족하면 골드/품위가 충분해도 요정 고양이 구매가 막혀야 함');
+
+  Engine.GROWTH_STAT_KEYS.forEach((k) => { state.stats[k] = Math.max(state.stats[k], 100); });
+  for (let i = 0; i < 5; i++) Engine.checkNobleRankPromotion(state); // 남작 -> ... -> 대공
+  eq(state.nobleRankIndex, 5, '테스트 준비: 대공까지 승급되어야 함');
+  ok(Engine.petRequirementMet(state, 7), '대공이 되면 요정 고양이 요건을 만족해야 함');
+  ok(Engine.buyPet(state, 7), '대공이 되면 요정 고양이를 데려올 수 있어야 함');
+  eq(state.pets.equipped, 7, '구매하면 바로 함께하게 되어야 함');
 }
 
 /* ---------------- 연회 입장 게이트(사교모임 3단계) ---------------- */

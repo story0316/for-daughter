@@ -233,9 +233,6 @@
     // 구매 가능하고 특정 작위를 요구하지 않는다 — 이미 출시되어 저장 데이터가
     // 쌓인 등급이라 요건을 더 엄격하게 바꾸지 않았다.
     // hasArt: assets/wardrobe/tierN.png로 실제 그린 일러스트가 있는지 여부.
-    // 기존 6단계(tier0~5)는 있고, 작위 세분화로 새로 추가한 tier6~10은 아직
-    // 그림이 없어서 이모지로만 표시한다(펫과 같은 방식). 그림이 준비되면
-    // hasArt: true만 추가하면 script.js가 자동으로 <img>를 렌더링한다.
     const OUTFIT_TIERS = [
       { min: 0, cost: 0, emoji: '👕', name: '평범한 옷', hasArt: true, wardrobeDesc: '처음부터 입고 있는 편안한 옷' },
       { min: 25, cost: 400, emoji: '👚', name: '단정한 옷', hasArt: true, wardrobeDesc: '품위 25 이상에서 구매 가능' },
@@ -243,11 +240,11 @@
       { min: 75, cost: 1800, emoji: '👑', name: '공주 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 75 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
       { min: 90, cost: 3200, emoji: '💐', name: '무도회 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 90 이상 + 귀족 신분 필요(평민은 살 수 없는 옷)' },
       { min: 100, cost: 6000, emoji: '✨', name: '대관식 드레스', requiresNoble: true, hasArt: true, wardrobeDesc: '품위 100(만점) + 귀족 신분에서만 구매 가능한 전설의 옷' },
-      { min: 100, cost: 10000, emoji: '🎀', name: '자작 예복', requiresNoble: true, requiredNobleRankIndex: 1, wardrobeDesc: '품위 100(만점) + 자작 이상 필요(남작만으로는 살 수 없는 예복)' },
-      { min: 100, cost: 16000, emoji: '🏵️', name: '백작 예복', requiresNoble: true, requiredNobleRankIndex: 2, wardrobeDesc: '품위 100(만점) + 백작 이상 필요' },
-      { min: 100, cost: 24000, emoji: '🎖️', name: '후작 예복', requiresNoble: true, requiredNobleRankIndex: 3, wardrobeDesc: '품위 100(만점) + 후작 이상 필요' },
-      { min: 100, cost: 34000, emoji: '💎', name: '공작 예복', requiresNoble: true, requiredNobleRankIndex: 4, wardrobeDesc: '품위 100(만점) + 공작 이상 필요' },
-      { min: 100, cost: 48000, emoji: '🌟', name: '대공 예복', requiresNoble: true, requiredNobleRankIndex: 5, wardrobeDesc: '품위 100(만점) + 대공(최고위 작위)에서만 구매 가능한 전설의 예복' },
+      { min: 100, cost: 10000, emoji: '🎀', name: '자작 예복', requiresNoble: true, requiredNobleRankIndex: 1, hasArt: true, wardrobeDesc: '품위 100(만점) + 자작 이상 필요(남작만으로는 살 수 없는 예복)' },
+      { min: 100, cost: 16000, emoji: '🏵️', name: '백작 예복', requiresNoble: true, requiredNobleRankIndex: 2, hasArt: true, wardrobeDesc: '품위 100(만점) + 백작 이상 필요' },
+      { min: 100, cost: 24000, emoji: '🎖️', name: '후작 예복', requiresNoble: true, requiredNobleRankIndex: 3, hasArt: true, wardrobeDesc: '품위 100(만점) + 후작 이상 필요' },
+      { min: 100, cost: 34000, emoji: '💎', name: '공작 예복', requiresNoble: true, requiredNobleRankIndex: 4, hasArt: true, wardrobeDesc: '품위 100(만점) + 공작 이상 필요' },
+      { min: 100, cost: 48000, emoji: '🌟', name: '대공 예복', requiresNoble: true, requiredNobleRankIndex: 5, hasArt: true, wardrobeDesc: '품위 100(만점) + 대공(최고위 작위)에서만 구매 가능한 전설의 예복' },
     ];
 
     // 옷장과 같은 구조(품위 요건 + 상위 등급은 귀족 신분까지 필요)를 그대로
@@ -256,14 +253,16 @@
     // 옷장의 wardrobeDesc와 같은 역할(카드 하단 안내 문구). stressRelief는
     // 그 펫을 착용(equipped) 중일 때 매턴 자동으로 줄어드는 스트레스 양이다
     // (applyServantEffects에서 적용 — 하녀/정원사 같은 고용인 효과와 동일한 훅).
+    // hasArt: assets/pets/tierN.png로 실제 그린 일러스트가 있는지 여부.
     const PET_TIERS = [
-      { min: 0, cost: 300, emoji: '🐶', name: '강아지', stressRelief: 1, petDesc: '누구나 바로 데려올 수 있는 든든한 첫 반려동물' },
-      { min: 15, cost: 600, emoji: '🐱', name: '고양이', stressRelief: 1, petDesc: '품위 15 이상에서 데려올 수 있음' },
-      { min: 30, cost: 1100, emoji: '🐰', name: '토끼', stressRelief: 2, petDesc: '품위 30 이상에서 데려올 수 있음' },
-      { min: 50, cost: 1900, emoji: '🦊', name: '여우', stressRelief: 2, petDesc: '품위 50 이상에서 데려올 수 있음' },
-      { min: 65, cost: 3200, emoji: '🦚', name: '공작새', stressRelief: 3, requiresNoble: true, petDesc: '품위 65 이상 + 귀족 신분 필요(평민은 키울 수 없는 새)' },
-      { min: 85, cost: 5500, emoji: '🐎', name: '백마', stressRelief: 3, requiresNoble: true, petDesc: '품위 85 이상 + 귀족 신분 필요(평민은 탈 수 없는 말)' },
-      { min: 100, cost: 9500, emoji: '🦄', name: '유니콘', stressRelief: 4, requiresNoble: true, petDesc: '품위 100(만점) + 귀족 신분에서만 만날 수 있는 전설의 동물' },
+      { min: 0, cost: 300, emoji: '🐶', name: '강아지', stressRelief: 1, hasArt: true, petDesc: '누구나 바로 데려올 수 있는 든든한 첫 반려동물' },
+      { min: 15, cost: 600, emoji: '🐱', name: '고양이', stressRelief: 1, hasArt: true, petDesc: '품위 15 이상에서 데려올 수 있음' },
+      { min: 30, cost: 1100, emoji: '🐰', name: '토끼', stressRelief: 2, hasArt: true, petDesc: '품위 30 이상에서 데려올 수 있음' },
+      { min: 50, cost: 1900, emoji: '🦊', name: '여우', stressRelief: 2, hasArt: true, petDesc: '품위 50 이상에서 데려올 수 있음' },
+      { min: 65, cost: 3200, emoji: '🦚', name: '공작새', stressRelief: 3, requiresNoble: true, hasArt: true, petDesc: '품위 65 이상 + 귀족 신분 필요(평민은 키울 수 없는 새)' },
+      { min: 85, cost: 5500, emoji: '🐎', name: '백마', stressRelief: 3, requiresNoble: true, hasArt: true, petDesc: '품위 85 이상 + 귀족 신분 필요(평민은 탈 수 없는 말)' },
+      { min: 100, cost: 9500, emoji: '🦄', name: '유니콘', stressRelief: 4, requiresNoble: true, hasArt: true, petDesc: '품위 100(만점) + 귀족 신분에서만 만날 수 있는 전설의 동물' },
+      { min: 100, cost: 15000, emoji: '🧚', name: '요정 고양이', stressRelief: 5, requiresNoble: true, requiredNobleRankIndex: 5, hasArt: true, petDesc: '품위 100(만점) + 대공(최고위 작위)에서만 만날 수 있는, 유니콘보다도 희귀한 전설의 요정 고양이' },
     ];
 
     const NPC_DEFS = [
@@ -886,6 +885,9 @@
       const tier = PET_TIERS[tierIndex];
       if (graceScore(state.stats) < tier.min) return false;
       if (tier.requiresNoble && !state.nobleTitle) return false;
+      if (typeof tier.requiredNobleRankIndex === 'number') {
+        if (state.nobleRankIndex === null || state.nobleRankIndex === undefined || state.nobleRankIndex < tier.requiredNobleRankIndex) return false;
+      }
       return true;
     }
 

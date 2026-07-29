@@ -60,7 +60,7 @@ async function testTopPetTiersRequireNobleTitle() {
       hasNobleBadge: !!c.querySelector('.wardrobe-card-noble-badge'),
     })));
     ok(cardStates[3].classes.includes('purchasable'), '여우(tier3)는 귀족이 아니어도 품위만 충분하면 구매 가능해야 함');
-    [4, 5, 6].forEach((i) => {
+    [4, 5, 6, 7].forEach((i) => {
       ok(cardStates[i].classes.includes('locked') && !cardStates[i].hasBuyBtn, `tier${i}는 품위가 만점이어도 귀족이 아니면 잠겨 있어야 함`);
       ok(cardStates[i].hasNobleBadge, `tier${i} 카드에는 "귀족 전용" 표시가 있어야 함`);
     });
@@ -102,7 +102,7 @@ async function testNobleCanBuyTopPetTiers() {
 async function testStatusScreenShowsPetBadge() {
   const errors = await withPage(async (page) => {
     const state = makeState({ gold: 2000 });
-    state.pets = { equipped: 1, owned: [true, true, false, false, false, false, false], notifiedGraceTier: 1 };
+    state.pets = { equipped: 1, owned: [true, true, false, false, false, false, false, false], notifiedGraceTier: 1 };
     await seedAndContinue(page, state);
     await page.click('[data-menu="status"]');
     await page.waitForSelector('#screen-status.active');
@@ -116,7 +116,7 @@ async function testStatusScreenShowsPetBadge() {
 async function testCanSwitchBetweenOwnedPets() {
   const errors = await withPage(async (page) => {
     const state = makeState({ gold: 2000 });
-    state.pets = { equipped: 0, owned: [true, true, false, false, false, false, false], notifiedGraceTier: 1 };
+    state.pets = { equipped: 0, owned: [true, true, false, false, false, false, false, false], notifiedGraceTier: 1 };
     await seedAndContinue(page, state);
     await page.click('[data-menu="wardrobe"]');
     await page.waitForSelector('#screen-shop.active');
@@ -131,6 +131,58 @@ async function testCanSwitchBetweenOwnedPets() {
   ok(errors.length === 0, `JS 에러 없어야 함(펫 갈아타기): ${errors.join('\n')}`);
 }
 
+// 요정 고양이(tier7)는 유니콘(tier6)보다도 희귀해서, 귀족이기만 해서는
+// (남작) 안 되고 최고위 작위(대공)까지 있어야 살 수 있어야 한다.
+async function testFairyCatRequiresGrandDukeRank() {
+  const errors = await withPage(async (page) => {
+    const baronState = makeState({
+      gold: 100000,
+      stats: { intelligence: 100, focus: 40, stamina: 60, charm: 100, creativity: 100, stress: 20, luck: 30 },
+      nobleTitle: '희귀 펫 테스트',
+      nobleRankIndex: 0, // 남작
+    });
+    await seedAndContinue(page, baronState);
+    await page.click('[data-menu="wardrobe"]');
+    await page.waitForSelector('#screen-shop.active');
+    await page.click('.shop-tab-btn[data-tab="pet"]');
+    await page.waitForTimeout(150);
+
+    const cardStates = await page.$$eval('#pet-list .wardrobe-card', (cards) => cards.map((c) => ({
+      classes: c.className,
+      hasBuyBtn: !!c.querySelector('.wardrobe-buy-btn'),
+      badgeText: (c.querySelector('.wardrobe-card-noble-badge') || {}).textContent || '',
+    })));
+    ok(cardStates[6].classes.includes('purchasable') && cardStates[6].hasBuyBtn, '남작이어도 유니콘(tier6)은 살 수 있어야 함');
+    ok(cardStates[7].classes.includes('locked') && !cardStates[7].hasBuyBtn, '남작으로는 요정 고양이(tier7)를 살 수 없어야 함');
+    ok(cardStates[7].badgeText.includes('대공'), `요정 고양이 카드 배지는 "대공 이상"을 보여줘야 함 (got "${cardStates[7].badgeText}")`);
+
+    const grandDukeState = makeState({
+      gold: 100000,
+      stats: { intelligence: 100, focus: 40, stamina: 60, charm: 100, creativity: 100, stress: 20, luck: 30 },
+      nobleTitle: '희귀 펫 테스트',
+      nobleRankIndex: 5, // 대공
+    });
+    await seedAndContinue(page, grandDukeState);
+    await page.click('[data-menu="wardrobe"]');
+    await page.waitForSelector('#screen-shop.active');
+    await page.click('.shop-tab-btn[data-tab="pet"]');
+    await page.waitForTimeout(150);
+    const cardStates2 = await page.$$eval('#pet-list .wardrobe-card', (cards) => cards.map((c) => ({
+      classes: c.className,
+      hasBuyBtn: !!c.querySelector('.wardrobe-buy-btn'),
+    })));
+    ok(cardStates2[7].classes.includes('purchasable') && cardStates2[7].hasBuyBtn, '대공이면 요정 고양이(tier7)를 살 수 있어야 함');
+
+    const buyBtns = await page.$$('#pet-list .wardrobe-card:nth-child(8) .wardrobe-buy-btn');
+    await buyBtns[0].click();
+    await page.waitForTimeout(200);
+    const saved = await getSavedState(page);
+    eq(saved.pets.owned[7], true, '대공 신분으로 구매하면 실제로 소유 목록에 기록되어야 함');
+    eq(saved.pets.equipped, 7, '구매하면 바로 함께하게 되어야 함');
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(요정 고양이 구매): ${errors.join('\n')}`);
+}
+
 (async () => {
   console.log('pet-purchase e2e tests');
   await testBasicPetPurchaseFlow();
@@ -138,5 +190,6 @@ async function testCanSwitchBetweenOwnedPets() {
   await testNobleCanBuyTopPetTiers();
   await testStatusScreenShowsPetBadge();
   await testCanSwitchBetweenOwnedPets();
+  await testFairyCatRequiresGrandDukeRank();
   summary('pet-purchase.test.js');
 })();

@@ -1222,8 +1222,7 @@
   }
 
   /* ---------------- 애완동물 ---------------- */
-  // 옷장 렌더링(renderWardrobeList/equipOutfit/buyOutfit)과 같은 구조를
-  // 그대로 따른다. 실제 그려진 일러스트 이미지가 없어서 카드에 이모지만 쓴다.
+  // 옷장 렌더링(renderWardrobeList/equipOutfit/buyOutfit)과 같은 구조를 그대로 따른다.
 
   function renderPetList() {
     el.petList.innerHTML = '';
@@ -1232,13 +1231,17 @@
       const purchasable = !owned && Engine.petRequirementMet(state, tierIndex);
       const equipped = tierIndex === state.pets.equipped;
       const canAfford = state.gold >= tier.cost;
+      const nobleBadgeText = typeof tier.requiredNobleRankIndex === 'number'
+        ? `👑 ${NOBLE_RANKS[tier.requiredNobleRankIndex].name} 이상`
+        : '👑 귀족 전용';
       const card = document.createElement('div');
       card.className = `wardrobe-card${owned ? '' : purchasable ? ' purchasable' : ' locked'}${equipped ? ' equipped' : ''}${tier.requiresNoble ? ' noble-tier' : ''}`;
       card.innerHTML = `
         ${equipped ? '<span class="wardrobe-card-badge">함께하는 중</span>' : ''}
-        ${tier.requiresNoble ? '<span class="wardrobe-card-noble-badge">👑 귀족 전용</span>' : ''}
+        ${tier.requiresNoble ? `<span class="wardrobe-card-noble-badge">${nobleBadgeText}</span>` : ''}
         <span class="wardrobe-card-img-wrap">
-          <span class="wardrobe-card-emoji-fallback" style="display:flex">${tier.emoji}</span>
+          ${tier.hasArt ? `<img src="assets/pets/tier${tierIndex}.png" alt="${tier.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />` : ''}
+          <span class="wardrobe-card-emoji-fallback" style="${tier.hasArt ? '' : 'display:flex'}">${tier.emoji}</span>
         </span>
         <span class="wardrobe-card-label">${tier.emoji} ${tier.name}</span>
         ${purchasable ? `<button class="wardrobe-buy-btn" ${canAfford ? '' : 'disabled'}>💰 ${tier.cost}G 데려오기</button>` : ''}
