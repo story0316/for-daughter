@@ -208,11 +208,28 @@
 
   /* ---------------- 과목별 콘텐츠 현황 ---------------- */
 
+  // 문제은행 항목에 unit 필드(과목별 문제-단원 태깅)가 있으면 단원별 문제
+  // 개수까지 보여준다. 아직 unit 태깅이 안 된 과목은 단원명만 나열한다.
+  function curriculumUnitRow(level, bank) {
+    const items = bank[level.id] || [];
+    const tagged = items.some((q) => q.unit);
+    if (!tagged) {
+      return `<div class="admin-card-desc">Lv.${level.id} ${level.name} (${level.curriculum.gradeRange}): ${level.curriculum.units.join(' / ')}</div>`;
+    }
+    const counts = {};
+    level.curriculum.units.forEach((u) => { counts[u] = 0; });
+    items.forEach((q) => { if (q.unit != null) counts[q.unit] = (counts[q.unit] || 0) + 1; });
+    const unitText = level.curriculum.units.map((u) => {
+      const c = counts[u] || 0;
+      return c === 0 ? `⚠️ ${u}(0)` : `${u}(${c})`;
+    }).join(' / ');
+    return `<div class="admin-card-desc">Lv.${level.id} ${level.name} (${level.curriculum.gradeRange}): ${unitText}</div>`;
+  }
+
   function bankSubjectCard(name, emoji, levels, bank, tag) {
     const total = levels.reduce((sum, l) => sum + (bank[l.id] ? bank[l.id].length : 0), 0);
     const perLevel = levels.map((l) => `Lv.${l.id} ${l.name}: ${bank[l.id] ? bank[l.id].length : 0}개(지능 ${l.unlockIntelligence != null ? l.unlockIntelligence + '+' : '신분별'})`).join(' · ');
-    const curriculumRows = levels.filter((l) => l.curriculum).map((l) =>
-      `<div class="admin-card-desc">Lv.${l.id} ${l.name} (${l.curriculum.gradeRange}): ${l.curriculum.units.join(' / ')}</div>`).join('');
+    const curriculumRows = levels.filter((l) => l.curriculum).map((l) => curriculumUnitRow(l, bank)).join('');
     return `
       <div class="admin-card">
         <div class="admin-card-title">${emoji} ${name} (총 ${total}문제, ${levels.length}레벨)</div>
