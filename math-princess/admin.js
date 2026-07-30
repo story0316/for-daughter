@@ -341,29 +341,74 @@
     }
   }
 
+  // 과목별로 "단원(레벨) 이름 목록"과 "그 단원의 문제은행"을 한곳에서 찾을
+  // 수 있게 모아둔다. 수학은 절차적으로 생성되는 문제라 고정 은행이 없으므로
+  // bank는 null — 진도율(문제은행 대비 몇 개를 풀어봤는지)은 계산하지 않고
+  // 정답/오답 집계만 보여준다.
+  const SUBJECT_META = {
+    math: { name: '수학', levels: null, bank: null },
+    english: { name: '영어', levels: SUBJ.ENGLISH_LEVELS, bank: SUBJ.ENGLISH_BANK },
+    science: { name: '과학', levels: SUBJ.SCIENCE_LEVELS, bank: SUBJ.SCIENCE_BANK },
+    music: { name: '음악', levels: SUBJ.MUSIC_LEVELS, bank: SUBJ.MUSIC_BANK },
+    korean: { name: '국어', levels: SUBJ.KOREAN_LEVELS, bank: SUBJ.KOREAN_BANK },
+    art: { name: '미술', levels: SUBJ.ART_LEVELS, bank: SUBJ.ART_BANK },
+    social: { name: '사회', levels: SUBJ.SOCIAL_LEVELS, bank: SUBJ.SOCIAL_BANK },
+  };
+  const BOX_LABELS = ['', '🔴 1(자주 나옴)', '🟠 2', '🟡 3', '🟢 4', '🔵 5(거의 안 나옴)'];
+
+  function levelDisplayName(subjectKey, level) {
+    const meta = SUBJECT_META[subjectKey];
+    const def = meta.levels && meta.levels.find((l) => l.id === level);
+    return def ? def.name : `레벨 ${level}`;
+  }
+
+  // 한 단원(레벨)의 숙달도 박스 분포를 계산한다. 문제은행이 있는 과목(수학
+  // 제외)은 "이 단원 문제은행 중 몇 개를 풀어봤는지(진도율)"까지 함께 낸다 —
+  // 교과서 연습문제집의 "몇 쪽까지 풀었고, 그중 몇 개를 확실히 아는지"에
+  // 해당하는 정보다.
+  function masteryBoxSummary(subjectKey, level, mastery) {
+    const entries = (mastery && mastery[level]) ? Object.values(mastery[level]) : [];
+    const boxCounts = [0, 0, 0, 0, 0, 0]; // index 1~5 사용
+    entries.forEach((e) => { boxCounts[Math.min(5, Math.max(1, e.box || 3))]++; });
+    const bank = SUBJECT_META[subjectKey].bank;
+    const bankSize = bank && bank[level] ? bank[level].length : null;
+    return { entries: entries.length, boxCounts, bankSize };
+  }
+
   function renderLearning() {
     const state = loadRealSaveState();
     if (!state) {
       el.learningList.innerHTML = `<div class="admin-card-desc">아직 이 브라우저에서 게임을 이어한 기록이 없어요. 아이가 플레이한 뒤 이 페이지를 새로고침하면 여기 표시됩니다.</div>`;
       return;
     }
-    el.learningList.innerHTML = Engine.CERT_SUBJECT_KEYS.map((subjectKey) => {
+    el.learningList.innerHTML = Engine.LOG_SUBJECT_KEYS.map((subjectKey) => {
       const log = state.learningLog[subjectKey];
-      const subjectName = Engine.SUBJECTS[subjectKey].name;
+      const subjectName = SUBJECT_META[subjectKey].name;
       const levels = Object.keys(log.byLevel).map(Number).sort((a, b) => a - b);
       const levelRows = levels.map((level) => {
         const { correct, wrong } = log.byLevel[level];
         const total = correct + wrong;
         const accuracy = total ? Math.round((correct / total) * 100) : 0;
         const weak = total >= 3 && accuracy < 60;
-        return `<div class="admin-card-desc"${weak ? ' style="color:#e0685f;font-weight:700;"' : ''}>레벨 ${level}: 정답 ${correct} · 오답 ${wrong} (정답률 ${accuracy}%)${weak ? ' — 약한 부분일 수 있어요' : ''}</div>`;
+        const mastery = masteryBoxSummary(subjectKey, level, log.mastery);
+        const coverageText = mastery.bankSize
+          ? ` · 문제은행 진도 ${mastery.entries}/${mastery.bankSize}개(${Math.round((mastery.entries / mastery.bankSize) * 100)}%)`
+          : '';
+        const boxPills = mastery.entries
+          ? `<div class="admin-card-desc" style="margin-top:2px;">${[1, 2, 3, 4, 5].filter((b) => mastery.boxCounts[b] > 0).map((b) => `${BOX_LABELS[b]} ${mastery.boxCounts[b]}개`).join(' · ')}</div>`
+          : '';
+        return `
+          <div class="admin-card-desc"${weak ? ' style="color:#e0685f;font-weight:700;"' : ''}>
+            ${levelDisplayName(subjectKey, level)}: 정답 ${correct} · 오답 ${wrong} (정답률 ${accuracy}%)${coverageText}${weak ? ' — 약한 부분일 수 있어요' : ''}
+          </div>
+          ${boxPills}`;
       }).join('');
-      const mistakeRows = log.recentMistakes.slice(0, 5).map((m) => `<div class="admin-card-desc">· [레벨 ${m.level}, ${m.turn}턴] ${m.question}</div>`).join('');
+      const mistakeRows = log.recentMistakes.slice(0, 5).map((m) => `<div class="admin-card-desc">· [${levelDisplayName(subjectKey, m.level)}, ${m.turn}턴] ${m.question}</div>`).join('');
       return `
         <div class="admin-card">
           <div class="admin-card-title">${subjectName}</div>
           ${levels.length ? levelRows : '<div class="admin-card-desc">아직 이 과목의 학습 기록이 없어요.</div>'}
-          ${log.recentMistakes.length ? `<div class="admin-card-title" style="margin-top:8px;font-size:13px;">최근 오답</div>${mistakeRows}` : ''}
+          ${log.recentMistakes.length ? `<div class="admin-card-title" style="margin-top:8px;font-size:13px;">최근 오답 (복습 라운드에서 다시 출제됨)</div>${mistakeRows}` : ''}
         </div>`;
     }).join('');
   }

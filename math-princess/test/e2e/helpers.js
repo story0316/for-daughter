@@ -64,8 +64,17 @@ async function answerAnyQuizQuestion(page) {
 }
 
 // 화면이 quiz에서 벗어날 때까지(세션의 모든 문제를 다 풀 때까지) 계속 답한다.
+// maxQuestions는 "정규 라운드 문제 수"를 가리키는 파라미터지만, 오답을 낸
+// 문제는 정규 라운드가 끝난 뒤 "오답 복습" 라운드로 한 번 더 나올 수 있다
+// (study/job/school/competition/creativity/faith). answerAnyQuizQuestion은
+// 정답 여부를 가리지 않고 아무 보기나 고르므로 오답이 섞여 나올 수 있어,
+// 정규 라운드 문제 수만큼만 반복하면 복습 라운드가 남은 채로 루프가 끝나
+// 그 뒤 결과 화면을 기다리는 코드가 타임아웃될 수 있다. 최악의 경우(정규
+// 라운드를 전부 틀려 그 문제 수만큼 복습 라운드가 통째로 또 생기는 경우)까지
+// 감안해 넉넉하게 반복한다.
 async function drainQuizSession(page, maxQuestions) {
-  for (let i = 0; i < (maxQuestions || 6); i++) {
+  const cap = (maxQuestions || 6) * 2 + 4;
+  for (let i = 0; i < cap; i++) {
     const stillQuiz = await page.evaluate(() => document.querySelector('.screen.active').id === 'screen-quiz');
     if (!stillQuiz) break;
     await answerAnyQuizQuestion(page);
