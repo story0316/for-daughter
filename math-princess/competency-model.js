@@ -81,6 +81,10 @@
     math: { competencies: ['knowledge-processing', 'creative-thinking'], note: '연산부터 올림피아드형 심화 문제까지, 논리적으로 사고하고 패턴을 찾아 응용하는 힘을 기른다.' },
     english: { competencies: ['knowledge-processing', 'communication'], note: '어휘·문법 지식과 함께, 다른 언어로 생각과 정보를 주고받는 소통의 기초를 기른다.' },
     science: { competencies: ['knowledge-processing', 'creative-thinking'], note: '자연 현상을 관찰하고 원리를 탐구하며 왜 그런지 궁금해하는 힘을 기른다.' },
+    music: { competencies: ['aesthetic-emotional', 'creative-thinking'], note: '작곡가·악기·음악 이론을 배우며 음악을 느끼고 표현하는 감수성을 기른다.' },
+    korean: { competencies: ['communication', 'knowledge-processing'], note: '문학 작품과 어법·맞춤법을 익히며 우리말을 정확히 읽고 표현하는 힘을 기른다.' },
+    art: { competencies: ['aesthetic-emotional', 'creative-thinking'], note: '화가·미술사·색채 이론을 배우며 아름다움을 감상하고 표현하는 힘을 기른다.' },
+    social: { competencies: ['community', 'knowledge-processing'], note: '지리·역사·정치·경제를 배우며 사회를 이해하고 공동체의 일원으로 참여하는 힘을 기른다.' },
   };
 
   // 게임 내 활동(스케줄에서 고르는 활동)이 어떤 역량과 연결되는지.
