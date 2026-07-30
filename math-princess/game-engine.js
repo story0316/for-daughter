@@ -196,6 +196,12 @@
       { id: 'gold', name: '금메달', emoji: '🥇', requiredLevel: 7, questionCount: 5, passCount: 4 },
     ];
     const CERT_SUBJECT_KEYS = ['math', 'english', 'science'];
+    // 학습 로그를 남기는 전체 과목: 공부/알바가 쓰는 과목(수학·영어·과학)에
+    // "학교 수업" 전용 과목(음악·국어·미술·사회)까지 더한 일곱 과목이다.
+    // CERT_SUBJECT_KEYS는 여전히 기초 과목 인증 대상(수학·영어·과학)만
+    // 가리키는 별개의 목록으로 남겨둔다(인증 시험 자격과 학습 기록 범위는
+    // 서로 다른 개념이라 분리).
+    const LOG_SUBJECT_KEYS = ['math', 'english', 'science', 'music', 'korean', 'art', 'social'];
 
     // 학습 로그: 부모(관리자)가 "어떤 과목/레벨에서 자주 틀리는지"를 실제로
     // 확인할 수 있도록, 능력치(state.stats)와는 별도로 과목×레벨별 정답/오답
@@ -203,10 +209,17 @@
     // 자랐는지"만 보여주고 "무엇을 틀렸는지"는 세션이 끝나면 사라지던
     // 문제를 보완한다(recordAnswerLog 참고). 연회/창의력/기도와 선행처럼
     // 과목·레벨 구조가 없는 활동은 기록하지 않는다.
+    //
+    // mastery: 라이트너(Leitner) 방식 문제별 숙달도. { [level]: { [question]:
+    // { box } } } 형태로, box는 1(방금 틀렸거나 처음 보는 문제)~5(충분히
+    // 숙달) 사이 값이다. subjects.js의 nextFromStudyBag가 이 값을 가중치로
+    // 써서 맞춘 문제는 점점 드물게, 틀린 문제는 훨씬 자주 나오도록 만든다
+    // (recordAnswerLog, flatMasteryBoxLookup 참고). 절차적으로 생성되는
+    // 수학은 문제 텍스트가 매번 달라 사실상 쌓이지 않지만 기록 자체는 무해하다.
     const RECENT_MISTAKES_LIMIT = 15;
     function makeLearningLog() {
       const log = {};
-      CERT_SUBJECT_KEYS.forEach((key) => { log[key] = { byLevel: {}, recentMistakes: [] }; });
+      LOG_SUBJECT_KEYS.forEach((key) => { log[key] = { byLevel: {}, recentMistakes: [], mastery: {} }; });
       return log;
     }
 
@@ -539,15 +552,18 @@
       if (!loaded.learningLog || typeof loaded.learningLog !== 'object') {
         loaded.learningLog = makeLearningLog();
       } else {
-        CERT_SUBJECT_KEYS.forEach((key) => {
+        LOG_SUBJECT_KEYS.forEach((key) => {
           if (!loaded.learningLog[key] || typeof loaded.learningLog[key] !== 'object') {
-            loaded.learningLog[key] = { byLevel: {}, recentMistakes: [] };
+            loaded.learningLog[key] = { byLevel: {}, recentMistakes: [], mastery: {} };
           }
           if (!loaded.learningLog[key].byLevel || typeof loaded.learningLog[key].byLevel !== 'object' || Array.isArray(loaded.learningLog[key].byLevel)) {
             loaded.learningLog[key].byLevel = {};
           }
           if (!Array.isArray(loaded.learningLog[key].recentMistakes)) {
             loaded.learningLog[key].recentMistakes = [];
+          }
+          if (!loaded.learningLog[key].mastery || typeof loaded.learningLog[key].mastery !== 'object' || Array.isArray(loaded.learningLog[key].mastery)) {
+            loaded.learningLog[key].mastery = {};
           }
         });
       }
@@ -562,7 +578,7 @@
     function schoolSubjectName(key) { return Question.schoolSubjectName(key); }
     function generateEtiquetteQuestion(session) { return Question.generateEtiquetteQuestion(session); }
     function generateScenarioQuestion(session) { return Question.generateScenarioQuestion(session); }
-    function generateNextProblem(state, session) { return Question.generateNextProblem(state.stats.intelligence, session); }
+    function generateNextProblem(state, session) { return Question.generateNextProblem(state.stats.intelligence, session, flatMasteryBoxLookup(state)); }
     function typicalStudyLevel(state) { return Question.typicalStudyLevel(state.stats.intelligence); }
     function typicalJobLevel(state) { return Question.typicalJobLevel(state.stats.intelligence); }
 
@@ -665,11 +681,21 @@
       if (Question.MULTI_SUBJECT_TYPES.includes(session.type)) return session.currentSubject;
       if (session.type === 'competition') return 'math';
       if (session.type === 'cert-exam') return session.subject;
-      // 학교 수업의 음악은 learningLog에 없는 과목이라 기록되지 않고 조용히
-      // 무시된다(recordAnswerLog의 !state.learningLog[subjectKey] 가드).
-      // 수학·과학은 공부/알바와 같은 과목이라 오답 기록이 함께 쌓인다.
+      // 학교 수업(수학/과학/음악/국어/미술/사회 전부)도 공부/알바와 같은
+      // learningLog 대상이라 정답/오답과 숙달도가 함께 쌓인다.
       if (session.type === 'school') return session.currentSubject;
       return null;
+    }
+
+    // 라이트너(Leitner) 방식 숙달도 박스 전이: 맞히면 한 칸 올라가고(최대
+    // 5), 틀리면 1로 리셋된다. 처음 보는 문제는 기본값 3(중간)에서
+    // 시작한다고 간주한다(subjects.js의 weightOfBox와 기본값을 맞춰야
+    // 가중치 계산이 일관됨).
+    const MASTERY_BOX_MAX = 5;
+    const MASTERY_BOX_DEFAULT = 3;
+    function nextMasteryBox(prevBox, correct) {
+      if (correct) return Math.min(MASTERY_BOX_MAX, (prevBox || MASTERY_BOX_DEFAULT) + 1);
+      return 1;
     }
 
     function recordAnswerLog(state, session, problem, correct) {
@@ -686,6 +712,32 @@
         log.recentMistakes.unshift({ question: problem.question, level, turn: state.turn });
         if (log.recentMistakes.length > RECENT_MISTAKES_LIMIT) log.recentMistakes.length = RECENT_MISTAKES_LIMIT;
       }
+      if (!log.mastery[level]) log.mastery[level] = {};
+      const prevEntry = log.mastery[level][problem.question];
+      log.mastery[level][problem.question] = {
+        box: nextMasteryBox(prevEntry ? prevEntry.box : null, correct),
+        correctCount: (prevEntry ? prevEntry.correctCount : 0) + (correct ? 1 : 0),
+        wrongCount: (prevEntry ? prevEntry.wrongCount : 0) + (correct ? 0 : 1),
+      };
+    }
+
+    // state.learningLog 전체에서 "문제 텍스트 -> box" 평면 조회 객체를
+    // 만든다. 과목·레벨을 가리지 않고 하나로 합치는 이유는, 문제를 낼
+    // 시점(question-engine.js 내부)에는 아직 어떤 과목/레벨이 뽑힐지 모르는
+    // 경우(알바처럼 과목이 무작위)가 있어 미리 통째로 넘겨주는 편이 훨씬
+    // 간단하기 때문이다 — 실제로는 각 subjects.js 생성 함수가 자기 은행에
+    // 있는 문제만 조회하므로, 서로 다른 과목에 우연히 같은 문제 텍스트가
+    // 있지 않은 한 섞일 일이 없다(수작업으로 만든 콘텐츠라 사실상 없음).
+    function flatMasteryBoxLookup(state) {
+      const flat = {};
+      LOG_SUBJECT_KEYS.forEach((key) => {
+        const mastery = state.learningLog[key] && state.learningLog[key].mastery;
+        if (!mastery) return;
+        Object.keys(mastery).forEach((level) => {
+          Object.keys(mastery[level]).forEach((q) => { flat[q] = mastery[level][q].box; });
+        });
+      });
+      return flat;
     }
 
     // 방금 틀린 문제가 최근 오답 목록에 이미 있었는지(=같은 문제를 예전에도
@@ -720,6 +772,25 @@
       applyDelta(state, Reward.wrongAnswerPenalty(session.type));
       recordAnswerLog(state, session, problem, false);
       clampStats(state);
+    }
+
+    // 세션 정규 라운드가 끝난 뒤, 그 세션에서 틀렸던 문제만 모아 한 번 더
+    // 물어보는 "오답 복습" 라운드를 지원하는 세션 유형. 연회(결과 이벤트
+    // 분기가 따로 있음)·시나리오 퀴즈(1회성 서사)·기초 과목 인증 시험(공식
+    // 시험이라 재시험은 의미가 다름)·운동/휴식 등 보너스 문제(문제가 1개뿐)는
+    // 제외한다.
+    const REVIEWABLE_SESSION_TYPES = ['study', 'job', 'school', 'competition', 'creativity', 'faith'];
+    function isReviewableSession(session) {
+      return REVIEWABLE_SESSION_TYPES.includes(session.type);
+    }
+
+    // 복습 라운드 전용 정답/오답 반영: 정규 라운드처럼 골드·능력치·콤보를
+    // 다시 주지 않는다(그러면 일부러 틀리고 복습에서 다시 맞혀 보상을 두 번
+    // 받는 것이 가능해짐). 대신 학습 로그와 숙달도(mastery box)는 정규
+    // 라운드와 똑같이 갱신해서, 복습에서 맞히면 그 문제가 실제로 더
+    // 드물게 나오게 되는 효과가 이어진다.
+    function recordReviewAnswer(state, session, problem, correct) {
+      recordAnswerLog(state, session, problem, correct);
     }
 
     /* ---------------- 세션 종료 처리 ---------------- */
@@ -1347,7 +1418,7 @@
       CREATIVITY_PUZZLE_BANK: Question.CREATIVITY_PUZZLE_BANK, FAITH_QUESTIONS: Question.FAITH_QUESTIONS,
       BANQUET_TIERS, PRINCE_MIN_TIER,
       STRESS_OVERFLOW_THRESHOLD, NPC_HINT_AFFECTION, NPC_LENIENT_AFFECTION, CAREER_DEFS,
-      MEDAL_TIERS, CERT_SUBJECT_KEYS,
+      MEDAL_TIERS, CERT_SUBJECT_KEYS, LOG_SUBJECT_KEYS, MASTERY_BOX_MAX, MASTERY_BOX_DEFAULT, flatMasteryBoxLookup,
       AFFECTION_TIERS, AFFECTION_DECAY_GRACE_TURNS, AFFECTION_DECAY_AMOUNT, OUTFIT_TIERS, PET_TIERS, NPC_DEFS, ACTIVITY_DEFS,
       MULTI_SUBJECT_TYPES: Question.MULTI_SUBJECT_TYPES, BONUS_QUIZ_TYPES: Reward.DEFERRED_REWARD_TYPES,
       ASSUMED_CORRECT_RATE, EXPECTED_COMBO_MULTIPLIER, DELTA_STAT_KEYS, DELTA_STAT_LABELS,
@@ -1365,7 +1436,7 @@
       startStudySession, startJobSession, startSchoolSession, startBanquetSession, startExerciseSession, startRestSession,
       startLaundrySession, startGardenSession, startScenarioQuizSession, startCompetitionSession,
       startCreativitySession, startFaithSession,
-      applyCorrect, applyWrong, isRepeatMistake,
+      applyCorrect, applyWrong, isRepeatMistake, isReviewableSession, recordReviewAnswer,
       finishStudyOrJobOutcome, finishBanquetOutcome, finishExerciseBonusOutcome, finishRestBonusOutcome,
       finishLaundryBonusOutcome, finishGardenBonusOutcome, finishCompetitionOutcome, rollRandomEvent, checkStressOverflow,
       finishCreativityOutcome, finishFaithOutcome,

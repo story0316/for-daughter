@@ -525,16 +525,16 @@
     // 정해진 학년 단계)로 레벨 범위를 찾아 그 안에서 무작위로 뽑는다.
     // 공부처럼 지능으로 해금된 레벨을 따지지 않고, 그 학년 단계에 정해진
     // 범위 안에서만 출제된다.
-    function generateSchoolProblem(session) {
+    function generateSchoolProblem(session, boxOf) {
       const subjectKey = session.fixedSubject;
       const range = SCHOOL_LEVEL_RANGES[session.schoolTier][subjectKey];
       const level = randChoice(range);
       session.currentSubject = subjectKey;
-      if (subjectKey === 'music') return SUBJ.generateMusicProblem(level);
-      if (subjectKey === 'korean') return SUBJ.generateKoreanProblem(level);
-      if (subjectKey === 'art') return SUBJ.generateArtProblem(level);
-      if (subjectKey === 'social') return SUBJ.generateSocialProblem(level);
-      if (subjectKey === 'science') return SUBJ.generateScienceProblem(level);
+      if (subjectKey === 'music') return SUBJ.generateMusicProblem(level, undefined, boxOf);
+      if (subjectKey === 'korean') return SUBJ.generateKoreanProblem(level, undefined, boxOf);
+      if (subjectKey === 'art') return SUBJ.generateArtProblem(level, undefined, boxOf);
+      if (subjectKey === 'social') return SUBJ.generateSocialProblem(level, undefined, boxOf);
+      if (subjectKey === 'science') return SUBJ.generateScienceProblem(level, undefined, boxOf);
       return P.generateProblem(level);
     }
 
@@ -542,12 +542,12 @@
     // 필요하면 session.currentSubject를 채워준다(표시용 과목 이름을 UI가 알 수 있도록).
     // session.fixedSubject가 있으면(공부 세션) 매 문제 과목을 다시 뽑지 않고
     // 세션 내내 그 과목으로 통일해, "이번엔 수학을 공부한다"처럼 연계성을 준다.
-    function generateNextProblem(intelligence, session) {
+    function generateNextProblem(intelligence, session, boxOf) {
       if (session.type === 'banquet') return generateEtiquetteQuestion(session);
       if (session.type === 'creativity') return generateCreativityQuestion(session);
       if (session.type === 'faith') return generateFaithQuestion(session);
       if (session.type === 'scenario-quiz') return generateScenarioQuestion(session);
-      if (session.type === 'school') return generateSchoolProblem(session);
+      if (session.type === 'school') return generateSchoolProblem(session, boxOf);
       // 왕국 수학경시대회: 문제마다 미리 정해둔 난이도 사다리(session.levels)를
       // 따라간다(덧셈뺄셈부터 점점 어려워짐), 다른 과목과 섞이지 않는다.
       if (session.type === 'competition') return P.generateProblem(session.levels[session.index]);
@@ -573,7 +573,7 @@
         else if (session.fixedSubject) picked = { subject: session.fixedSubject, level: pickLevelForSubject(intelligence, session.fixedSubject) };
         else picked = pickRandomSubjectAndLevel(intelligence);
         session.currentSubject = picked.subject;
-        return SUBJECTS[picked.subject].generateProblem(picked.level);
+        return SUBJECTS[picked.subject].generateProblem(picked.level, undefined, boxOf);
       }
       return P.generateProblem(session.level);
     }

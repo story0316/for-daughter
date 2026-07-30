@@ -658,7 +658,20 @@
   const HINT_HELPER_NPC_IDS = ['teacher', 'sage'];
 
   function nextQuizQuestion() {
-    if (session.index >= session.count) {
+    if (!session.reviewRound && session.index >= session.count) {
+      if (session.wrongQueue && session.wrongQueue.length && Engine.isReviewableSession(session)) {
+        session.reviewRound = true;
+        session.reviewQueue = session.wrongQueue;
+        session.wrongQueue = [];
+        session.reviewIndex = 0;
+        session.reviewCorrectCount = 0;
+        showLevelToast(`🔁 복습 시간이에요! 틀린 문제 ${session.reviewQueue.length}개를 다시 풀어볼까요?`);
+      } else {
+        finishSession();
+        return;
+      }
+    }
+    if (session.reviewRound && session.reviewIndex >= session.reviewQueue.length) {
       finishSession();
       return;
     }
@@ -669,7 +682,14 @@
     el.quizHint.textContent = '';
     el.btnQuizNext.style.display = 'none';
     session.answered = false;
-    const problem = Engine.generateNextProblem(state, session);
+    let problem;
+    if (session.reviewRound) {
+      const item = session.reviewQueue[session.reviewIndex];
+      session.currentSubject = item.subjectKey;
+      problem = Object.assign({}, item.problem, { choices: Array.isArray(item.problem.choices) ? Engine.shuffle(item.problem.choices) : item.problem.choices });
+    } else {
+      problem = Engine.generateNextProblem(state, session);
+    }
     session.currentProblem = problem;
 
     el.quizSessionLabel.textContent =
@@ -698,7 +718,12 @@
                             : session.type === 'cert-exam'
                             ? `📜 ${Engine.subjectName(session.subject)} ${session.tier.name} 인증 시험`
                             : `${session.scenario.entryEmoji} ${session.scenario.title}`;
-    el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
+    if (session.reviewRound) {
+      el.quizSessionLabel.textContent = `🔁 오답 복습 · ${el.quizSessionLabel.textContent}`;
+      el.quizProgress.textContent = `복습 ${session.reviewIndex + 1} / ${session.reviewQueue.length}`;
+    } else {
+      el.quizProgress.textContent = `${session.index + 1} / ${session.count}`;
+    }
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
     el.quizLevelBadge.textContent = session.type === 'banquet'
       ? '예절'
@@ -784,7 +809,18 @@
     }
 
     const beforeTiers = Engine.snapshotGrowthTiers(state.stats);
-    if (correct) {
+    if (session.reviewRound) {
+      // 복습 라운드는 골드·능력치·콤보를 다시 주지 않는다(일부러 틀리고
+      // 복습에서 다시 맞혀 보상을 두 번 받는 것을 막기 위함). 학습
+      // 로그·숙달도만 정규 라운드와 똑같이 갱신된다.
+      Engine.recordReviewAnswer(state, session, problem, correct);
+      if (correct) {
+        session.reviewCorrectCount++;
+        el.quizFeedback.textContent = `정답이에요! 🎉 ${problem.explanation}`;
+      } else {
+        el.quizFeedback.textContent = `아쉬워요! 정답: ${problem.answer}\n${problem.explanation}`;
+      }
+    } else if (correct) {
       Engine.applyCorrect(state, session, problem);
       announceStatLevelUps(beforeTiers);
       el.quizFeedback.textContent = `정답이에요! 🎉 ${problem.explanation}`;
@@ -797,6 +833,12 @@
         ? `아쉬워요! 정답: ${problem.answer}\n${problem.explanation}\n\n🔁 이 문제, 예전에도 헷갈렸었죠? 아래 힌트를 같이 살펴봐요!`
         : `아쉬워요! 정답: ${problem.answer}\n${problem.explanation}`;
       if (repeatMistake) revealHint();
+      // 오답 복습 라운드에 담을 수 있는 세션 유형이면, 나중에 세션이 끝난
+      // 뒤 이 문제를 한 번 더 물어볼 수 있도록 큐에 쌓아둔다.
+      if (Engine.isReviewableSession(session)) {
+        if (!session.wrongQueue) session.wrongQueue = [];
+        session.wrongQueue.push({ problem, subjectKey: session.currentSubject });
+      }
     }
     el.quizCombo.textContent = `🔥 콤보 ${state.combo}`;
     saveGame();
@@ -806,7 +848,8 @@
 
   el.btnQuizNext.addEventListener('click', () => {
     if (!session || !session.answered) return;
-    session.index++;
+    if (session.reviewRound) session.reviewIndex++;
+    else session.index++;
     nextQuizQuestion();
   });
 
@@ -827,6 +870,12 @@
 
   el.btnQuizHint.addEventListener('click', revealHint);
 
+  // 오답 복습 라운드를 거친 세션이면 결과 화면 설명에 복습 성적을 덧붙인다.
+  function reviewSummarySuffix(session) {
+    if (!session.reviewQueue || !session.reviewQueue.length) return '';
+    return ` · 🔁 복습 ${session.reviewCorrectCount}/${session.reviewQueue.length}문제 다시 맞힘`;
+  }
+
   function finishSession() {
     if (session.type === 'banquet') { finishBanquetSession(); return; }
     if (session.type === 'scenario-quiz') { finishScenarioQuizSession(); return; }
@@ -842,7 +891,7 @@
     const outcome = Engine.finishStudyOrJobOutcome(session);
     el.summaryEmoji.textContent = outcome.perfect ? '🌟' : '✅';
     el.summaryTitle.textContent = outcome.title;
-    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
+    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요${reviewSummarySuffix(session)}`;
     el.summaryGold.textContent = outcome.goldEarned;
     el.summaryCombo.textContent = outcome.bestCombo;
     updateSummaryConfirmLabel();
@@ -882,7 +931,7 @@
     announceStatLevelUps(beforeTiers);
     el.summaryEmoji.textContent = outcome.perfect ? '🏆' : '🥈';
     el.summaryTitle.textContent = outcome.perfect ? '왕국 수학경시대회에서 만점을 받았어요!' : '왕국 수학경시대회를 마쳤어요';
-    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
+    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요${reviewSummarySuffix(session)}`;
     el.summaryGold.textContent = outcome.goldEarned;
     el.summaryCombo.textContent = session.sessionBestCombo;
     updateSummaryConfirmLabel();
@@ -896,7 +945,7 @@
     announceStatLevelUps(beforeTiers);
     el.summaryEmoji.textContent = outcome.perfect ? '🎨' : '✅';
     el.summaryTitle.textContent = outcome.perfect ? '창의력 올림피아드에서 만점을 받았어요!' : '창의력 올림피아드를 마쳤어요';
-    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
+    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요${reviewSummarySuffix(session)}`;
     el.summaryGold.textContent = outcome.goldEarned;
     el.summaryCombo.textContent = session.sessionBestCombo;
     updateSummaryConfirmLabel();
@@ -910,7 +959,7 @@
     announceStatLevelUps(beforeTiers);
     el.summaryEmoji.textContent = outcome.perfect ? '🙏' : '✅';
     el.summaryTitle.textContent = outcome.perfect ? '기도와 선행으로 마음이 가득 채워졌어요!' : '기도와 선행 시간을 마쳤어요';
-    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요`;
+    el.summaryDesc.textContent = `${outcome.count}문제 중 ${outcome.correctCount}개를 맞혔어요${reviewSummarySuffix(session)}`;
     el.summaryGold.textContent = session.goldEarned;
     el.summaryCombo.textContent = outcome.bestCombo;
     updateSummaryConfirmLabel();
