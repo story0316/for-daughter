@@ -210,11 +210,14 @@
 
   function bankSubjectCard(name, emoji, levels, bank, tag) {
     const total = levels.reduce((sum, l) => sum + (bank[l.id] ? bank[l.id].length : 0), 0);
-    const perLevel = levels.map((l) => `Lv.${l.id} ${l.name}: ${bank[l.id] ? bank[l.id].length : 0}개(지능 ${l.unlockIntelligence}+)`).join(' · ');
+    const perLevel = levels.map((l) => `Lv.${l.id} ${l.name}: ${bank[l.id] ? bank[l.id].length : 0}개(지능 ${l.unlockIntelligence != null ? l.unlockIntelligence + '+' : '신분별'})`).join(' · ');
+    const curriculumRows = levels.filter((l) => l.curriculum).map((l) =>
+      `<div class="admin-card-desc">Lv.${l.id} ${l.name} (${l.curriculum.gradeRange}): ${l.curriculum.units.join(' / ')}</div>`).join('');
     return `
       <div class="admin-card">
         <div class="admin-card-title">${emoji} ${name} (총 ${total}문제, ${levels.length}레벨)</div>
         <div class="admin-card-desc">${perLevel}</div>
+        ${curriculumRows ? `<div class="admin-card-title" style="margin-top:8px;font-size:13px;">2022 개정 교육과정 대응 단원(참고용)</div>${curriculumRows}` : ''}
         <div class="admin-card-desc" style="margin-top:6px;">${tag.note}</div>
         ${competencyChips(tag.competencies)}
       </div>`;
@@ -223,18 +226,27 @@
   function renderSubjects() {
     const mathTag = CM.SUBJECT_COMPETENCY_TAGS.math;
     const mathLevels = P.LEVELS.map((l) => `Lv.${l.id} ${l.name}(지능 ${l.unlockIntelligence}+)`).join(' · ');
+    const mathCurriculumRows = P.LEVELS.map((l) => l.curriculum
+      ? `<div class="admin-card-desc">Lv.${l.id} ${l.name} (${l.curriculum.gradeRange}): ${l.curriculum.units.join(' / ')}</div>`
+      : '').join('');
     const mathCard = `
       <div class="admin-card">
         <div class="admin-card-title">🔢 수학 (${P.LEVELS.length}단계, 생성기 기반)</div>
         <div class="admin-card-desc">문제은행이 아니라 규칙 기반 생성기로 매번 새로운 문제를 만들어 사실상 무한한 변형이 있습니다.</div>
         <div class="admin-card-desc" style="margin-top:6px;">${mathLevels}</div>
+        <div class="admin-card-title" style="margin-top:8px;font-size:13px;">2022 개정 교육과정 대응 단원(참고용)</div>
+        ${mathCurriculumRows}
         <div class="admin-card-desc" style="margin-top:6px;">${mathTag.note}</div>
         ${competencyChips(mathTag.competencies)}
       </div>`;
 
     el.subjectList.innerHTML = mathCard
       + bankSubjectCard('영어', '🔤', SUBJ.ENGLISH_LEVELS, SUBJ.ENGLISH_BANK, CM.SUBJECT_COMPETENCY_TAGS.english)
-      + bankSubjectCard('과학', '🔬', SUBJ.SCIENCE_LEVELS, SUBJ.SCIENCE_BANK, CM.SUBJECT_COMPETENCY_TAGS.science);
+      + bankSubjectCard('과학', '🔬', SUBJ.SCIENCE_LEVELS, SUBJ.SCIENCE_BANK, CM.SUBJECT_COMPETENCY_TAGS.science)
+      + bankSubjectCard('음악', '🎵', SUBJ.MUSIC_LEVELS, SUBJ.MUSIC_BANK, CM.SUBJECT_COMPETENCY_TAGS.music)
+      + bankSubjectCard('국어', '📖', SUBJ.KOREAN_LEVELS, SUBJ.KOREAN_BANK, CM.SUBJECT_COMPETENCY_TAGS.korean)
+      + bankSubjectCard('미술', '🎨', SUBJ.ART_LEVELS, SUBJ.ART_BANK, CM.SUBJECT_COMPETENCY_TAGS.art)
+      + bankSubjectCard('사회', '🌍', SUBJ.SOCIAL_LEVELS, SUBJ.SOCIAL_BANK, CM.SUBJECT_COMPETENCY_TAGS.social);
   }
 
   /* ---------------- 기초 과목 인증 ---------------- */
