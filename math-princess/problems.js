@@ -161,9 +161,15 @@
     '*': '예를 들어 6 × 7을 구할 땐 구구단 7단을 떠올리거나, 6을 7번 더해보면(6+6+6+6+6+6+6) 42가 나와요. 지금 문제도 구구단을 떠올리며 풀어보세요!',
     '/': "예를 들어 24 ÷ 6을 구할 땐 '6에 얼마를 곱해야 24가 될까?'를 생각하면 돼요(6×4=24이니 답은 4). 지금 문제도 나누는 수에 곱셈을 해보며 답을 찾아보세요!",
   };
+  // unit: 절차적으로 생성되는 수학 문제는 문제은행이 없어 curriculum.units
+  // (학기 단위 참고 정보)와 1:1로 대응시킬 수 없다. 대신 각 생성기가 실제로
+  // 다루는 연산/개념 이름을 unit으로 붙여, 어떤 유형이 얼마나 나오는지
+  // 정도는 파악할 수 있게 한다(관리자 페이지 전용 메타데이터, 게임 로직에는
+  // 관여하지 않음).
   // ---- Level 1: 사칙연산 ----
   register(1, () => {
     const op = randChoice(['+', '-', '*', '/']);
+    const OP_UNIT = { '+': '덧셈', '-': '뺄셈', '*': '곱셈', '/': '나눗셈' };
     let a, b, answer, text;
     if (op === '+') {
       a = randInt(2, 99);
@@ -188,6 +194,7 @@
     }
     return makeProblem(1, {
       question: text,
+      unit: OP_UNIT[op],
       answer: String(answer),
       explanation: `${text.replace(' = ?', '')} = ${answer}`,
       hint: ARITHMETIC_HINTS[op],
@@ -205,6 +212,7 @@
     const answer = fractionToString(num, den);
     return makeProblem(2, {
       question: `${n1}/${d1} + ${n2}/${d2} = ? (기약분수로)`,
+      unit: '분수의 덧셈',
       answer,
       explanation: `${n1}/${d1} + ${n2}/${d2} = ${num}/${den} = ${answer}`,
       hint: '예를 들어 1/3 + 1/4를 더할 땐 분모를 같게 만들어야 해요. 분모의 최소공배수인 12로 통분하면 1/3=4/12, 1/4=3/12가 되고, 더하면 7/12예요. 지금 문제도 두 분모를 통분한 다음 분자끼리 더해보세요!',
@@ -217,6 +225,7 @@
     const answer = (Number(a) + Number(b)).toFixed(1);
     return makeProblem(2, {
       question: `${a} + ${b} = ?`,
+      unit: '소수의 덧셈',
       answer,
       tolerance: 0.05,
       explanation: `${a} + ${b} = ${answer}`,
@@ -230,6 +239,7 @@
     const answer = gcd(a, b);
     return makeProblem(2, {
       question: `${a}와 ${b}의 최대공약수는?`,
+      unit: '최대공약수',
       answer: String(answer),
       explanation: `${a} = ${answer} × ${a / answer}, ${b} = ${answer} × ${b / answer}`,
       hint: '예를 들어 12와 18의 최대공약수를 구할 땐, 두 수를 모두 나눌 수 있는 가장 큰 수를 찾아요. 12=2×2×3, 18=2×3×3이니 공통인 2×3=6이 최대공약수예요. 지금 문제도 두 수를 나눠보며 공통된 약수를 찾아보세요!',
@@ -245,6 +255,7 @@
     const bTerm = b >= 0 ? `+ ${b}` : `- ${Math.abs(b)}`;
     return makeProblem(3, {
       question: `${a}x ${bTerm} = ${c}, x = ?`,
+      unit: '일차방정식',
       answer: String(x),
       explanation: `${a}x = ${c - b} → x = ${x}`,
       hint: '예를 들어 3x + 2 = 11을 풀 땐 먼저 양쪽에서 2를 빼서 3x = 9로 만들고, 그다음 양쪽을 3으로 나누면 x = 3이 나와요. 지금 문제도 숫자를 옮긴 다음 x 앞의 수로 나눠보세요!',
@@ -259,6 +270,7 @@
     const x = b * k;
     return makeProblem(3, {
       question: `${a} : ${b} = ${c} : x, x = ?`,
+      unit: '비례식',
       answer: String(x),
       explanation: `비율 ${c}/${a} = ${k} 이므로 x = ${b} × ${k} = ${x}`,
       hint: '예를 들어 2 : 3 = 6 : x를 풀 땐, 앞의 2가 6이 되려면 몇 배가 됐는지부터 찾아요(6÷2=3배). 뒤의 3도 똑같이 3배 해주면 x = 9예요. 지금 문제도 앞의 비율이 몇 배가 됐는지 찾아서 뒤에도 똑같이 곱해보세요!',
@@ -274,6 +286,7 @@
     const bTerm = b >= 0 ? `+ ${b}` : `- ${Math.abs(b)}`;
     return makeProblem(4, {
       question: `y = ${a}x ${bTerm} 일 때, x = ${x}이면 y = ?`,
+      unit: '일차함수(대입)',
       answer: String(y),
       explanation: `y = ${a}×${x} ${bTerm} = ${y}`,
       hint: '예를 들어 y = 2x + 1에서 x = 3일 때 y를 구하려면, x 자리에 3을 그대로 넣어서 y = 2×3 + 1 = 7을 계산하면 돼요. 지금 문제도 주어진 x값을 식에 그대로 대입해서 계산해보세요!',
@@ -289,6 +302,7 @@
     const slope = (y2 - y1) / (x2 - x1);
     return makeProblem(4, {
       question: `두 점 (${x1}, ${y1}), (${x2}, ${y2})을 지나는 직선의 기울기는? (기약분수)`,
+      unit: '직선의 기울기',
       answer: fractionToString(y2 - y1, x2 - x1),
       tolerance: 0.01,
       explanation: `기울기 = (${y2} - ${y1}) / (${x2} - ${x1}) = ${fractionToString(y2 - y1, x2 - x1)}`,
@@ -302,6 +316,7 @@
     const h = randInt(3, 20);
     return makeProblem(5, {
       question: `가로 ${w}, 세로 ${h}인 직사각형의 넓이는?`,
+      unit: '도형의 넓이',
       answer: String(w * h),
       explanation: `${w} × ${h} = ${w * h}`,
       hint: '예를 들어 가로 4, 세로 5인 직사각형의 넓이는 4×5=20이에요. 지금 문제도 가로와 세로를 그대로 곱해보세요!',
@@ -318,6 +333,7 @@
     if (askHyp) {
       return makeProblem(5, {
         question: `직각삼각형의 두 변이 ${a}, ${b}일 때 빗변의 길이는?`,
+        unit: '피타고라스 정리',
         answer: String(c),
         explanation: `${a}² + ${b}² = ${c}² → 빗변 = ${c}`,
         hint: PYTHAGOREAN_HINT,
@@ -325,6 +341,7 @@
     }
     return makeProblem(5, {
       question: `직각삼각형의 빗변이 ${c}, 한 변이 ${a}일 때 나머지 한 변은?`,
+      unit: '피타고라스 정리',
       answer: String(b),
       explanation: `${c}² - ${a}² = ${b}²`,
       hint: PYTHAGOREAN_HINT,
@@ -337,6 +354,7 @@
     const favorable = randInt(1, total - 1);
     return makeProblem(6, {
       question: `주머니에 공이 ${total}개 있고 그중 ${favorable}개가 빨간공이다. 하나를 꺼낼 때 빨간공일 확률은? (기약분수)`,
+      unit: '확률',
       answer: fractionToString(favorable, total),
       explanation: `${favorable}/${total} = ${fractionToString(favorable, total)}`,
       hint: '예를 들어 공 5개 중 2개가 빨간공이면, 빨간공을 뽑을 확률은 2/5예요(원하는 경우의 수 ÷ 전체 경우의 수). 지금 문제도 원하는 개수를 전체 개수로 나눠서 기약분수로 나타내보세요!',
@@ -349,6 +367,7 @@
     const avg = sum / nums.length;
     return makeProblem(6, {
       question: `${nums.join(', ')}의 평균은?`,
+      unit: '평균',
       answer: String(avg),
       tolerance: 0.05,
       explanation: `합 ${sum} ÷ ${nums.length}개 = ${avg}`,
@@ -364,6 +383,7 @@
     const answer = first + diff * (n - 1);
     return makeProblem(7, {
       question: `첫째항 ${first}, 공차 ${diff}인 등차수열의 제${n}항은?`,
+      unit: '등차수열',
       answer: String(answer),
       explanation: `${first} + ${diff} × (${n} - 1) = ${answer}`,
       hint: '예를 들어 첫째항이 2이고 공차가 3인 등차수열의 제5항을 구하려면, 2 + 3×(5-1) = 2+12 = 14가 돼요(첫째항에 공차를 (항의 번호-1)번만큼 더해요). 지금 문제도 같은 방법으로 계산해보세요!',
@@ -376,6 +396,7 @@
     const value = Math.pow(base, exp);
     return makeProblem(7, {
       question: `log₍${base}₎ ${value} = ?`,
+      unit: '로그',
       answer: String(exp),
       explanation: `${base}^${exp} = ${value} 이므로 log₍${base}₎ ${value} = ${exp}`,
       hint: "예를 들어 log₂ 8을 구하려면 '2를 몇 번 곱해야 8이 될까?'를 생각해요(2×2×2=8이니 답은 3). 지금 문제도 밑을 몇 번 곱해야 그 값이 나오는지 찾아보세요!",
@@ -401,6 +422,7 @@
     return makeProblem(8, {
       type: 'choice',
       question: `${func}(${row.angle}°) 의 값은?`,
+      unit: '삼각비',
       answer,
       choices: shuffle([...pool]),
       explanation: `${func}(${row.angle}°) = ${answer}`,
@@ -417,6 +439,7 @@
     if (!isPerfect) {
       return makeProblem(8, {
         question: `벡터 (${x}, ${y})의 내적을 자기 자신과 계산하면? (x²+y²)`,
+        unit: '벡터',
         answer: String(x * x + y * y),
         explanation: `${x}² + ${y}² = ${x * x + y * y}`,
         hint: vectorHint,
@@ -424,6 +447,7 @@
     }
     return makeProblem(8, {
       question: `벡터 (${x}, ${y})의 크기는?`,
+      unit: '벡터',
       answer: String(answer),
       explanation: `√(${x}² + ${y}²) = ${answer}`,
       hint: vectorHint,
@@ -442,6 +466,7 @@
     const nPr = factorial(n) / factorial(n - r);
     return makeProblem(9, {
       question: `${n}명 중 ${r}명을 순서를 고려해 뽑는 경우의 수(순열)는?`,
+      unit: '순열',
       answer: String(nPr),
       explanation: `${n}P${r} = ${n}! / (${n}-${r})! = ${nPr}`,
       hint: '예를 들어 5명 중 2명을 순서를 고려해 뽑는 경우의 수는 5×4=20이에요(첫 번째 자리에 5명 중 아무나, 두 번째 자리엔 남은 4명 중 아무나 올 수 있어요). 지금 문제도 첫 자리부터 하나씩 줄여가며 곱해보세요!',
@@ -454,6 +479,7 @@
     const nCr = factorial(n) / (factorial(r) * factorial(n - r));
     return makeProblem(9, {
       question: `${n}명 중 ${r}명을 순서 상관없이 뽑는 경우의 수(조합)는?`,
+      unit: '조합',
       answer: String(nCr),
       explanation: `${n}C${r} = ${n}! / (${r}! × (${n}-${r})!) = ${nCr}`,
       hint: '예를 들어 5명 중 2명을 순서 상관없이 뽑는 경우의 수는, 순서를 고려한 5×4=20에서 2명을 줄 세우는 방법(2가지)만큼 나누면 20÷2=10이에요. 지금 문제도 순서를 고려해 곱한 다음, 뽑은 인원수를 줄 세우는 경우의 수로 나눠보세요!',
