@@ -6,6 +6,7 @@
   const SC = window.MathPrincessScenarios;
   const SUBJ = window.MathPrincessSubjects;
   const Engine = window.MathPrincessEngine.createEngine({ P, SUBJ, SC, E });
+  const Profiles = window.MathPrincessProfiles;
 
   const {
     STAT_KEYS, STAT_LABELS, OUTFIT_TIERS, PET_TIERS, NPC_DEFS, ITEMS, ACTIVITY_DEFS,
@@ -14,7 +15,17 @@
   } = Engine;
 
   const TOTAL_TURNS = Number(new URLSearchParams(location.search).get('turns')) || 48;
-  const SAVE_KEY = Engine.SAVE_KEY;
+
+  // 저장/엔딩 도감 키는 더 이상 고정 상수가 아니라 "지금 활성화된 프로필"
+  // 기준으로 매번 계산한다. 프로필을 하나도 만들어본 적 없는 사용자는
+  // Profiles.DEFAULT_PROFILE_ID 하나만 쓰게 되고, 그 키는 예전 고정 키
+  // (math-princess-save-v1)와 동일해서 기존 저장 데이터를 그대로 이어간다.
+  function activeSaveKey() {
+    return Profiles.saveKeyFor(Profiles.getActiveProfileId() || Profiles.DEFAULT_PROFILE_ID);
+  }
+  function activeEndingsKey() {
+    return Profiles.endingsKeyFor(Profiles.getActiveProfileId() || Profiles.DEFAULT_PROFILE_ID);
+  }
 
   const el = {
     screens: {
@@ -35,6 +46,9 @@
       ending: document.getElementById('screen-ending'),
       endingGallery: document.getElementById('screen-ending-gallery'),
       confirmNewGame: document.getElementById('screen-confirm-new-game'),
+      profiles: document.getElementById('screen-profiles'),
+      profileNew: document.getElementById('screen-profile-new'),
+      profilePin: document.getElementById('screen-profile-pin'),
     },
     totalTurnsLabel: document.getElementById('total-turns-label'),
     totalYearsLabel: document.getElementById('total-years-label'),
@@ -43,6 +57,23 @@
     characterNameInput: document.getElementById('character-name-input'),
     btnConfirmNewGame: document.getElementById('btn-confirm-new-game'),
     btnCancelNewGame: document.getElementById('btn-cancel-new-game'),
+
+    btnProfileBar: document.getElementById('btn-profile-bar'),
+    profileBarAvatar: document.getElementById('profile-bar-avatar'),
+    profileBarName: document.getElementById('profile-bar-name'),
+    profileList: document.getElementById('profile-list'),
+    btnProfileAdd: document.getElementById('btn-profile-add'),
+    btnProfileBack: document.getElementById('btn-profile-back'),
+    profileNameInput: document.getElementById('profile-name-input'),
+    profilePinInput: document.getElementById('profile-pin-input'),
+    profileNewError: document.getElementById('profile-new-error'),
+    btnProfileNewConfirm: document.getElementById('btn-profile-new-confirm'),
+    btnProfileNewCancel: document.getElementById('btn-profile-new-cancel'),
+    profilePinTitle: document.getElementById('profile-pin-title'),
+    profilePinVerifyInput: document.getElementById('profile-pin-verify-input'),
+    profilePinError: document.getElementById('profile-pin-error'),
+    btnProfilePinConfirm: document.getElementById('btn-profile-pin-confirm'),
+    btnProfilePinCancel: document.getElementById('btn-profile-pin-cancel'),
 
     btnOpenEndingGallery: document.getElementById('btn-open-ending-gallery'),
     btnEndingGalleryBack: document.getElementById('btn-ending-gallery-back'),
@@ -231,9 +262,163 @@
     el.screens[name].classList.add('active');
   }
 
+  /* ---------------- 프로필(기기 내 계정) ---------------- */
+  // 서버가 없는 정적 사이트라 "로그인"은 실제 인증이 아니라, 이 기기 안에서
+  // 저장 데이터를 사람별로 나누는 프로필 선택이다. 자세한 설계는 profiles.js
+  // 상단 주석 참고. 프로필이 1개(기본 프로필)뿐이면 화면에 아무것도 보여주지
+  // 않고 예전과 동일하게 동작한다 — 프로필 바(bar)만 항상 보여줘서, 필요할
+  // 때 두 번째 프로필을 만들 수 있다는 걸 알 수 있게 한다.
+
+  let pendingPinProfileId = null; // PIN 입력 화면이 검증하려는 대상 프로필
+  let pendingDeleteId = null; // 삭제 확인 중인 프로필(목록에서 카드 하나만 "정말 삭제?" 상태로 바뀜)
+
+  function renderProfileBar() {
+    const active = Profiles.getActiveProfile();
+    if (!active) {
+      el.btnProfileBar.style.display = 'none';
+      return;
+    }
+    el.btnProfileBar.style.display = 'flex';
+    el.profileBarAvatar.textContent = active.emoji;
+    el.profileBarName.textContent = active.name;
+  }
+
+  function selectProfile(profile) {
+    if (profile.pin) {
+      pendingPinProfileId = profile.id;
+      el.profilePinTitle.textContent = `${profile.emoji} ${profile.name}의 PIN을 입력하세요`;
+      el.profilePinVerifyInput.value = '';
+      el.profilePinError.textContent = '';
+      showScreen('profilePin');
+      el.profilePinVerifyInput.focus();
+      return;
+    }
+    activateProfile(profile.id);
+  }
+
+  function activateProfile(profileId) {
+    Profiles.setActiveProfileId(profileId);
+    // 방금 고른 프로필의 저장 데이터 기준으로 이어하기 버튼 등을 다시 계산해야 한다.
+    state = Engine.makeInitialState();
+    gameStarted = false;
+    renderProfileBar();
+    updateContinueButtonVisibility();
+    showScreen('start');
+  }
+
+  function renderProfileList() {
+    const list = Profiles.listProfiles();
+    const canDelete = list.length > 1;
+    el.profileList.innerHTML = list.map((p) => {
+      if (p.id === pendingDeleteId) {
+        return `
+          <div class="profile-card profile-card-confirm" data-id="${p.id}">
+            <span class="profile-card-confirm-text">${p.emoji} ${p.name}을(를) 정말 삭제할까요?<br/>저장 데이터도 함께 사라져요.</span>
+            <div class="profile-card-confirm-actions">
+              <button class="btn btn-primary profile-card-delete-confirm" data-id="${p.id}">삭제</button>
+              <button class="btn btn-secondary profile-card-delete-cancel" data-id="${p.id}">취소</button>
+            </div>
+          </div>`;
+      }
+      return `
+        <div class="profile-card" data-id="${p.id}">
+          <button class="profile-card-select" data-id="${p.id}">
+            <span class="profile-card-avatar">${p.emoji}</span>
+            <span class="profile-card-name">${p.name}</span>
+            ${p.pin ? '<span class="profile-card-lock">🔒</span>' : ''}
+          </button>
+          ${canDelete ? `<button class="profile-card-delete" data-id="${p.id}" aria-label="프로필 삭제">✕</button>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  function openProfileScreen() {
+    pendingDeleteId = null;
+    renderProfileList();
+    // 프로필이 1개뿐일 때(=기본 프로필 관리 화면으로 들어온 경우)만 시작
+    // 화면으로 돌아갈 수 있는 뒤로가기 버튼을 보여준다. 앱을 막 켜서 아직
+    // 아무 프로필도 안 골랐을 때는 뒤로 갈 시작 화면이 없으므로 숨긴다.
+    el.btnProfileBack.style.display = Profiles.getActiveProfileId() ? 'block' : 'none';
+    showScreen('profiles');
+  }
+
+  el.btnProfileBar.addEventListener('click', openProfileScreen);
+  el.btnProfileBack.addEventListener('click', () => showScreen('start'));
+
+  el.profileList.addEventListener('click', (e) => {
+    const selectBtn = e.target.closest('.profile-card-select');
+    if (selectBtn) {
+      const profile = Profiles.getProfile(selectBtn.dataset.id);
+      if (profile) selectProfile(profile);
+      return;
+    }
+    const deleteBtn = e.target.closest('.profile-card-delete');
+    if (deleteBtn) {
+      pendingDeleteId = deleteBtn.dataset.id;
+      renderProfileList();
+      return;
+    }
+    const confirmBtn = e.target.closest('.profile-card-delete-confirm');
+    if (confirmBtn) {
+      Profiles.deleteProfile(confirmBtn.dataset.id);
+      pendingDeleteId = null;
+      renderProfileList();
+      renderProfileBar();
+      return;
+    }
+    const cancelBtn = e.target.closest('.profile-card-delete-cancel');
+    if (cancelBtn) {
+      pendingDeleteId = null;
+      renderProfileList();
+    }
+  });
+
+  el.btnProfileAdd.addEventListener('click', () => {
+    el.profileNameInput.value = '';
+    el.profilePinInput.value = '';
+    el.profileNewError.textContent = '';
+    showScreen('profileNew');
+    el.profileNameInput.focus();
+  });
+
+  el.btnProfileNewCancel.addEventListener('click', openProfileScreen);
+
+  el.btnProfileNewConfirm.addEventListener('click', () => {
+    const pin = el.profilePinInput.value.trim();
+    if (pin && !/^\d{4}$/.test(pin)) {
+      el.profileNewError.textContent = 'PIN은 숫자 4자리로 입력하거나 비워두세요';
+      return;
+    }
+    const profile = Profiles.createProfile(el.profileNameInput.value, pin || null);
+    activateProfile(profile.id);
+  });
+
+  el.btnProfilePinCancel.addEventListener('click', () => {
+    pendingPinProfileId = null;
+    openProfileScreen();
+  });
+
+  function submitProfilePin() {
+    if (!pendingPinProfileId) return;
+    if (Profiles.verifyPin(pendingPinProfileId, el.profilePinVerifyInput.value.trim())) {
+      const id = pendingPinProfileId;
+      pendingPinProfileId = null;
+      activateProfile(id);
+      return;
+    }
+    el.profilePinError.textContent = 'PIN이 올바르지 않아요';
+    el.profilePinVerifyInput.value = '';
+    el.profilePinVerifyInput.focus();
+  }
+
+  el.btnProfilePinConfirm.addEventListener('click', submitProfilePin);
+  el.profilePinVerifyInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') submitProfilePin();
+  });
+
   function saveGame() {
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      localStorage.setItem(activeSaveKey(), JSON.stringify(state));
       return true;
     } catch (e) {
       // 저장 공간이 꽉 찼거나(사파리 시크릿 모드 등) localStorage를 쓸 수 없는 경우에도
@@ -244,7 +429,7 @@
 
   function clearSave() {
     try {
-      localStorage.removeItem(SAVE_KEY);
+      localStorage.removeItem(activeSaveKey());
     } catch (e) {
       // no-op
     }
@@ -253,7 +438,7 @@
   function loadGame() {
     let raw;
     try {
-      raw = localStorage.getItem(SAVE_KEY);
+      raw = localStorage.getItem(activeSaveKey());
     } catch (e) {
       return false;
     }
@@ -274,7 +459,7 @@
   function hasValidSave() {
     let raw;
     try {
-      raw = localStorage.getItem(SAVE_KEY);
+      raw = localStorage.getItem(activeSaveKey());
     } catch (e) {
       return false;
     }
@@ -292,11 +477,9 @@
 
   /* ---------------- 엔딩 도감(여러 판에 걸쳐 누적되는 별도 저장) ---------------- */
 
-  const ENDINGS_COLLECTION_KEY = 'math-princess-endings-v1';
-
   function loadEndingCollection() {
     try {
-      const arr = JSON.parse(localStorage.getItem(ENDINGS_COLLECTION_KEY) || '[]');
+      const arr = JSON.parse(localStorage.getItem(activeEndingsKey()) || '[]');
       return Array.isArray(arr) ? arr : [];
     } catch (e) {
       return [];
@@ -310,7 +493,7 @@
     if (collected.includes(endingId)) return false;
     collected.push(endingId);
     try {
-      localStorage.setItem(ENDINGS_COLLECTION_KEY, JSON.stringify(collected));
+      localStorage.setItem(activeEndingsKey(), JSON.stringify(collected));
     } catch (e) {
       // no-op
     }
@@ -2043,7 +2226,17 @@
     }
   });
 
-  updateContinueButtonVisibility();
+  // 프로필이 2개 이상인데 이번 브라우저 세션에서 아직 아무도 고르지
+  // 않았다면 시작 화면 대신 "누가 할까요?" 화면부터 보여준다. 프로필이
+  // 1개(기본 프로필)뿐이면 자동으로 그 프로필이 활성화되고(needsProfilePicker
+  // 내부에서 처리) 화면은 그대로 시작 화면부터 보여준다 — 기존 사용자는
+  // 프로필 기능이 생겼다는 걸 눈치챌 필요조차 없다.
+  if (Profiles.needsProfilePicker()) {
+    openProfileScreen();
+  } else {
+    renderProfileBar();
+    updateContinueButtonVisibility();
+  }
 
   // 안전망: 앱이 백그라운드로 가거나 탭/창이 닫히는 순간에도 현재 진행 상태를
   // 즉시 저장해서, 명시적으로 "확인" 버튼을 누르기 전에 앱이 종료되어도

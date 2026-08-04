@@ -158,6 +158,48 @@ async function testLearningSectionShowsRealSaveData() {
   ok(errors.length === 0, `JS 에러 없어야 함(학습 현황 실데이터): ${errors.join('\n')}`);
 }
 
+async function testLearningSectionShowsProfilePickerWhenMultipleProfiles() {
+  const errors = await withPage(async (page) => {
+    // 프로필이 여러 개면(여러 아이가 이 기기를 나눠 쓰면) 학습 현황에서
+    // 어느 아이의 데이터를 볼지 고를 수 있어야 한다.
+    await page.goto(`${BASE_URL}/math-princess/index.html`);
+    await page.evaluate(() => {
+      const profiles = [
+        { id: 'default', name: '첫째', emoji: '👑', pin: null, createdAt: 1 },
+        { id: 'p_second', name: '둘째', emoji: '🎀', pin: null, createdAt: 2 },
+      ];
+      localStorage.setItem('math-princess-profiles-v1', JSON.stringify(profiles));
+      const baseState = (name, mathCorrect) => ({
+        turn: 5, gold: 500, characterName: name,
+        stats: { intelligence: 30, focus: 20, stamina: 50, charm: 20, creativity: 20, stress: 10, luck: 20 },
+        learningLog: { math: { byLevel: { 1: { correct: mathCorrect, wrong: 1 } }, recentMistakes: [] } },
+      });
+      localStorage.setItem('math-princess-save-v1', JSON.stringify(baseState('첫째공주', 9)));
+      localStorage.setItem('math-princess-save-v1::p_second', JSON.stringify(baseState('둘째공주', 3)));
+    });
+
+    await gotoAdmin(page);
+    await enterPin(page, '000001');
+    await page.waitForSelector('#screen-dashboard.active');
+
+    const chips = await page.$$eval('#learning-profile-picker .filter-chip', (els) => els.map((e) => e.textContent.trim()));
+    eq(chips.length, 2, '프로필이 2개면 선택 칩도 2개가 보여야 함');
+    ok(chips.some((c) => c.includes('첫째')) && chips.some((c) => c.includes('둘째')), `칩에 각 프로필 이름이 보여야 함 (got ${JSON.stringify(chips)})`);
+
+    const firstText = await page.textContent('#learning-list');
+    ok(firstText.includes('레벨 1: 정답 9'), `기본으로는 첫 번째 프로필(첫째)의 데이터가 보여야 함 (got "${firstText}")`);
+
+    const chipButtons = await page.$$('#learning-profile-picker .filter-chip');
+    await chipButtons[1].click();
+    await page.waitForTimeout(100);
+    const secondText = await page.textContent('#learning-list');
+    ok(secondText.includes('레벨 1: 정답 3'), `칩을 바꾸면 그 프로필(둘째)의 데이터로 바뀌어야 함 (got "${secondText}")`);
+    const activeChip = await page.$eval('#learning-profile-picker .filter-chip.active', (e) => e.textContent.trim());
+    ok(activeChip.includes('둘째'), '고른 칩이 active 상태로 표시되어야 함');
+  });
+  ok(errors.length === 0, `JS 에러 없어야 함(학습 현황 프로필 선택): ${errors.join('\n')}`);
+}
+
 (async () => {
   console.log('admin e2e tests');
   await testWrongPinIsRejected();
@@ -167,5 +209,6 @@ async function testLearningSectionShowsRealSaveData() {
   await testSubjectAndCertSectionsReflectRealBankSizes();
   await testLearningSectionShowsEmptyStateWithoutSave();
   await testLearningSectionShowsRealSaveData();
+  await testLearningSectionShowsProfilePickerWhenMultipleProfiles();
   summary('admin.test.js');
 })();

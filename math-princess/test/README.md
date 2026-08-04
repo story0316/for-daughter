@@ -11,8 +11,9 @@
 test/
   helpers/assert.js     외부 의존성 없는 아주 작은 assertion 헬퍼(ok/eq/approx/summary)
   unit/*.test.js         순수 로직(problems.js/subjects.js/endings.js/scenarios.js/
-                         question-engine.js/reward-engine.js/game-engine.js) 유닛
-                         테스트 — 브라우저 불필요, plain Node로 즉시 실행됨, 아주 빠름
+                         question-engine.js/reward-engine.js/game-engine.js/
+                         profiles.js) 유닛 테스트 — 브라우저 불필요, plain Node로
+                         즉시 실행됨, 아주 빠름
   balance/simulate.js    48개월 x 4주 생활 계획표 전체를 game-engine.js를 그대로
                          require해 실제 게임과 완전히 같은 코드로 재현하는
                          경제/엔딩 도달 가능성 시뮬레이션(수백 회 반복)
@@ -55,8 +56,8 @@ bash run-e2e.sh         # e2e만(브라우저를 여러 번 띄우므로 몇 분
 ## 새 기능을 추가할 때
 
 1. `problems.js`/`subjects.js`/`endings.js`/`scenarios.js`/`question-engine.js`/
-   `reward-engine.js`/`game-engine.js`처럼 DOM에 의존하지 않는 순수 로직을
-   건드렸다면 `test/unit/`에 케이스를 추가하세요.
+   `reward-engine.js`/`game-engine.js`/`profiles.js`처럼 DOM에 의존하지 않는
+   순수 로직을 건드렸다면 `test/unit/`에 케이스를 추가하세요.
 2. 골드/스탯 보상 공식(콤보 배율, 아이템 보너스, 정답/오답 증감량 등)을
    조정하고 싶다면 `reward-engine.js`만 고치면 됩니다 — `test/balance/
    simulate.js`는 `game-engine.js`를 그대로 `require`해서 쓰고

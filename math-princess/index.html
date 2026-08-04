@@ -27,6 +27,12 @@
         <p class="subtitle">문제를 풀어 돈을 벌고 교양을 쌓으면<br/>평범한 옷이 예쁜 드레스로 바뀌어요!</p>
         <p class="subtitle-sub">품위가 오를수록 만날 수 있는 사람도 늘어나요.<br/>한 턴은 한 달, 총 <span id="total-turns-label">48</span>개월(<span id="total-years-label">4</span>년) 동안<br/>공주가 되는 그날까지 키워보세요.</p>
 
+        <button id="btn-profile-bar" class="profile-bar" style="display:none">
+          <span id="profile-bar-avatar">👑</span>
+          <span id="profile-bar-name">플레이어 1</span>
+          <span class="profile-bar-manage">프로필 전환 ›</span>
+        </button>
+
         <div class="name-input-wrap">
           <label for="character-name-input" class="name-input-label">주인공 이름을 지어주세요</label>
           <input type="text" id="character-name-input" class="name-input" placeholder="예: 서연" maxlength="10" autocomplete="off" />
@@ -36,6 +42,56 @@
           <button id="btn-new-game" class="btn btn-primary">새로 시작하기</button>
           <button id="btn-continue" class="btn btn-secondary" style="display:none">이어하기</button>
           <button id="btn-open-ending-gallery" class="btn btn-secondary">📖 엔딩 도감</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 프로필(계정) 선택 화면: 이 기기를 여러 사람이 나눠 쓸 때 "누가 할까요?"를
+         고른다. 저장은 서버가 아니라 이 기기의 브라우저 안에서 프로필별로 나뉜다. -->
+    <section id="screen-profiles" class="screen">
+      <div class="card">
+        <div class="title-emoji">👤</div>
+        <h2>누가 할까요?</h2>
+        <p class="subtitle">프로필을 고르거나 새로 만들어주세요</p>
+        <div id="profile-list" class="profile-list"></div>
+        <div class="start-buttons">
+          <button id="btn-profile-add" class="btn btn-secondary">➕ 새 프로필 만들기</button>
+          <button id="btn-profile-back" class="btn btn-secondary" style="display:none">‹ 뒤로</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 새 프로필 만들기 -->
+    <section id="screen-profile-new" class="screen overlay-screen">
+      <div class="card">
+        <div class="title-emoji">➕</div>
+        <h2>새 프로필 만들기</h2>
+        <div class="name-input-wrap">
+          <label for="profile-name-input" class="name-input-label">이름을 지어주세요</label>
+          <input type="text" id="profile-name-input" class="name-input" placeholder="예: 서연" maxlength="10" autocomplete="off" />
+        </div>
+        <div class="name-input-wrap">
+          <label for="profile-pin-input" class="name-input-label">PIN (선택, 4자리 숫자 · 비워둬도 돼요)</label>
+          <input type="tel" id="profile-pin-input" class="name-input" placeholder="0000" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+        </div>
+        <p id="profile-new-error" class="field-error"></p>
+        <div class="result-buttons">
+          <button id="btn-profile-new-confirm" class="btn btn-primary">만들기</button>
+          <button id="btn-profile-new-cancel" class="btn btn-secondary">취소</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PIN 입력: 고른 프로필에 PIN이 설정되어 있을 때만 거친다 -->
+    <section id="screen-profile-pin" class="screen overlay-screen">
+      <div class="card">
+        <div class="title-emoji">🔒</div>
+        <h2 id="profile-pin-title">PIN을 입력하세요</h2>
+        <input type="tel" id="profile-pin-verify-input" class="name-input" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+        <p id="profile-pin-error" class="field-error"></p>
+        <div class="result-buttons">
+          <button id="btn-profile-pin-confirm" class="btn btn-primary">확인</button>
+          <button id="btn-profile-pin-cancel" class="btn btn-secondary">뒤로</button>
         </div>
       </div>
     </section>
@@ -466,14 +522,15 @@
     </section>
 
   </div>
-  <script src="problems.js?v=20260729"></script>
-  <script src="subjects.js?v=20260729"></script>
-  <script src="endings.js?v=20260729"></script>
-  <script src="portrait.js?v=20260729"></script>
-  <script src="scenarios.js?v=20260729"></script>
-  <script src="question-engine.js?v=20260729"></script>
-  <script src="reward-engine.js?v=20260729"></script>
-  <script src="game-engine.js?v=20260729"></script>
-  <script src="script.js?v=20260729"></script>
+  <script src="problems.js?v=20260804"></script>
+  <script src="subjects.js?v=20260804"></script>
+  <script src="endings.js?v=20260804"></script>
+  <script src="portrait.js?v=20260804"></script>
+  <script src="scenarios.js?v=20260804"></script>
+  <script src="question-engine.js?v=20260804"></script>
+  <script src="reward-engine.js?v=20260804"></script>
+  <script src="game-engine.js?v=20260804"></script>
+  <script src="profiles.js?v=20260804"></script>
+  <script src="script.js?v=20260804"></script>
 </body>
 </html>
