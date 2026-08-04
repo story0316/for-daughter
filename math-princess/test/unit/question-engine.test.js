@@ -309,4 +309,35 @@ eq(Question.SUBJECTS.science.maxLevel, SUBJ.SCIENCE_LEVELS.length, '과학 maxLe
   ok(counts[hardest] > counts[easiest], `최근 해금 밴드 중 가장 어려운 레벨(${hardest})이 가장 쉬운 레벨(${easiest})보다 자주 나와야 함: ${JSON.stringify(counts)}`);
 }
 
+{
+  // parseGradeCeiling: curriculum.gradeRange 문자열(초/중/고 표기, "~" 범위,
+  // 접두사 생략된 두 번째 숫자 등)을 학년 상한(초1~6=1~6, 중1~3=7~9,
+  // 고1~3=10~12)으로 정확히 변환해야 한다. "초1~3"처럼 두 번째 숫자에
+  // 접두사가 없으면 앞쪽 단계(초)를 이어받아야 한다(그냥 "3학년"으로
+  // 잘못 해석해 상한이 낮게 잡히는 회귀가 있었음).
+  eq(Question.parseGradeCeiling('초1~3'), 3, '"초1~3"은 초3까지(상한 3)');
+  eq(Question.parseGradeCeiling('중1~3'), 9, '"중1~3"은 중3까지(상한 9)');
+  eq(Question.parseGradeCeiling('초6~중2'), 8, '"초6~중2"는 중2까지(상한 8)');
+  eq(Question.parseGradeCeiling('고등학교'), 12, '"고등학교"는 상한 12');
+  eq(Question.parseGradeCeiling('중학교'), 9, '"중학교"는 상한 9');
+  eq(Question.parseGradeCeiling('초등학교'), 6, '"초등학교"는 상한 6');
+  eq(Question.parseGradeCeiling('전 학년 심화'), 99, '단계를 특정할 수 없는 범위는 무제한(99) 취급');
+  eq(Question.parseGradeCeiling(undefined), 99, 'gradeRange가 없으면 무제한(99) 취급');
+}
+
+{
+  // isLevelAllowedInMode / unlockedLevelsFor: curriculumMode가 'elementary'면
+  // 중학교 이상 curriculum.gradeRange를 가진 레벨은 지능이 아무리 높아도
+  // 절대 해금되면 안 된다. 'all'(기본값, curriculumMode 인자 생략 포함)은
+  // 예전과 100% 동일하게 아무 것도 걸러내지 않아야 한다(하위 호환).
+  const allElementary = Question.unlockedLevelsFor(100, 'math', 'elementary');
+  allElementary.forEach((lv) => {
+    ok(Question.isLevelAllowedInMode('math', lv, 'elementary'), `elementary 모드에서 해금된 레벨(${lv})은 실제로 초등 범위여야 함`);
+  });
+  const unrestrictedNoArg = Question.unlockedLevelsFor(100, 'math');
+  const unrestrictedAllMode = Question.unlockedLevelsFor(100, 'math', 'all');
+  eq(unrestrictedNoArg.length, unrestrictedAllMode.length, 'curriculumMode 인자를 생략하면 "all"과 동일하게 전체 레벨이 해금되어야 함(하위 호환)');
+  ok(allElementary.length <= unrestrictedAllMode.length, 'elementary 모드는 all 모드보다 해금 레벨 수가 같거나 적어야 함');
+}
+
 summary('question-engine.js');

@@ -44,7 +44,11 @@ html, body {
 #screen-event,
 #screen-branching,
 #screen-ending,
-#screen-noble-promotion {
+#screen-noble-promotion,
+#screen-profiles,
+#screen-profile-new,
+#screen-profile-pin,
+#screen-curriculum-mode {
   align-items: center;
   justify-content: center;
   overflow-y: auto;

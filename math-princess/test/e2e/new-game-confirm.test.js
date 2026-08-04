@@ -2,7 +2,7 @@
 // 실수로 지우지 않도록 먼저 확인을 받는지 검증한다(취소하면 기존 진행 보존,
 // 확인하면 실제로 새 게임 시작). 저장 데이터가 없을 때는 확인 없이 바로 시작한다.
 const { ok, eq, summary } = require('../helpers/assert');
-const { withPage, seedAndContinue, makeState, getSavedState, activeScreenId, drainQuizSession, BASE_URL } = require('./helpers');
+const { withPage, seedAndContinue, makeState, getSavedState, activeScreenId, drainQuizSession, BASE_URL, pickCurriculumModeAndStart } = require('./helpers');
 
 async function testNoExistingSaveStartsImmediately() {
   const errors = await withPage(async (page) => {
@@ -10,7 +10,7 @@ async function testNoExistingSaveStartsImmediately() {
     await page.evaluate(() => localStorage.removeItem('math-princess-save-v1'));
     await page.reload();
     await page.click('#btn-new-game');
-    await page.waitForSelector('#screen-main.active');
+    await pickCurriculumModeAndStart(page);
     const active = await activeScreenId(page);
     eq(active, 'screen-main', '저장 데이터가 없으면 확인 없이 바로 새 게임이 시작되어야 함');
   });
@@ -64,7 +64,7 @@ async function testConfirmOverwritesExistingSave() {
     await page.click('#btn-new-game');
     await page.waitForSelector('#screen-confirm-new-game.active');
     await page.click('#btn-confirm-new-game');
-    await page.waitForSelector('#screen-main.active');
+    await pickCurriculumModeAndStart(page);
 
     const saved = await getSavedState(page);
     eq(saved.gold, 0, '확인하면 새 게임으로 초기화되어 골드가 0이어야 함');
@@ -85,7 +85,7 @@ async function testCorruptSaveSkipsConfirmAndHidesContinue() {
     ok(!continueVisible, '유효하지 않은 저장 데이터면 이어하기 버튼이 보이면 안 됨');
 
     await page.click('#btn-new-game');
-    await page.waitForSelector('#screen-main.active');
+    await pickCurriculumModeAndStart(page);
     const active = await activeScreenId(page);
     eq(active, 'screen-main', '유효하지 않은 저장 데이터는 확인 없이 바로 새 게임이 시작되어야 함');
   });

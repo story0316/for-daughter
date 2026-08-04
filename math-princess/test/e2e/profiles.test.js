@@ -5,7 +5,7 @@
 // 4) PIN을 설정한 프로필은 틀린 PIN을 막고 맞는 PIN만 통과시킴
 // 5) 프로필 삭제 시 그 프로필의 저장 데이터도 함께 지워짐, 마지막 하나는 삭제 버튼 자체가 없음
 const { chromium } = require('playwright');
-const { BASE_URL } = require('./helpers');
+const { BASE_URL, pickCurriculumModeAndStart } = require('./helpers');
 const { ok, eq, summary } = require('../helpers/assert');
 
 const EXECUTABLE_PATH = process.env.PLAYWRIGHT_CHROMIUM_PATH || '/opt/pw-browsers/chromium';
@@ -52,7 +52,7 @@ async function testCreateProfileAndSeparateSaves() {
     // 기본 프로필로 새 게임을 시작해 저장 데이터를 만들어둔다.
     await page.fill('#character-name-input', '기본이');
     await page.click('#btn-new-game');
-    await page.waitForSelector('#screen-main.active');
+    await pickCurriculumModeAndStart(page);
     await page.click('.home-link', { trial: true }).catch(() => {}); // no-op, just ensures main screen rendered
 
     // 프로필 관리로 가려면 일단 새로고침 후 시작 화면으로(진행 중 화면에는 프로필 바가 없음)
@@ -74,7 +74,7 @@ async function testCreateProfileAndSeparateSaves() {
 
     await page.fill('#character-name-input', '둘째공주');
     await page.click('#btn-new-game');
-    await page.waitForSelector('#screen-main.active');
+    await pickCurriculumModeAndStart(page);
 
     const saveKeys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('math-princess-save-v1')));
     eq(saveKeys.length, 2, '두 프로필의 저장 데이터가 서로 다른 키에 각각 존재해야 함');
@@ -147,7 +147,7 @@ async function testDeleteProfile() {
     await page.click('#btn-profile-new-confirm');
     await page.waitForSelector('#screen-start.active');
     await page.click('#btn-new-game');
-    await page.waitForSelector('#screen-main.active');
+    await pickCurriculumModeAndStart(page);
 
     await page.goto(`${BASE_URL}/math-princess/index.html`);
     await page.waitForSelector('#screen-start.active');

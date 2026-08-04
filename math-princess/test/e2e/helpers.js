@@ -34,6 +34,16 @@ async function seedAndContinue(page, state, query) {
   await page.waitForSelector('#screen-main.active');
 }
 
+// "#btn-new-game"(또는 확인 다이얼로그의 "#btn-confirm-new-game")을 누르면
+// 이제 학습 난이도 모드를 고르는 화면이 뜬다. 이 화면에서 mode('elementary'
+// /'middle'/'all', 기본값 'all')를 고르고 실제로 새 게임(#screen-main)이
+// 시작될 때까지 기다린다.
+async function pickCurriculumModeAndStart(page, mode) {
+  await page.waitForSelector('#screen-curriculum-mode.active');
+  await page.click(`[data-mode="${mode || 'all'}"]`);
+  await page.waitForSelector('#screen-main.active');
+}
+
 function makeState(overrides) {
   const base = {
     turn: 1, gold: 500, characterName: '테스트',
@@ -124,5 +134,5 @@ async function planWeekActivity(page, weekIdx, activityId, countOrTier) {
 
 module.exports = {
   BASE_URL, withPage, seedAndContinue, makeState, answerAnyQuizQuestion, drainQuizSession, getSavedState, activeScreenId,
-  planWeekActivity,
+  planWeekActivity, pickCurriculumModeAndStart,
 };

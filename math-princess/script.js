@@ -49,6 +49,7 @@
       profiles: document.getElementById('screen-profiles'),
       profileNew: document.getElementById('screen-profile-new'),
       profilePin: document.getElementById('screen-profile-pin'),
+      curriculumMode: document.getElementById('screen-curriculum-mode'),
     },
     totalTurnsLabel: document.getElementById('total-turns-label'),
     totalYearsLabel: document.getElementById('total-years-label'),
@@ -57,6 +58,8 @@
     characterNameInput: document.getElementById('character-name-input'),
     btnConfirmNewGame: document.getElementById('btn-confirm-new-game'),
     btnCancelNewGame: document.getElementById('btn-cancel-new-game'),
+    curriculumModeList: document.getElementById('curriculum-mode-list'),
+    btnCurriculumModeBack: document.getElementById('btn-curriculum-mode-back'),
 
     btnProfileBar: document.getElementById('btn-profile-bar'),
     profileBarAvatar: document.getElementById('profile-bar-avatar'),
@@ -2183,7 +2186,8 @@
 
   el.btnEndingRestart.addEventListener('click', () => {
     const prevName = state.characterName;
-    state = Engine.makeInitialState(prevName);
+    const prevMode = state.curriculumMode;
+    state = Engine.makeInitialState(prevName, prevMode);
     clearSave();
     saveGame();
     gameStarted = true;
@@ -2194,8 +2198,8 @@
 
   /* ---------------- 시작 화면 ---------------- */
 
-  function startNewGame() {
-    state = Engine.makeInitialState(el.characterNameInput.value);
+  function startNewGame(curriculumMode) {
+    state = Engine.makeInitialState(el.characterNameInput.value, curriculumMode);
     clearSave();
     saveGame();
     gameStarted = true;
@@ -2208,14 +2212,24 @@
       showScreen('confirmNewGame');
       return;
     }
-    startNewGame();
+    showScreen('curriculumMode');
   });
 
   el.btnConfirmNewGame.addEventListener('click', () => {
-    startNewGame();
+    showScreen('curriculumMode');
   });
 
   el.btnCancelNewGame.addEventListener('click', () => {
+    showScreen('start');
+  });
+
+  el.curriculumModeList.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-mode]');
+    if (!btn) return;
+    startNewGame(btn.dataset.mode);
+  });
+
+  el.btnCurriculumModeBack.addEventListener('click', () => {
     showScreen('start');
   });
 

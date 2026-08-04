@@ -74,6 +74,18 @@
       { id: 'grandDuke', name: '대공', minAllStats: 100 },
     ];
 
+    // 게임 시작 시 고르는 "학습 난이도 모드" — 새 게임을 시작할 때 한 번
+    // 고르면 그 판이 끝날 때까지 이 범위 안에서만 문제가 나온다(공부/알바/
+    // 경시대회/학교 수업 등 레벨이 있는 활동 전부에 적용됨). 나중에 신분이
+    // 올라가거나 지능이 아무리 높아져도 고른 학년 범위를 넘는 문제는 나오지
+    // 않는다. id는 그대로 state.curriculumMode에 저장된다.
+    const CURRICULUM_MODES = [
+      { id: 'elementary', name: '초등학교', desc: '초등학교 교과 범위까지만 문제가 나와요' },
+      { id: 'middle', name: '중학교', desc: '초등학교~중학교 교과 범위까지 문제가 나와요' },
+      { id: 'all', name: '전체', desc: '고등학교까지 모든 범위에서 문제가 나와요' },
+    ];
+    function isValidCurriculumMode(mode) { return CURRICULUM_MODES.some((m) => m.id === mode); }
+
     // "학교 수업"의 학년 단계: 평민(nobleRankIndex가 null)은 초등학교,
     // 남작~백작(하위 귀족, index 0~2)은 중학교, 후작~대공(상위 귀족,
     // index 3~5)은 고등학교 과정으로 배운다. NOBLE_RANKS 6단계를 정확히
@@ -82,6 +94,21 @@
       if (nobleRankIndex === null || nobleRankIndex === undefined) return 'elementary';
       if (nobleRankIndex <= 2) return 'middle';
       return 'high';
+    }
+
+    const SCHOOL_TIER_ORDER = ['elementary', 'middle', 'high'];
+    const CURRICULUM_MODE_SCHOOL_TIER_CAP = { elementary: 'elementary', middle: 'middle', all: 'high' };
+
+    // 게임 시작 시 고른 학습 난이도 모드(state.curriculumMode)가 신분에 따라
+    // 자연스럽게 올라가는 학교 수업 학년(schoolTierForRank)의 상한이 된다.
+    // 예를 들어 "중학교" 모드를 골랐으면 신분이 후작 이상으로 올라가도
+    // 학교 수업은 중학교 과정에서 멈춘다.
+    function schoolTierForState(state) {
+      const natural = schoolTierForRank(state.nobleRankIndex);
+      const cap = CURRICULUM_MODE_SCHOOL_TIER_CAP[state.curriculumMode] || 'high';
+      const naturalIdx = SCHOOL_TIER_ORDER.indexOf(natural);
+      const capIdx = SCHOOL_TIER_ORDER.indexOf(cap);
+      return SCHOOL_TIER_ORDER[Math.min(naturalIdx, capIdx)];
     }
 
     const WEEKS_PER_MONTH = 4;
@@ -453,11 +480,12 @@
 
     /* ---------------- 상태 생성/저장 형식 이관 ---------------- */
 
-    function makeInitialState(characterName) {
+    function makeInitialState(characterName, curriculumMode) {
       return {
         turn: 1,
         gold: 0,
         characterName: (characterName && characterName.trim()) || '우리 딸',
+        curriculumMode: isValidCurriculumMode(curriculumMode) ? curriculumMode : 'all',
         stats: { intelligence: 20, focus: 20, stamina: 50, charm: 20, creativity: 20, stress: 10, luck: randInt(10, 30) },
         totalCorrect: 0,
         combo: 0,
@@ -485,6 +513,9 @@
     // localStorage 읽기/쓰기 자체는 이 함수를 호출하는 쪽(script.js)의 몫이다.
     function migrateLoadedState(loaded) {
       if (!loaded || typeof loaded.turn !== 'number') return null;
+      // curriculumMode가 생기기 전에 저장된 판은 예전처럼 전체 범위(all)로
+      // 취급한다 — 이미 진행 중이던 게임의 난이도가 갑자기 좁아지지 않게 하기 위함.
+      if (!isValidCurriculumMode(loaded.curriculumMode)) loaded.curriculumMode = 'all';
       loaded.items = loaded.items || {};
       loaded.npcs = loaded.npcs || NPC_DEFS.map((n) => ({ id: n.id, affection: randInt(10, 20), lastMetTurn: 0 }));
       loaded.npcs.forEach((n) => { if (typeof n.lastMetTurn !== 'number') n.lastMetTurn = 0; });
@@ -572,15 +603,15 @@
 
     /* ---------------- 과목/문제 (질문 엔진에 위임) ---------------- */
 
-    function unlockedLevelsFor(state, subjectKey) { return Question.unlockedLevelsFor(state.stats.intelligence, subjectKey); }
-    function pickRandomSubjectAndLevel(state) { return Question.pickRandomSubjectAndLevel(state.stats.intelligence); }
+    function unlockedLevelsFor(state, subjectKey) { return Question.unlockedLevelsFor(state.stats.intelligence, subjectKey, state.curriculumMode); }
+    function pickRandomSubjectAndLevel(state) { return Question.pickRandomSubjectAndLevel(state.stats.intelligence, state.curriculumMode); }
     function subjectName(key) { return Question.subjectName(key); }
     function schoolSubjectName(key) { return Question.schoolSubjectName(key); }
     function generateEtiquetteQuestion(session) { return Question.generateEtiquetteQuestion(session); }
     function generateScenarioQuestion(session) { return Question.generateScenarioQuestion(session); }
-    function generateNextProblem(state, session) { return Question.generateNextProblem(state.stats.intelligence, session, flatMasteryBoxLookup(state)); }
-    function typicalStudyLevel(state) { return Question.typicalStudyLevel(state.stats.intelligence); }
-    function typicalJobLevel(state) { return Question.typicalJobLevel(state.stats.intelligence); }
+    function generateNextProblem(state, session) { return Question.generateNextProblem(state.stats.intelligence, session, flatMasteryBoxLookup(state), state.curriculumMode); }
+    function typicalStudyLevel(state) { return Question.typicalStudyLevel(state.stats.intelligence, state.curriculumMode); }
+    function typicalJobLevel(state) { return Question.typicalJobLevel(state.stats.intelligence, state.curriculumMode); }
 
     // 왕국 수학경시대회에서 쓸 난이도 사다리를 만든다. 덧셈뺄셈(레벨 1)부터
     // 시작해 현재 해금된 최고 레벨까지 count개 문제에 걸쳐 고르게 올라간다.
@@ -635,7 +666,7 @@
         count: n,
         rewardMultiplier: sessionLengthMultiplier(n, QUESTIONS_PER_SCHOOL),
         fixedSubject: randChoice(Question.SCHOOL_SUBJECT_KEYS),
-        schoolTier: schoolTierForRank(state.nobleRankIndex),
+        schoolTier: schoolTierForState(state),
         helperNpc: isNoble ? 'royalScholar' : 'teacher',
       });
     }
@@ -1431,7 +1462,8 @@
       // 과목/문제(질문 엔진에 위임)
       unlockedLevelsFor, pickRandomSubjectAndLevel, subjectName, schoolSubjectName,
       generateEtiquetteQuestion, generateScenarioQuestion, generateNextProblem,
-      SCHOOL_SUBJECT_KEYS: Question.SCHOOL_SUBJECT_KEYS, schoolTierForRank,
+      SCHOOL_SUBJECT_KEYS: Question.SCHOOL_SUBJECT_KEYS, schoolTierForRank, schoolTierForState,
+      CURRICULUM_MODES, isValidCurriculumMode,
       // 세션
       startStudySession, startJobSession, startSchoolSession, startBanquetSession, startExerciseSession, startRestSession,
       startLaundrySession, startGardenSession, startScenarioQuizSession, startCompetitionSession,

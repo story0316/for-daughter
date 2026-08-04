@@ -10,7 +10,7 @@
      코드가 계속 보이는 문제가 있었다(예: 새 구매 버튼이 안 뜨는 것처럼
      보임). 게임 코드를 바꿀 때마다 이 페이지와 admin.html의 모든
      ?v= 값을 같은 새 날짜로 함께 올려주면 된다. -->
-<link rel="stylesheet" href="style.css?v=20260729" />
+<link rel="stylesheet" href="style.css?v=20260804" />
 </head>
 <body>
   <div id="app">
@@ -106,6 +106,45 @@
           <button id="btn-confirm-new-game" class="btn btn-primary">네, 새로 시작할게요</button>
           <button id="btn-cancel-new-game" class="btn btn-secondary">아니요, 이어할래요</button>
         </div>
+      </div>
+    </section>
+
+    <!-- 학습 난이도 모드 선택: 새 게임을 시작할 때 한 번 고르면, 그 판이 끝날
+         때까지 이 학년 범위 안에서만 문제가 나온다(공부/알바/경시대회/학교
+         수업 전부 적용). 신분이 올라가거나 지능이 높아져도 이 범위를 넘는
+         문제는 나오지 않는다. -->
+    <section id="screen-curriculum-mode" class="screen">
+      <div class="card">
+        <div class="title-emoji">🎓</div>
+        <h2>학습 난이도를 골라주세요</h2>
+        <p class="subtitle">고른 범위 안에서만 문제가 나와요. 이 판을 하는 동안은 바뀌지 않으니 신중하게 골라주세요.</p>
+        <div class="profile-list" id="curriculum-mode-list">
+          <button class="level-card" data-mode="elementary">
+            <span class="level-badge-num">🎒</span>
+            <span class="level-info">
+              <span class="level-title">초등학교</span>
+              <span class="level-desc">초등학교 교과 범위까지만 문제가 나와요</span>
+            </span>
+            <span class="level-lock-icon">›</span>
+          </button>
+          <button class="level-card" data-mode="middle">
+            <span class="level-badge-num">📘</span>
+            <span class="level-info">
+              <span class="level-title">중학교</span>
+              <span class="level-desc">초등학교~중학교 교과 범위까지 문제가 나와요</span>
+            </span>
+            <span class="level-lock-icon">›</span>
+          </button>
+          <button class="level-card" data-mode="all">
+            <span class="level-badge-num">🎓</span>
+            <span class="level-info">
+              <span class="level-title">전체 (추천)</span>
+              <span class="level-desc">고등학교까지 모든 범위에서 문제가 나와요</span>
+            </span>
+            <span class="level-lock-icon">›</span>
+          </button>
+        </div>
+        <button id="btn-curriculum-mode-back" class="btn btn-secondary">‹ 뒤로</button>
       </div>
     </section>
 

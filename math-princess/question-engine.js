@@ -16,11 +16,74 @@
     const SUBJ = deps.SUBJ;
 
     const SUBJECTS = {
-      math: { name: '수학', isLevelUnlocked: P.isLevelUnlocked, generateProblem: P.generateProblem, maxLevel: 9 },
-      english: { name: '영어', isLevelUnlocked: SUBJ.isEnglishLevelUnlocked, generateProblem: SUBJ.generateEnglishProblem, maxLevel: 8 },
-      science: { name: '과학', isLevelUnlocked: SUBJ.isScienceLevelUnlocked, generateProblem: SUBJ.generateScienceProblem, maxLevel: 7 },
+      math: { name: '수학', isLevelUnlocked: P.isLevelUnlocked, generateProblem: P.generateProblem, maxLevel: 9, levels: P.LEVELS },
+      english: { name: '영어', isLevelUnlocked: SUBJ.isEnglishLevelUnlocked, generateProblem: SUBJ.generateEnglishProblem, maxLevel: 8, levels: SUBJ.ENGLISH_LEVELS },
+      science: { name: '과학', isLevelUnlocked: SUBJ.isScienceLevelUnlocked, generateProblem: SUBJ.generateScienceProblem, maxLevel: 7, levels: SUBJ.SCIENCE_LEVELS },
     };
     const SUBJECT_KEYS = Object.keys(SUBJECTS);
+
+    // 게임 시작 시 고르는 "학습 난이도 모드"(curriculumMode)가 각 과목의
+    // 레벨을 어디까지 허용하는지 계산하는 유틸. 레벨마다 이미 붙어있는
+    // curriculum.gradeRange(예: "초3~4", "중2", "중3~고등학교")를 파싱해
+    // 그 레벨이 실제로 어느 학년까지의 내용을 다루는지(ceiling) 추정하고,
+    // 선택한 모드의 최대 학년보다 낮거나 같은 레벨만 허용한다. 수학 레벨처럼
+    // 한 게임-레벨 안에 초등~중등 내용이 섞여 있어도(예: "도형" 레벨은
+    // 초2~중2), gradeRange에 적힌 학년 중 가장 높은 것을 기준으로 삼아
+    // 안전하게(그 레벨을 통째로 포함시킬지 말지) 판단한다.
+    // 학년 번호 체계: 초1~6 = 1~6, 중1~3 = 7~9, 고1~3 = 10~12.
+    const MODE_MAX_GRADE = { elementary: 6, middle: 9, all: 99 };
+
+    function gradeToken(stage, n) {
+      return stage === '초' ? n : stage === '중' ? 6 + n : 9 + n;
+    }
+
+    // "초1~3"(=초1~초3), "중1~3"(=중1~중3)처럼 두 번째 숫자가 학년 접두어
+    // 없이 나오는 표기가 흔해서, 단순히 "(초|중|고)(숫자)"만 정규식으로
+    // 찾으면 두 번째 숫자를 놓친다("초1~3"에서 "초1"만 잡히고 "3"은
+    // 무시됨). '~' 기준으로 나눠, 접두어가 없는 조각은 바로 앞 조각의
+    // 학년 단계를 그대로 물려받게 한다.
+    function parseGradeCeiling(gradeRange) {
+      if (!gradeRange) return 99;
+      let ceiling = null;
+      let lastStage = null;
+      gradeRange.split('~').forEach((part) => {
+        const stageDigit = part.match(/^(초|중|고)(\d)/);
+        if (stageDigit) {
+          lastStage = stageDigit[1];
+          ceiling = ceiling === null ? gradeToken(lastStage, Number(stageDigit[2])) : Math.max(ceiling, gradeToken(lastStage, Number(stageDigit[2])));
+          return;
+        }
+        const bareDigit = part.match(/^(\d)/);
+        if (bareDigit && lastStage) {
+          const val = gradeToken(lastStage, Number(bareDigit[1]));
+          ceiling = ceiling === null ? val : Math.max(ceiling, val);
+          return;
+        }
+        if (/고등학교|고등/.test(part)) {
+          ceiling = ceiling === null ? 12 : Math.max(ceiling, 12);
+          lastStage = '고';
+        } else if (/중학교/.test(part)) {
+          ceiling = ceiling === null ? 9 : Math.max(ceiling, 9);
+          lastStage = '중';
+        } else if (/초등학교/.test(part)) {
+          ceiling = ceiling === null ? 6 : Math.max(ceiling, 6);
+          lastStage = '초';
+        }
+      });
+      // 파싱할 학년 정보가 전혀 없으면(예: "전 학년 심화") 특정 학년으로
+      // 한정 지을 수 없는 심화 콘텐츠로 보고, 제한 모드(초등/중학교)에서는
+      // 항상 제외되도록 아주 큰 값을 돌려준다.
+      return ceiling === null ? 99 : ceiling;
+    }
+
+    function isLevelAllowedInMode(subjectKey, levelId, curriculumMode) {
+      const maxGrade = MODE_MAX_GRADE[curriculumMode] != null ? MODE_MAX_GRADE[curriculumMode] : MODE_MAX_GRADE.all;
+      if (maxGrade >= MODE_MAX_GRADE.all) return true;
+      const subj = SUBJECTS[subjectKey];
+      const levelDef = subj && subj.levels && subj.levels.find((l) => l.id === levelId);
+      const gradeRange = levelDef && levelDef.curriculum && levelDef.curriculum.gradeRange;
+      return parseGradeCeiling(gradeRange) <= maxGrade;
+    }
 
     // 과목별 문제 대신 고정된 문제 은행에서 뽑는 세션 유형(연회 예절 문제).
     const MULTI_SUBJECT_TYPES = ['study', 'job', 'exercise-bonus', 'rest-bonus', 'laundry-bonus', 'garden-bonus'];
@@ -402,25 +465,27 @@
     function subjectName(key) { return SUBJECTS[key].name; }
 
     // 현재 지능으로 어떤 과목의 어떤 레벨까지 풀 수 있는지 확인한다.
-    function unlockedLevelsFor(intelligence, subjectKey) {
+    // curriculumMode(게임 시작 시 고른 학습 난이도 모드)가 있으면 그 학년
+    // 범위를 넘는 레벨은 지능이 충분해도 제외한다.
+    function unlockedLevelsFor(intelligence, subjectKey, curriculumMode) {
       const subj = SUBJECTS[subjectKey];
       const ids = [];
       for (let i = 1; i <= subj.maxLevel; i++) {
-        if (subj.isLevelUnlocked(i, intelligence)) ids.push(i);
+        if (subj.isLevelUnlocked(i, intelligence) && isLevelAllowedInMode(subjectKey, i, curriculumMode)) ids.push(i);
       }
       return ids;
     }
 
-    function typicalStudyLevel(intelligence) {
-      const unlocked = unlockedLevelsFor(intelligence, 'math');
+    function typicalStudyLevel(intelligence, curriculumMode) {
+      const unlocked = unlockedLevelsFor(intelligence, 'math', curriculumMode);
       return unlocked.length ? unlocked[unlocked.length - 1] : 1;
     }
 
     // "알바"가 계속 낼 수 있는 가장 어려운 레벨(해금된 레벨의 하위 절반 중
     // 가장 높은 것). pickJobLevelForSubject와 같은 기준을 preview 계산에도
     // 쓸 수 있도록 대표 과목(수학)으로 미리 계산해둔다.
-    function typicalJobLevel(intelligence) {
-      const unlocked = unlockedLevelsFor(intelligence, 'math');
+    function typicalJobLevel(intelligence, curriculumMode) {
+      const unlocked = unlockedLevelsFor(intelligence, 'math', curriculumMode);
       if (!unlocked.length) return 1;
       const ceiling = Math.max(1, Math.ceil(unlocked.length / 2));
       return unlocked[ceiling - 1];
@@ -432,16 +497,16 @@
     // 올라가게 하려는 의도다(예전에는 3개 레벨이 똑같은 확률이라 지능이
     // 아무리 높아져도 가장 쉬운 레벨만 자주 걸릴 수 있었다). 그래도 가끔은
     // 살짝 쉬운 레벨도 섞여 나와 복습 효과를 준다.
-    function pickLevelForSubject(intelligence, subjectKey) {
-      const unlocked = unlockedLevelsFor(intelligence, subjectKey);
+    function pickLevelForSubject(intelligence, subjectKey, curriculumMode) {
+      const unlocked = unlockedLevelsFor(intelligence, subjectKey, curriculumMode);
       const recentBand = unlocked.slice(-3);
       return recentBand.length ? weightedChoice(recentBand) : 1;
     }
 
     // 과목은 무작위로, 레벨은 방금 해금된 것 위주로 뽑는다.
-    function pickRandomSubjectAndLevel(intelligence) {
+    function pickRandomSubjectAndLevel(intelligence, curriculumMode) {
       const subjectKey = randChoice(SUBJECT_KEYS);
-      return { subject: subjectKey, level: pickLevelForSubject(intelligence, subjectKey) };
+      return { subject: subjectKey, level: pickLevelForSubject(intelligence, subjectKey, curriculumMode) };
     }
 
     // "알바"는 "공부"처럼 최근 해금된 어려운 레벨 위주가 아니라, 여러 잡일을
@@ -451,16 +516,16 @@
     // 하위 절반까지는 알바에도 반영해 지능 성장이 알바 보상에도 조금은
     // 체감되게 하되, 상위 절반(가장 어려운 레벨들)은 "공부"에서만 만날 수
     // 있게 남겨 공부의 존재 이유를 지킨다.
-    function pickJobLevelForSubject(intelligence, subjectKey) {
-      const unlocked = unlockedLevelsFor(intelligence, subjectKey);
+    function pickJobLevelForSubject(intelligence, subjectKey, curriculumMode) {
+      const unlocked = unlockedLevelsFor(intelligence, subjectKey, curriculumMode);
       if (!unlocked.length) return 1;
       const ceiling = Math.max(1, Math.ceil(unlocked.length / 2));
       return randChoice(unlocked.slice(0, ceiling));
     }
 
-    function pickJobSubjectAndLevel(intelligence) {
+    function pickJobSubjectAndLevel(intelligence, curriculumMode) {
       const subjectKey = randChoice(SUBJECT_KEYS);
-      return { subject: subjectKey, level: pickJobLevelForSubject(intelligence, subjectKey) };
+      return { subject: subjectKey, level: pickJobLevelForSubject(intelligence, subjectKey, curriculumMode) };
     }
 
     // 연회 예절/창의력 올림피아드/기도와 선행은 은행 크기가 20~30개뿐이라
@@ -542,7 +607,7 @@
     // 필요하면 session.currentSubject를 채워준다(표시용 과목 이름을 UI가 알 수 있도록).
     // session.fixedSubject가 있으면(공부 세션) 매 문제 과목을 다시 뽑지 않고
     // 세션 내내 그 과목으로 통일해, "이번엔 수학을 공부한다"처럼 연계성을 준다.
-    function generateNextProblem(intelligence, session, boxOf) {
+    function generateNextProblem(intelligence, session, boxOf, curriculumMode) {
       if (session.type === 'banquet') return generateEtiquetteQuestion(session);
       if (session.type === 'creativity') return generateCreativityQuestion(session);
       if (session.type === 'faith') return generateFaithQuestion(session);
@@ -569,9 +634,9 @@
       }
       if (MULTI_SUBJECT_TYPES.includes(session.type)) {
         let picked;
-        if (session.type === 'job') picked = pickJobSubjectAndLevel(intelligence);
-        else if (session.fixedSubject) picked = { subject: session.fixedSubject, level: pickLevelForSubject(intelligence, session.fixedSubject) };
-        else picked = pickRandomSubjectAndLevel(intelligence);
+        if (session.type === 'job') picked = pickJobSubjectAndLevel(intelligence, curriculumMode);
+        else if (session.fixedSubject) picked = { subject: session.fixedSubject, level: pickLevelForSubject(intelligence, session.fixedSubject, curriculumMode) };
+        else picked = pickRandomSubjectAndLevel(intelligence, curriculumMode);
         session.currentSubject = picked.subject;
         return SUBJECTS[picked.subject].generateProblem(picked.level, undefined, boxOf);
       }
@@ -582,6 +647,7 @@
       SUBJECTS, SUBJECT_KEYS, MULTI_SUBJECT_TYPES, ETIQUETTE_QUESTIONS,
       CREATIVITY_PUZZLE_BANK, FAITH_QUESTIONS,
       SCHOOL_SUBJECTS, SCHOOL_SUBJECT_KEYS, SCHOOL_LEVEL_RANGES, schoolSubjectName,
+      MODE_MAX_GRADE, parseGradeCeiling, isLevelAllowedInMode,
       randInt, randChoice, shuffle, weightedChoice,
       subjectName, unlockedLevelsFor, typicalStudyLevel, typicalJobLevel, pickLevelForSubject,
       pickRandomSubjectAndLevel, pickJobLevelForSubject, pickJobSubjectAndLevel,
