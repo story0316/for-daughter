@@ -98,15 +98,16 @@
 - `math-princess/reward-engine.js` — "정답/오답에 얼마를 줄지"만 담당하는 순수 로직(DOM 비의존). 골드/스탯 공식, 콤보 배율, 장비 보너스, 호감도 증가량. 밸런스 수치를 조정할 때는 이 파일만 보면 된다. `createRewardEngine({ITEMS})`로 만든다
 - `math-princess/game-engine.js` — question-engine.js/reward-engine.js를 조합해 세션 흐름·상점/옷장·시나리오·턴 진행·엔딩 등 게임 상태가 바뀌는 전체 흐름을 담당하는 오케스트레이션 엔진(DOM 비의존). `createEngine({P,SUBJ,SC,E})`로 만들며, script.js(브라우저 UI)와 밸런스 시뮬레이터(Node)가 완전히 같은 코드를 공유한다. `state.learningLog[과목].mastery`에 문제별 라이트너 숙달도 박스(1~5)를 저장하고(`recordAnswerLog`), `flatMasteryBoxLookup`으로 만든 조회 객체를 question-engine.js에 넘겨 오답 위주 가중 출제를 가능하게 한다(`recordReviewAnswer`/`isReviewableSession`은 오답 복습 라운드 전용)
 - `math-princess/competency-model.js` — 게임 콘텐츠(과목/활동/연회 예절/시나리오/기초 과목 인증)가 어떤 핵심역량·상황판단 유형과 연결되는지 태깅한 참고 데이터(DOM 비의존, 게임 로직에는 관여하지 않음). admin.html이 이 데이터를 읽어 커버리지 매트릭스를 그린다
-- `math-princess/admin.html`/`admin.js`/`admin.css` — PIN 로그인(관리자 전용) 뒤에 "어떤 문제가 어떤 역량/상황판단 유형과 연결되어 있는지"를 한눈에 보여주는 관리자 대시보드. 콘텐츠 열람 위주지만, "📈 실제 플레이 학습 현황" 섹션은 이 브라우저에 저장된 실제 진행 데이터(`math-princess-save-v1`)를 읽어와 과목·레벨별 정답/오답 횟수와 정답률이 낮은(3회 이상 시도했는데 60% 미만) 약한 부분, 최근 오답 문제를 보여준다(저장 데이터가 없으면 안내 문구만 표시)
+- `math-princess/profiles.js` — 기기(브라우저) 안에서 여러 사람이 저장 데이터를 나눠 쓸 수 있게 해주는 "프로필" 관리 모듈(DOM 비의존, 서버 없는 정적 사이트라 실제 로그인이 아니라 localStorage 안에서 프로필별로 키를 나누는 방식). 프로필이 1개(기본 프로필)뿐이면 예전 고정 저장 키(`math-princess-save-v1`/`math-princess-endings-v1`)를 그대로 쓰고 선택 화면도 건너뛴다 — 두 번째 프로필을 만드는 순간부터 매 세션(탭을 새로 열 때)마다 "누가 할까요?" 화면이 뜨고, 프로필마다 `math-princess-save-v1::<id>`처럼 독립된 키에 저장된다. 프로필마다 이름·이모지·선택적 4자리 PIN을 가질 수 있다
+- `math-princess/admin.html`/`admin.js`/`admin.css` — PIN 로그인(관리자 전용) 뒤에 "어떤 문제가 어떤 역량/상황판단 유형과 연결되어 있는지"를 한눈에 보여주는 관리자 대시보드. 콘텐츠 열람 위주지만, "📈 실제 플레이 학습 현황" 섹션은 이 브라우저에 저장된 실제 진행 데이터를 읽어와 과목·레벨별 정답/오답 횟수와 정답률이 낮은(3회 이상 시도했는데 60% 미만) 약한 부분, 최근 오답 문제를 보여준다(저장 데이터가 없으면 안내 문구만 표시). 프로필이 여러 개면 어느 아이의 데이터를 볼지 고르는 선택 칩이 함께 뜬다
 - `math-princess/assets/scenarios/{id}/*.png` — 시나리오별 실제 일러스트 장면 이미지
 - `math-princess/assets/portraits/tier0~10.png` — 품위/작위 단계별 실제 일러스트 초상화(옷 11단계 전부, 옷을 갈아입으면 초상화도 그에 맞게 바뀜)
 - `math-princess/assets/wardrobe/tier0~10.png` — 옷장 탭에 쓰이는 옷 썸네일 이미지(11단계 전부)
 - `math-princess/assets/npcs/{id}.png` — 인물별 기본 초상화("학교 수업"에서 귀족에게 수업하는 왕궁 학자까지 7명 전부 적용됨 — NPC_DEFS의 `hasArt` 플래그로 관리, 그림이 없는 인물이 생기면 이모지로만 표시). `{id}-happy.png`/`{id}-surprised.png` 표정 그림도 있어, "친구 만나기"로 대화할 때는 기쁜 표정을, 연회에서 왕자님을 만나면 놀란 표정을 보여준다(그림이 없으면 기본 그림으로, 기본 그림도 없으면 이모지로 자동 대체)
 - `math-princess/assets/backgrounds/schedule-desk.png`/`dressing-room.png`/`ballroom.png` — 스케줄·상점·연회 등급 선택 화면에 각각 쓰이는 배경 일러스트(메인 화면의 서재풍 배경과 같은 톤의 반투명 그라데이션을 겹쳐 카드 가독성은 그대로 유지)
-- `math-princess/script.js` — game-engine.js를 호출해 화면을 그리는 UI 레이어. 스케줄/실행 메뉴, 옷장/상점, 상태 화면(다가오는 이야기 포함), 로컬 저장/이어하기, 배경음악 재생
+- `math-princess/script.js` — game-engine.js를 호출해 화면을 그리는 UI 레이어. 스케줄/실행 메뉴, 옷장/상점, 상태 화면(다가오는 이야기 포함), 로컬 저장/이어하기, 배경음악 재생, 프로필 선택/생성/삭제 화면(profiles.js 기반)
 
-`problems.js`/`subjects.js`/`endings.js`/`scenarios.js`/`question-engine.js`/`reward-engine.js`/`game-engine.js`는 DOM에 의존하지 않는 순수 로직이라 Node.js에서 바로 불러와 유닛 테스트할 수 있습니다.
+`problems.js`/`subjects.js`/`endings.js`/`scenarios.js`/`question-engine.js`/`reward-engine.js`/`game-engine.js`/`profiles.js`는 DOM에 의존하지 않는 순수 로직이라 Node.js에서 바로 불러와 유닛 테스트할 수 있습니다.
 
 `math-princess/test/`에 회귀 테스트 스위트가 있습니다(순수 로직 유닛 테스트, 48개월 x 4주 밸런스/엔딩 도달 가능성 시뮬레이션, Playwright 기반 e2e 테스트). 기능을 추가·수정한 뒤 `bash math-princess/test/run-all.sh`로 전부 돌려볼 수 있습니다. 자세한 내용은 `math-princess/test/README.md` 참고.
 

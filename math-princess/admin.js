@@ -14,6 +14,7 @@
   const E = window.MathPrincessEndings;
   const Engine = window.MathPrincessEngine.createEngine({ P, SUBJ, SC, E });
   const CM = window.MathPrincessCompetencyModel;
+  const Profiles = window.MathPrincessProfiles;
 
   const el = {
     screens: {
@@ -38,6 +39,7 @@
     faithFilter: document.getElementById('faith-filter'),
     faithList: document.getElementById('faith-list'),
     scenarioList: document.getElementById('scenario-list'),
+    learningProfilePicker: document.getElementById('learning-profile-picker'),
     learningList: document.getElementById('learning-list'),
   };
 
@@ -354,11 +356,13 @@
 
   // 이 브라우저의 실제 저장 데이터(script.js와 같은 localStorage 키)를 읽어
   // 온다. 콘텐츠 브라우저인 이 페이지의 다른 섹션과 달리, 여기만 유일하게
-  // "지금 이 아이가 실제로 어떻게 하고 있는지"를 보여준다.
-  function loadRealSaveState() {
+  // "지금 이 아이가 실제로 어떻게 하고 있는지"를 보여준다. 이 기기에 프로필이
+  // 여러 개면(여러 아이가 나눠 쓰는 경우) profileId로 어느 프로필의 저장
+  // 데이터를 볼지 고른다.
+  function loadRealSaveState(profileId) {
     let raw;
     try {
-      raw = localStorage.getItem(Engine.SAVE_KEY);
+      raw = localStorage.getItem(Profiles.saveKeyFor(profileId));
     } catch (e) {
       return null;
     }
@@ -369,6 +373,32 @@
       return null;
     }
   }
+
+  // 학습 현황에서 지금 보고 있는 프로필. 처음 열 때는 첫 번째 프로필을 고른다.
+  let selectedLearningProfileId = null;
+
+  function renderLearningProfilePicker() {
+    const profiles = Profiles.listProfiles();
+    if (!selectedLearningProfileId || !profiles.some((p) => p.id === selectedLearningProfileId)) {
+      selectedLearningProfileId = profiles[0].id;
+    }
+    // 프로필이 1개뿐이면(이 기기를 아직 한 명만 쓰고 있으면) 고를 필요가
+    // 없으니 선택 칩 자체를 숨긴다.
+    if (profiles.length <= 1) {
+      el.learningProfilePicker.innerHTML = '';
+      return;
+    }
+    el.learningProfilePicker.innerHTML = profiles.map((p) => `
+      <button class="filter-chip${p.id === selectedLearningProfileId ? ' active' : ''}" data-profile-id="${p.id}">${p.emoji} ${p.name}</button>
+    `).join('');
+  }
+
+  el.learningProfilePicker.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-profile-id]');
+    if (!btn) return;
+    selectedLearningProfileId = btn.dataset.profileId;
+    renderLearning();
+  });
 
   // 과목별로 "단원(레벨) 이름 목록"과 "그 단원의 문제은행"을 한곳에서 찾을
   // 수 있게 모아둔다. 수학은 절차적으로 생성되는 문제라 고정 은행이 없으므로
@@ -405,9 +435,10 @@
   }
 
   function renderLearning() {
-    const state = loadRealSaveState();
+    renderLearningProfilePicker();
+    const state = loadRealSaveState(selectedLearningProfileId);
     if (!state) {
-      el.learningList.innerHTML = `<div class="admin-card-desc">아직 이 브라우저에서 게임을 이어한 기록이 없어요. 아이가 플레이한 뒤 이 페이지를 새로고침하면 여기 표시됩니다.</div>`;
+      el.learningList.innerHTML = `<div class="admin-card-desc">아직 이 프로필로 게임을 이어한 기록이 없어요. 아이가 플레이한 뒤 이 페이지를 새로고침하면 여기 표시됩니다.</div>`;
       return;
     }
     el.learningList.innerHTML = Engine.LOG_SUBJECT_KEYS.map((subjectKey) => {
