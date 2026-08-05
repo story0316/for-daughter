@@ -104,7 +104,7 @@
     career: { name: '직업', competencies: ['community', 'self-management'] },
   };
 
-  // 시나리오(인물별 1회성 이야기) 14편의 역량/상황판단 태깅.
+  // 시나리오(인물별 1회성 이야기) 16편의 역량/상황판단 태깅.
   // scenarios.js의 id와 1:1로 대응한다.
   const SCENARIO_COMPETENCY_TAGS = {
     'banquet-etiquette': { theme: '연회 예절', competencies: ['aesthetic-emotional', 'communication'] },
@@ -121,6 +121,8 @@
     'library-secret': { theme: '탐구심', competencies: ['knowledge-processing', 'creative-thinking'] },
     'garden-walk-prince': { theme: '관계 발전', competencies: ['communication', 'aesthetic-emotional'] },
     'coronation-ball': { theme: '책임감과 종합적 성장', competencies: ['self-management', 'community', 'aesthetic-emotional'] },
+    'teacher-special-homework': { theme: '학업 태도와 자기관리', competencies: ['self-management', 'knowledge-processing'] },
+    'teachers-old-notebook': { theme: '사제 간의 정과 다짐', competencies: ['communication', 'aesthetic-emotional'] },
   };
 
   // 기초 과목 인증(동/은/금메달) 등급이 요구하는 역량 — 지식 축(과목)과
