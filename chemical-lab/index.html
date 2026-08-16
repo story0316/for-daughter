@@ -16,7 +16,7 @@
         <a href="../index.html" class="home-link">🏠 홈으로</a>
         <div class="title-emoji">🧪</div>
         <h1>화학식 연구소</h1>
-        <p class="subtitle">원소를 조합해서<br/>분자를 합성해보세요!</p>
+        <p class="subtitle">그리드를 스와이프해서<br/>원소를 합쳐 화합물을 발견해보세요!</p>
 
         <div class="save-info" id="save-info" style="display:none">
           <p id="save-desc">이어서 할 수 있어요</p>
@@ -33,7 +33,7 @@
       <div class="card">
         <div class="title-emoji">⚠️</div>
         <h2>정말 새로 시작할까요?</h2>
-        <p class="subtitle">지금까지 발견한 원소와 화합물 기록이<br/>모두 사라져요.</p>
+        <p class="subtitle">지금까지 발견한 원소와 화합물 기록,<br/>점수가 모두 사라져요.</p>
         <div class="result-buttons">
           <button id="btn-confirm-reset" class="btn btn-primary">새로 시작하기</button>
           <button id="btn-cancel-reset" class="btn btn-secondary">취소</button>
@@ -46,58 +46,64 @@
       <header class="hud">
         <div class="hud-row">
           <button id="btn-game-home" class="icon-btn">🏠</button>
-          <div id="stage-title" class="stage-title">1단계</div>
+          <div class="stage-title">화학식 연구소</div>
           <button id="btn-open-dex" class="icon-btn">📖</button>
         </div>
-        <div class="goal-panel" id="goal-panel">
-          <div class="goal-row goal-main" id="goal-main">
-            <span class="goal-check" id="goal-main-check">☐</span>
-            <span class="goal-label" id="goal-main-label">목표: 물 (H₂O)</span>
-          </div>
-          <div class="goal-row goal-bonus" id="goal-bonus-1">
-            <span class="goal-check" id="goal-bonus-1-check">☐</span>
-            <span class="goal-label" id="goal-bonus-1-label">추가: 수소 (H₂)</span>
-          </div>
-          <div class="goal-row goal-bonus" id="goal-bonus-2">
-            <span class="goal-check" id="goal-bonus-2-check">☐</span>
-            <span class="goal-label" id="goal-bonus-2-label">추가: 산소 (O₂)</span>
-          </div>
+        <div class="stat-row">
+          <div class="stat-chip">⭐ <span id="score-value">0</span></div>
+          <div class="stat-chip">🧬 <span id="discovered-badge-value">0</span> / <span id="total-count-value">30</span></div>
+          <div class="stat-chip combo-chip" id="combo-chip" style="display:none">🔗 <span id="combo-value">0</span>연쇄!</div>
         </div>
-        <div class="hud-row">
-          <button id="btn-hint" class="btn-hint">💡 힌트 <span id="hint-count">3</span></button>
-          <div id="discovered-badge" class="diff-badge">발견 0 / 30</div>
-        </div>
+        <div class="badge-strip" id="badge-strip"></div>
+        <div class="next-target-strip" id="next-target-strip"></div>
       </header>
 
-      <div class="lab-wrap">
-        <div id="tile-grid" class="tile-grid"></div>
+      <div class="board-wrap">
+        <div id="board-grid" class="board-grid">
+          <div class="board-bg" id="board-bg"></div>
+          <div class="board-layer" id="board-layer"></div>
+        </div>
+        <div class="dpad">
+          <button class="dpad-btn dpad-up" data-dir="up" aria-label="위로">▲</button>
+          <div class="dpad-mid">
+            <button class="dpad-btn dpad-left" data-dir="left" aria-label="왼쪽으로">◀</button>
+            <button class="dpad-btn dpad-right" data-dir="right" aria-label="오른쪽으로">▶</button>
+          </div>
+          <button class="dpad-btn dpad-down" data-dir="down" aria-label="아래로">▼</button>
+        </div>
+        <p class="swipe-hint">그리드를 스와이프하거나 화살표를 눌러 원소를 합쳐보세요</p>
       </div>
 
-      <div id="combine-toast" class="combine-toast"></div>
+      <div id="status-toast" class="status-toast"></div>
     </section>
 
-    <!-- 스테이지 클리어 -->
-    <section id="screen-stageclear" class="screen overlay-screen">
+    <!-- 라운드 종료 -->
+    <section id="screen-round-summary" class="screen overlay-screen">
       <div class="card">
-        <div class="title-emoji">🎉</div>
-        <h2 id="stageclear-title">1단계 클리어!</h2>
-        <p id="stageclear-desc">물(H₂O)을 합성했어요!</p>
-        <div id="stageclear-bonus" class="bonus-star" style="display:none">★ 추가 목표도 모두 완료!</div>
+        <div class="title-emoji">🧾</div>
+        <h2>라운드 종료!</h2>
+        <p id="summary-desc">그리드가 가득 차서 더 이상 합칠 수 없어요.</p>
+        <div class="summary-stats">
+          <div class="summary-stat"><span id="summary-discoveries">0</span><label>새 발견</label></div>
+          <div class="summary-stat"><span id="summary-score">0</span><label>획득 점수</label></div>
+          <div class="summary-stat"><span id="summary-combo">0</span><label>최고 연쇄</label></div>
+        </div>
         <div class="result-buttons">
-          <button id="btn-next-stage" class="btn btn-primary">다음 단계로</button>
+          <button id="btn-next-round" class="btn btn-primary">다음 라운드</button>
+          <button id="btn-summary-dex" class="btn btn-secondary">📖 도감 보기</button>
         </div>
       </div>
     </section>
 
-    <!-- 전체 완료 -->
+    <!-- 전체 발견 축하 -->
     <section id="screen-complete" class="screen overlay-screen">
       <div class="card">
         <div class="title-emoji">🏆</div>
-        <h2>모든 단계 클리어!</h2>
-        <p>훌륭한 화학자가 되었어요!<br/>도감에서 발견한 모든 것을 살펴보세요.</p>
+        <h2>모든 화합물을 발견했어요!</h2>
+        <p>훌륭한 화학자가 되었어요!<br/>이제부터는 점수를 쌓으며 자유롭게 실험해보세요.</p>
         <div class="result-buttons">
-          <button id="btn-view-dex" class="btn btn-primary">도감 보기</button>
-          <button id="btn-complete-home" class="btn btn-secondary">처음 화면으로</button>
+          <button id="btn-complete-continue" class="btn btn-primary">계속 플레이</button>
+          <button id="btn-complete-dex" class="btn btn-secondary">📖 도감 보기</button>
         </div>
       </div>
     </section>
@@ -113,20 +119,37 @@
         <div class="dex-tabs">
           <button class="dex-tab active" data-tab="element">원소</button>
           <button class="dex-tab" data-tab="compound">화합물</button>
+          <button class="dex-tab" data-tab="history">기록</button>
         </div>
       </header>
       <div class="dex-wrap">
         <div id="dex-grid" class="dex-grid"></div>
+        <div id="dex-table-wrap" class="dex-table-wrap" style="display:none">
+          <table class="dex-table" id="dex-table">
+            <thead>
+              <tr>
+                <th data-sort="display">화학식 ↕</th>
+                <th data-sort="name">이름 ↕</th>
+                <th data-sort="state">상태 ↕</th>
+                <th data-sort="score">점수 ↕</th>
+              </tr>
+            </thead>
+            <tbody id="dex-table-body"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
-    <!-- 상세 정보 모달 -->
+    <!-- 상세 정보 / 발견 모달 -->
     <div id="detail-modal" class="modal-overlay">
       <div class="modal-card">
+        <div id="detail-new-badge" class="new-badge" style="display:none">✨ 새로 발견!</div>
         <button id="btn-detail-close" class="modal-close">✕</button>
         <div id="detail-symbol" class="detail-symbol">H</div>
         <h2 id="detail-name">수소</h2>
-        <p id="detail-formula" class="detail-formula">H</p>
+        <div id="detail-recipe" class="detail-recipe" style="display:none"></div>
+        <div id="detail-thermal" class="detail-thermal" style="display:none"></div>
+        <div id="detail-hazards" class="detail-hazards" style="display:none"></div>
         <div id="detail-facts" class="detail-facts"></div>
         <p id="detail-desc" class="detail-desc"></p>
       </div>
