@@ -31,6 +31,13 @@
       theme: 'gold',
       image: 'math-princess/assets/hero.png',
     },
+    {
+      href: 'chemical-lab/index.html',
+      emoji: '🧪',
+      title: '화학식 연구소',
+      desc: '원소를 조합해서 화합물을 합성해보세요',
+      theme: 'teal',
+    },
   ];
 
   // 앞뒤에 클론을 하나씩 붙여서 좌우로 끝없이 도는 캐러셀을 만든다.

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>화학식 연구소</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧪</text></svg>" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- 시작 화면 -->
+    <section id="screen-start" class="screen active">
+      <div class="card">
+        <a href="../index.html" class="home-link">🏠 홈으로</a>
+        <div class="title-emoji">🧪</div>
+        <h1>화학식 연구소</h1>
+        <p class="subtitle">원소를 조합해서<br/>분자를 합성해보세요!</p>
+
+        <div class="save-info" id="save-info" style="display:none">
+          <p id="save-desc">이어서 할 수 있어요</p>
+        </div>
+
+        <button id="btn-continue" class="btn btn-primary" style="display:none">이어서 하기</button>
+        <button id="btn-start" class="btn btn-primary">새로 시작하기</button>
+        <button id="btn-dex-preview" class="btn btn-secondary">📖 원소·화합물 도감</button>
+      </div>
+    </section>
+
+    <!-- 새로 시작 확인 -->
+    <section id="screen-confirm-reset" class="screen overlay-screen">
+      <div class="card">
+        <div class="title-emoji">⚠️</div>
+        <h2>정말 새로 시작할까요?</h2>
+        <p class="subtitle">지금까지 발견한 원소와 화합물 기록이<br/>모두 사라져요.</p>
+        <div class="result-buttons">
+          <button id="btn-confirm-reset" class="btn btn-primary">새로 시작하기</button>
+          <button id="btn-cancel-reset" class="btn btn-secondary">취소</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 게임 화면 -->
+    <section id="screen-game" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-game-home" class="icon-btn">🏠</button>
+          <div id="stage-title" class="stage-title">1단계</div>
+          <button id="btn-open-dex" class="icon-btn">📖</button>
+        </div>
+        <div class="goal-panel" id="goal-panel">
+          <div class="goal-row goal-main" id="goal-main">
+            <span class="goal-check" id="goal-main-check">☐</span>
+            <span class="goal-label" id="goal-main-label">목표: 물 (H₂O)</span>
+          </div>
+          <div class="goal-row goal-bonus" id="goal-bonus-1">
+            <span class="goal-check" id="goal-bonus-1-check">☐</span>
+            <span class="goal-label" id="goal-bonus-1-label">추가: 수소 (H₂)</span>
+          </div>
+          <div class="goal-row goal-bonus" id="goal-bonus-2">
+            <span class="goal-check" id="goal-bonus-2-check">☐</span>
+            <span class="goal-label" id="goal-bonus-2-label">추가: 산소 (O₂)</span>
+          </div>
+        </div>
+        <div class="hud-row">
+          <button id="btn-hint" class="btn-hint">💡 힌트 <span id="hint-count">3</span></button>
+          <div id="discovered-badge" class="diff-badge">발견 0 / 30</div>
+        </div>
+      </header>
+
+      <div class="lab-wrap">
+        <div id="tile-grid" class="tile-grid"></div>
+      </div>
+
+      <div id="combine-toast" class="combine-toast"></div>
+    </section>
+
+    <!-- 스테이지 클리어 -->
+    <section id="screen-stageclear" class="screen overlay-screen">
+      <div class="card">
+        <div class="title-emoji">🎉</div>
+        <h2 id="stageclear-title">1단계 클리어!</h2>
+        <p id="stageclear-desc">물(H₂O)을 합성했어요!</p>
+        <div id="stageclear-bonus" class="bonus-star" style="display:none">★ 추가 목표도 모두 완료!</div>
+        <div class="result-buttons">
+          <button id="btn-next-stage" class="btn btn-primary">다음 단계로</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 전체 완료 -->
+    <section id="screen-complete" class="screen overlay-screen">
+      <div class="card">
+        <div class="title-emoji">🏆</div>
+        <h2>모든 단계 클리어!</h2>
+        <p>훌륭한 화학자가 되었어요!<br/>도감에서 발견한 모든 것을 살펴보세요.</p>
+        <div class="result-buttons">
+          <button id="btn-view-dex" class="btn btn-primary">도감 보기</button>
+          <button id="btn-complete-home" class="btn btn-secondary">처음 화면으로</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 도감 -->
+    <section id="screen-dex" class="screen">
+      <header class="hud">
+        <div class="hud-row">
+          <button id="btn-dex-back" class="icon-btn">← 뒤로</button>
+          <div class="stage-title">원소·화합물 도감</div>
+          <div style="width:40px"></div>
+        </div>
+        <div class="dex-tabs">
+          <button class="dex-tab active" data-tab="element">원소</button>
+          <button class="dex-tab" data-tab="compound">화합물</button>
+        </div>
+      </header>
+      <div class="dex-wrap">
+        <div id="dex-grid" class="dex-grid"></div>
+      </div>
+    </section>
+
+    <!-- 상세 정보 모달 -->
+    <div id="detail-modal" class="modal-overlay">
+      <div class="modal-card">
+        <button id="btn-detail-close" class="modal-close">✕</button>
+        <div id="detail-symbol" class="detail-symbol">H</div>
+        <h2 id="detail-name">수소</h2>
+        <p id="detail-formula" class="detail-formula">H</p>
+        <div id="detail-facts" class="detail-facts"></div>
+        <p id="detail-desc" class="detail-desc"></p>
+      </div>
+    </div>
+
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
