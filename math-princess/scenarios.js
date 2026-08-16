@@ -3,13 +3,14 @@
  *
  * 지금까지 게임 안의 이야기 콘텐츠(연회 퀴즈, 랜덤 이벤트, NPC와의 대사)는
  * script.js 여기저기에 흩어진 배열(EVENTS, NPC_DEFS.lines, ETIQUETTE_QUESTIONS)로
- * 따로따로 정의되어 있었다. 앞으로 콘텐츠를 더 풍부하게 늘려갈 때 같은 모양의
+ * 따로따로 정의되어 있었다. 콘텐츠를 더 풍부하게 늘려갈 때 같은 모양의
  * "시나리오" 한 편씩을 이 파일의 SCENARIOS 배열에 추가하기만 하면 되도록
  * 표준 형태(스키마)를 하나로 통일한 것이 이 파일이다.
  *
- * 아직 게임 로직(script.js)에 실제로 연결되어 있지는 않다. 다른 AI가 이
- * 스키마에 맞춰 시나리오 초안을 채워 넣으면, 그 다음 단계로 script.js에서
- * 이 SCENARIOS 배열을 읽어 스케줄 메뉴/랜덤 이벤트/NPC 이야기에 반영하면 된다.
+ * script.js가 findActiveScenario/resolveBranchingOption 등으로 이 SCENARIOS
+ * 배열을 직접 읽어 스케줄 메뉴/랜덤 이벤트/NPC 이야기에 반영하는, 이미
+ * 실제 게임 로직에 연결된 파일이다. 새 시나리오를 추가할 때는 이 배열
+ * 끝에 표준 형태를 그대로 따라 항목을 이어붙이면 된다.
  */
 (function (root) {
   'use strict';
@@ -841,6 +842,97 @@
           },
         ],
       },
+    },
+
+    // 선생님(teacher) 시나리오 보강. 다른 인물(친구/라이벌/귀족/왕실 스승)은
+    // 전부 2편씩인데 선생님만 첫 예절 수업 1편뿐이라 'teachers-successor'
+    // 엔딩("은사님의 뒤를 이어")으로 이어지는 호감도 흐름이 뚝 끊겨 있었다.
+    // first-royal-etiquette(항상 열림) 다음 단계로 이어지도록 minAffection을
+    // 점점 높여 두 편을 이어붙였다. 이미지는 아직 생성하지 않아 emoji 폴백만
+    // 쓰지만(assets.images: []), 다른 시나리오와 같은 규칙(assets/scenarios/<id>/)
+    // 으로 나중에 채워 넣을 수 있게 자리는 비워둔다.
+    {
+      id: 'teacher-special-homework',
+      arc: '선생님과 함께',
+      tier: 1,
+      type: 'quiz',
+      npcId: 'teacher',
+      title: '선생님의 특별 숙제',
+      entryEmoji: '📝',
+      status: 'ready',
+      unlock: { minAffection: { npcId: 'teacher', value: 25 } },
+      quiz: {
+        questionsPerSession: 3,
+        passCount: 2,
+        bank: [
+          {
+            question: '선생님이 새로운 것을 배울 때 가장 중요하다고 하신 태도는 무엇일까요?',
+            choices: ['모르는 것을 부끄러워하지 않고 질문하기', '다 아는 척하기', '어려우면 바로 포기하기', '친구 답을 몰래 베끼기'],
+            answer: '모르는 것을 부끄러워하지 않고 질문하기',
+            explanation: '모르는 걸 솔직하게 물어보는 용기가 가장 빨리 배우는 비결이라고 선생님이 말씀하셨어요.',
+          },
+          {
+            question: '배운 내용을 여러 번 복습하면 어떤 점이 좋을까요?',
+            choices: ['배운 내용을 오래 기억할 수 있다', '시간 낭비일 뿐이다', '오히려 더 헷갈린다', '전혀 도움이 안 된다'],
+            answer: '배운 내용을 오래 기억할 수 있다',
+            explanation: '반복해서 복습하면 머릿속에 오래 남는다고 선생님이 늘 강조하셨죠.',
+          },
+          {
+            question: '문제를 풀다가 실수했을 때 가장 좋은 자세는 무엇일까요?',
+            choices: ['실수의 원인을 살펴보고 다음엔 고쳐본다', '실수를 숨긴다', '다시는 도전하지 않는다', '다른 사람 탓을 한다'],
+            answer: '실수의 원인을 살펴보고 다음엔 고쳐본다',
+            explanation: '실수는 부끄러운 게 아니라 다음에 더 잘하기 위한 발판이에요.',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { intelligence: 8, focus: 8, stress: -3 },
+          npcEffects: { teacher: [8, 14] },
+          narrative: { emoji: '😊', title: '기특한 제자', desc: '선생님이 대견하다는 듯 흐뭇하게 웃으시며 머리를 쓰다듬어주셨어요.' },
+        },
+        fail: {
+          statEffects: { stress: 4 },
+          narrative: { emoji: '📖', title: '다음엔 더 잘할 수 있어요', desc: '선생님이 괜찮다며 틀린 부분을 차근차근 다시 짚어주셨어요.' },
+        },
+      },
+      assets: { images: [] },
+    },
+    {
+      id: 'teachers-old-notebook',
+      arc: '선생님과 함께',
+      tier: 2,
+      type: 'branching',
+      npcId: 'teacher',
+      title: '선생님의 낡은 공책',
+      entryEmoji: '📔',
+      status: 'ready',
+      unlock: { minAffection: { npcId: 'teacher', value: 50 }, minStat: { key: 'intelligence', value: 35 } },
+      branching: {
+        prompt: '선생님 책상 위에 낡고 손때 묻은 공책이 놓여 있었습니다. "이건 내가 너만 할 때 배운 것들을 적어둔 공책이란다." 선생님이 조심스레 공책을 건네주셨어요.',
+        options: [
+          {
+            label: '공책을 꼼꼼히 읽으며 선생님의 옛 이야기를 여쭤본다',
+            statEffects: { intelligence: 10, focus: 6, stress: 2 },
+            npcEffects: { teacher: [18, 24] },
+            resultLine: '선생님은 학창 시절 어려움을 이겨낸 이야기를 들려주셨고, 그 진심 어린 이야기에 큰 용기를 얻었어요.',
+          },
+          {
+            label: '나도 나만의 공책을 만들어보겠다고 다짐하며 웃어 보인다',
+            statEffects: { creativity: 8, charm: 6, stress: -2 },
+            npcEffects: { teacher: [14, 20] },
+            resultLine: '선생님은 그 마음가짐이 참 예쁘다며 눈시울을 붉히셨어요.',
+          },
+        ],
+      },
+      outcomes: {
+        success: {
+          statEffects: { intelligence: 4, focus: 4 },
+          npcEffects: { teacher: [4, 8] },
+          narrative: { emoji: '💞', title: '스승과 제자의 마음', desc: '낡은 공책 한 권이 이어준 마음은, 언젠가 당신도 누군가의 선생님이 되고 싶다는 작은 꿈을 심어주었습니다.' },
+        },
+      },
+      assets: { images: [] },
     },
   ];
 

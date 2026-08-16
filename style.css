@@ -96,6 +96,10 @@ html, body {
   background: linear-gradient(165deg, #ffe6b3 0%, #ffc16e 45%, #ff8fb3 100%);
 }
 
+.slide.theme-teal {
+  background: linear-gradient(165deg, #b0f0e0 0%, #4fd6c4 45%, #8fb4ff 100%);
+}
+
 .slide.has-image {
   background-size: cover;
   background-position: center 30%;
