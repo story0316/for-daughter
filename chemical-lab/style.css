@@ -41,7 +41,6 @@ html, body {
 /* ---------- 공통 카드 화면 ---------- */
 #screen-start,
 #screen-confirm-reset,
-#screen-round-summary,
 #screen-complete {
   align-items: center;
   justify-content: center;
@@ -50,7 +49,6 @@ html, body {
 }
 
 #screen-confirm-reset,
-#screen-round-summary,
 #screen-complete {
   background: rgba(10, 20, 22, 0.8);
 }
@@ -162,31 +160,6 @@ html, body {
   margin-top: 0;
 }
 
-.summary-stats {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  margin: 6px 0 16px;
-}
-
-.summary-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.summary-stat span {
-  font-size: 22px;
-  font-weight: 800;
-  color: #0f5f58;
-}
-
-.summary-stat label {
-  font-size: 11px;
-  color: #4a8a82;
-  margin-top: 2px;
-}
-
 /* ---------- 게임 화면 ---------- */
 #screen-game,
 #screen-dex {
@@ -208,8 +181,7 @@ html, body {
   gap: 10px;
 }
 
-.hud-row + .hud-row,
-.stat-row + .badge-strip,
+.hud-row + .badge-strip,
 .badge-strip + .next-target-strip {
   margin-top: 8px;
 }
@@ -229,37 +201,6 @@ html, body {
   font-size: 15px;
   font-weight: 800;
   color: #d8fff5;
-}
-
-.stat-row {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-  flex-wrap: wrap;
-}
-
-.stat-chip {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  color: #d8fff5;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 4px 10px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-.combo-chip {
-  background: linear-gradient(180deg, #ffe066, #ffc94a);
-  color: #7a4a00;
-  border-color: transparent;
-  animation: combo-pulse 0.4s ease;
-}
-
-@keyframes combo-pulse {
-  0% { transform: scale(0.7); }
-  60% { transform: scale(1.15); }
-  100% { transform: scale(1); }
 }
 
 .badge-strip {
@@ -317,155 +258,220 @@ html, body {
   color: #b8ffcf;
 }
 
-.board-wrap {
+.lab-wrap {
   flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 14px 14px 20px;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* ---------- 실험대 ---------- */
+.workbench {
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px 16px 16px;
-  min-height: 0;
   gap: 10px;
+  margin-bottom: 10px;
 }
 
-.board-grid {
-  position: relative;
-  width: 100%;
-  max-width: 380px;
-  aspect-ratio: 1 / 1;
-  background: rgba(255, 255, 255, 0.06);
+.wb-slot {
+  width: 76px;
+  height: 76px;
   border-radius: 16px;
-  padding: 8px;
-  transition: transform 0.12s ease;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
-.board-grid.shake {
-  animation: board-shake 0.3s ease;
+.wb-slot.filled {
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.14);
 }
 
-@keyframes board-shake {
+.wb-slot.shake {
+  animation: wb-shake 0.4s ease;
+}
+
+@keyframes wb-shake {
   0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-6px); }
-  75% { transform: translateX(6px); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
-.board-bg {
-  position: absolute;
-  inset: 8px;
+.wb-slot.swirl {
+  animation: wb-swirl 0.6s ease;
+}
+
+@keyframes wb-swirl {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(0.85) rotate(180deg); opacity: 0.5; }
+  100% { transform: scale(1) rotate(360deg); }
+}
+
+.wb-empty {
+  font-size: 26px;
+  color: rgba(255, 255, 255, 0.3);
+  font-weight: 300;
+}
+
+.wb-plus {
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 300;
+}
+
+.btn-combine {
+  display: block;
+  margin: 0 auto 14px;
+  border: none;
+  border-radius: 999px;
+  padding: 11px 28px;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(180deg, #4fd6c4, #23b09d);
+  box-shadow: 0 5px 0 #178a7a, 0 8px 16px rgba(23, 138, 122, 0.35);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.15s ease;
+}
+
+.btn-combine:disabled {
+  opacity: 0.35;
+  box-shadow: none;
+  cursor: default;
+}
+
+.btn-combine:not(:disabled):active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 0 #178a7a, 0 4px 10px rgba(23, 138, 122, 0.35);
+}
+
+/* ---------- 연구실 진열장 ---------- */
+.shelf-strip {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 14px;
+}
+
+.shelf-label {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #ffe9b8;
+  margin-bottom: 6px;
+}
+
+.shelf-bottles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 54px;
+  overflow-y: auto;
+}
+
+.shelf-bottle {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px 4px 6px 6px;
+  flex: 0 0 auto;
+}
+
+.inventory-label {
+  font-size: 11.5px;
+  color: rgba(216, 255, 245, 0.6);
+  margin-bottom: 6px;
+}
+
+.inventory-grid {
+  flex: 0 0 auto;
+}
+
+/* ---------- 원소/화합물 그리드 (공통: 실험대 인벤토리 + 도감) ---------- */
+.dex-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(4, 1fr);
   gap: 8px;
 }
 
-.board-cell {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-}
-
-.board-layer {
-  position: absolute;
-  inset: 8px;
-}
-
-.board-tile {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: var(--cell-size, 80px);
-  height: var(--cell-size, 80px);
-  transition: transform 0.15s ease;
-  cursor: pointer;
-}
-
-.tile-inner {
-  width: 100%;
-  height: 100%;
+.dex-tile {
+  aspect-ratio: 1 / 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f4f0ff;
-  border: 2px solid rgba(255,255,255,0.4);
+  cursor: pointer;
+  padding: 3px 2px;
   box-shadow: 0 3px 0 rgba(0,0,0,0.15);
-  user-select: none;
-  overflow: hidden;
-  padding: 2px;
 }
 
-.tile-inner.pop {
-  animation: tile-pop 0.35s ease;
+.dex-tile.selected {
+  box-shadow: 0 0 0 3px #ffe066, 0 3px 0 rgba(0,0,0,0.15);
 }
 
-@keyframes tile-pop {
-  0% { transform: scale(0.4); opacity: 0; }
-  60% { transform: scale(1.12); opacity: 1; }
-  100% { transform: scale(1); }
-}
-
-.tile-symbol {
-  font-size: clamp(12px, 4vw, 18px);
-  font-weight: 800;
-  color: #1c1f38;
-  line-height: 1.1;
-  text-align: center;
-  word-break: break-word;
-}
-
-.tile-name {
+.dex-tile .tile-name {
   font-size: 8.5px;
   font-weight: 600;
   color: rgba(0,0,0,0.55);
-  margin-top: 1px;
+  margin-top: -2px;
   text-align: center;
 }
 
-/* 원소/화합물 카테고리 색상 */
-.cat-nonmetal { background: #d6e6ff; }
-.cat-alkali { background: #e8d6ff; }
-.cat-halogen { background: #d6ffe0; }
-.cat-alkaline-earth { background: #ffe8c2; }
-.cat-compound { background: #fff0d6; }
-
-.dpad {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.dpad-mid {
-  display: flex;
-  gap: 44px;
-}
-
-.dpad-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.25);
+.dex-tile.locked {
   background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.4);
+  cursor: default;
+}
+
+.dex-tile.locked .tile-symbol {
+  font-size: 20px;
+  color: rgba(255,255,255,0.35);
+}
+
+.dex-table-wrap {
+  overflow-x: auto;
+}
+
+.dex-table {
+  width: 100%;
+  border-collapse: collapse;
   color: #d8fff5;
-  font-size: 15px;
+  font-size: 12.5px;
+}
+
+.dex-table th {
+  text-align: left;
+  padding: 8px 6px;
+  background: rgba(255,255,255,0.08);
   cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
 }
 
-.dpad-btn:active {
-  background: rgba(255,255,255,0.28);
+.dex-table td {
+  padding: 7px 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  white-space: nowrap;
 }
 
-.swipe-hint {
-  color: rgba(216, 255, 245, 0.55);
-  font-size: 11px;
-  margin: 0;
-  text-align: center;
+.dex-table tr.locked-row td {
+  color: rgba(216,255,245,0.35);
 }
 
 .status-toast {
   position: absolute;
   left: 50%;
-  bottom: 20px;
+  bottom: 16px;
   transform: translateX(-50%) translateY(20px);
   background: rgba(255, 255, 255, 0.96);
   color: #0f5f58;
@@ -521,67 +527,6 @@ html, body {
   min-height: 0;
 }
 
-.dex-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-.dex-tile {
-  aspect-ratio: 1 / 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: #f4f0ff;
-  cursor: pointer;
-  padding: 4px 2px;
-  box-shadow: 0 3px 0 rgba(0,0,0,0.15);
-}
-
-.dex-tile.locked {
-  background: rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.4);
-  cursor: default;
-}
-
-.dex-tile.locked .tile-symbol {
-  color: rgba(255,255,255,0.35);
-}
-
-.dex-table-wrap {
-  overflow-x: auto;
-}
-
-.dex-table {
-  width: 100%;
-  border-collapse: collapse;
-  color: #d8fff5;
-  font-size: 12.5px;
-}
-
-.dex-table th {
-  text-align: left;
-  padding: 8px 6px;
-  background: rgba(255,255,255,0.08);
-  cursor: pointer;
-  font-weight: 700;
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-}
-
-.dex-table td {
-  padding: 7px 6px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  white-space: nowrap;
-}
-
-.dex-table tr.locked-row td {
-  color: rgba(216,255,245,0.35);
-}
-
 /* ---------- 상세/발견 모달 ---------- */
 .modal-overlay {
   position: absolute;
@@ -629,6 +574,7 @@ html, body {
   padding: 5px 14px;
   border-radius: 999px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  white-space: nowrap;
 }
 
 .modal-close {
@@ -645,11 +591,16 @@ html, body {
   color: #333;
 }
 
-.detail-symbol {
-  font-size: 36px;
-  font-weight: 800;
-  color: #0f5f58;
-  margin-top: 6px;
+.detail-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 6px auto 4px;
+}
+
+.detail-diagram svg {
+  width: 128px;
+  height: 128px;
 }
 
 .modal-card h2 {
@@ -682,14 +633,6 @@ html, body {
   border-radius: 6px;
   background: linear-gradient(90deg, #9fd0ff 0%, #9fd0ff var(--mp-pct, 30%), #6fe0c4 var(--mp-pct, 30%), #6fe0c4 var(--bp-pct, 70%), #e6e6e6 var(--bp-pct, 70%), #e6e6e6 100%);
   margin-bottom: 4px;
-}
-
-.thermal-marker {
-  position: absolute;
-  top: -3px;
-  width: 2px;
-  height: 16px;
-  background: #333;
 }
 
 .thermal-labels {
