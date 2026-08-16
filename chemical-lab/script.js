@@ -155,6 +155,7 @@
   var popupActive = false;
   var popupAutoCloseTimer = null;
   var pendingCompleteCelebration = false;
+  var combineAnimating = false;
 
   function showMain(id) {
     MAIN_SCREENS.forEach(function (s) { el.screens[s].classList.toggle('active', s === id); });
@@ -390,6 +391,11 @@
 
   // 두 슬롯이 가운데로 미끄러져 만나 "딱" 맞물리는 퍼즐 스냅 연출.
   function playSnapAnimation(onDone) {
+    combineAnimating = true;
+    // 이전 애니메이션 잔여 클래스를 지우고 강제로 리플로우시켜 매번 처음부터 재생되게 한다.
+    el.wbSlotA.classList.remove('combine-a');
+    el.wbSlotB.classList.remove('combine-b');
+    void el.wbSlotA.offsetWidth;
     el.wbSlotA.classList.add('combine-a');
     el.wbSlotB.classList.add('combine-b');
     setTimeout(function () {
@@ -397,15 +403,24 @@
       void el.combineFlash.offsetWidth;
       el.combineFlash.classList.add('burst');
     }, 300);
-    el.wbSlotA.addEventListener('animationend', function handler() {
-      el.wbSlotA.removeEventListener('animationend', handler);
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      el.wbSlotA.removeEventListener('animationend', finish);
       el.wbSlotA.classList.remove('combine-a');
       el.wbSlotB.classList.remove('combine-b');
+      combineAnimating = false;
       onDone();
-    }, { once: true });
+    }
+    el.wbSlotA.addEventListener('animationend', finish, { once: true });
+    // 화면 전환(도감 등)으로 애니메이션이 중간에 취소되면 animationend가 발생하지 않으므로,
+    // 안전망으로 애니메이션 시간보다 넉넉한 지연 뒤 강제로 완료 처리한다.
+    setTimeout(finish, 900);
   }
 
   function attemptCombine() {
+    if (combineAnimating) return;
     if (!state.wbA || !state.wbB) return;
     var match = combineLookup(state.wbA, state.wbB);
     if (!match) {
@@ -413,6 +428,7 @@
       showToast('음... 반응이 없어요');
       return;
     }
+    el.btnCombine.disabled = true;
     playSnapAnimation(function () {
       state.wbA = null;
       state.wbB = null;
