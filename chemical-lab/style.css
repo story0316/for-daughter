@@ -269,6 +269,7 @@ html, body {
 
 /* ---------- 실험대 ---------- */
 .workbench {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -305,14 +306,51 @@ html, body {
   75% { transform: translateX(5px); }
 }
 
-.wb-slot.swirl {
-  animation: wb-swirl 0.6s ease;
+/* 퍼즐 스냅: 슬롯 A/B가 가운데로 미끄러져 만나 "딱" 맞물린 뒤 사라진다 */
+.wb-slot.combine-a {
+  animation: wb-combine-a 0.75s cubic-bezier(0.3, 0, 0.4, 1) forwards;
+}
+.wb-slot.combine-b {
+  animation: wb-combine-b 0.75s cubic-bezier(0.3, 0, 0.4, 1) forwards;
 }
 
-@keyframes wb-swirl {
-  0% { transform: scale(1) rotate(0deg); }
-  50% { transform: scale(0.85) rotate(180deg); opacity: 0.5; }
-  100% { transform: scale(1) rotate(360deg); }
+@keyframes wb-combine-a {
+  0%   { transform: translateX(0) scale(1); opacity: 1; }
+  40%  { transform: translateX(38px) scale(0.9); opacity: 1; }
+  55%  { transform: translateX(38px) scale(1.2); opacity: 1; }
+  70%  { transform: translateX(38px) scale(1); opacity: 1; }
+  100% { transform: translateX(38px) scale(0.4); opacity: 0; }
+}
+
+@keyframes wb-combine-b {
+  0%   { transform: translateX(0) scale(1); opacity: 1; }
+  40%  { transform: translateX(-38px) scale(0.9); opacity: 1; }
+  55%  { transform: translateX(-38px) scale(1.2); opacity: 1; }
+  70%  { transform: translateX(-38px) scale(1); opacity: 1; }
+  100% { transform: translateX(-38px) scale(0.4); opacity: 0; }
+}
+
+.combine-flash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%) scale(0);
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff8d6 0%, #ffe066 45%, transparent 72%);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.combine-flash.burst {
+  animation: flash-burst 0.5s ease-out;
+}
+
+@keyframes flash-burst {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  25%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(3.4); opacity: 0; }
 }
 
 .wb-empty {
