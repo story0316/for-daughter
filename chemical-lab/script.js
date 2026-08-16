@@ -12,14 +12,14 @@
 
   // valence = "손(hand)" 개수. 몇 개의 다른 원자와 이어질 수 있는지를 나타낸다.
   var ELEMENTS = [
-    { id: 'H', name: '수소', atomicNumber: 1, mass: 1.0, category: 'nonmetal', valence: 1, desc: '우주에서 가장 많고 가장 가벼운 원소예요. 손이 1개라 딱 하나랑만 손을 잡을 수 있어요.' },
-    { id: 'C', name: '탄소', atomicNumber: 6, mass: 12.0, category: 'nonmetal', valence: 4, desc: '생명체를 이루는 기본 원소예요. 손이 4개라 여러 원자와 한꺼번에 손을 잡을 수 있어요.' },
-    { id: 'N', name: '질소', atomicNumber: 7, mass: 14.0, category: 'nonmetal', valence: 3, desc: '공기의 78%를 차지해요. 손이 3개예요.' },
-    { id: 'O', name: '산소', atomicNumber: 8, mass: 16.0, category: 'nonmetal', valence: 2, desc: '우리가 숨 쉬는 데 꼭 필요해요. 손이 2개예요.' },
-    { id: 'Na', name: '나트륨', atomicNumber: 11, mass: 23.0, category: 'alkali', valence: 1, charge: 1, desc: '전자 하나를 잘 내줘서 항상 +1로 변해요. 물과 만나면 격렬하게 반응해요.' },
-    { id: 'Mg', name: '마그네슘', atomicNumber: 12, mass: 24.3, category: 'alkaline-earth', valence: 2, charge: 2, desc: '전자 두 개를 내줘서 +2로 변해요. 불꽃놀이에서 밝은 빛을 내요.' },
-    { id: 'Cl', name: '염소', atomicNumber: 17, mass: 35.5, category: 'halogen', valence: 1, charge: -1, desc: '전자 하나를 받아서 -1로 변해요. 소독약 냄새의 주인공이에요.' },
-    { id: 'Ca', name: '칼슘', atomicNumber: 20, mass: 40.1, category: 'alkaline-earth', valence: 2, charge: 2, desc: '전자 두 개를 내줘서 +2로 변해요. 뼈와 이를 튼튼하게 만들어줘요.' }
+    { id: 'H', name: '수소', atomicNumber: 1, mass: 1.0, category: 'nonmetal', valence: 1, desc: '우주에서 가장 많고 가장 가벼운 원소예요. 손이 1개라 딱 하나랑만 손을 잡을 수 있어요.', uses: '로켓 연료, 수소차 연료전지, 하늘로 띄우는 기구(풍선)에 쓰여요.' },
+    { id: 'C', name: '탄소', atomicNumber: 6, mass: 12.0, category: 'nonmetal', valence: 4, desc: '생명체를 이루는 기본 원소예요. 손이 4개라 여러 원자와 한꺼번에 손을 잡을 수 있어요.', uses: '연필심(흑연)과 반짝이는 다이아몬드, 숯, 그리고 우리 몸 세포 어디에나 들어있어요.' },
+    { id: 'N', name: '질소', atomicNumber: 7, mass: 14.0, category: 'nonmetal', valence: 3, desc: '공기의 78%를 차지해요. 손이 3개예요.', uses: '식물이 잘 자라게 돕는 질소 비료, 과자 봉지 안을 채워 신선하게 지켜주는 기체로 쓰여요.' },
+    { id: 'O', name: '산소', atomicNumber: 8, mass: 16.0, category: 'nonmetal', valence: 2, desc: '우리가 숨 쉬는 데 꼭 필요해요. 손이 2개예요.', uses: '우리가 숨 쉬는 공기, 병원 산소마스크, 무언가를 태울 때 불꽃을 키우는 데 쓰여요.' },
+    { id: 'Na', name: '나트륨', atomicNumber: 11, mass: 23.0, category: 'alkali', valence: 1, charge: 1, desc: '전자 하나를 잘 내줘서 항상 +1로 변해요. 물과 만나면 격렬하게 반응해요.', uses: '나트륨 혼자서는 위험해서 잘 안 쓰지만, 소금·베이킹소다 같은 화합물로 우리 식탁에 늘 함께해요.' },
+    { id: 'Mg', name: '마그네슘', atomicNumber: 12, mass: 24.3, category: 'alkaline-earth', valence: 2, charge: 2, desc: '전자 두 개를 내줘서 +2로 변해요. 불꽃놀이에서 밝은 빛을 내요.', uses: '불꽃놀이의 새하얀 불빛, 가벼운 자전거·노트북 몸체, 영양제로 쓰여요.' },
+    { id: 'Cl', name: '염소', atomicNumber: 17, mass: 35.5, category: 'halogen', valence: 1, charge: -1, desc: '전자 하나를 받아서 -1로 변해요. 소독약 냄새의 주인공이에요.', uses: '수돗물과 수영장 소독, 종이를 하얗게 만드는 표백, 플라스틱(PVC)을 만드는 데 쓰여요.' },
+    { id: 'Ca', name: '칼슘', atomicNumber: 20, mass: 40.1, category: 'alkaline-earth', valence: 2, charge: 2, desc: '전자 두 개를 내줘서 +2로 변해요. 뼈와 이를 튼튼하게 만들어줘요.', uses: '우유·멸치에 풍부해서 뼈와 이를 튼튼하게 해주고, 시멘트와 석회의 재료로도 쓰여요.' }
   ];
 
   var HAZARDS = {
@@ -32,49 +32,49 @@
   // structure.atoms: 트리 형태. parent가 없으면 뿌리 원자.
   // bondType: single/double/triple(공유결합) 또는 ionic(이온결합, +/- 로 표시).
   var COMPOUNDS = [
-    { id: 'H2', name: '수소 기체', formula: { H: 2 }, display: 'H₂', recipe: ['H', 'H'], desc: '가장 가벼운 기체예요. 로켓 연료로도 쓰여요.', thermalType: 'normal', meltingPoint: -259.2, boilingPoint: -252.9, hazards: ['flammable'],
+    { id: 'H2', name: '수소 기체', formula: { H: 2 }, display: 'H₂', recipe: ['H', 'H'], desc: '가장 가벼운 기체예요. 로켓 연료로도 쓰여요.', uses: '로켓 연료, 수소차 연료전지, 하늘로 띄우는 기구(풍선)에 쓰여요.', thermalType: 'normal', meltingPoint: -259.2, boilingPoint: -252.9, hazards: ['flammable'],
       structure: { atoms: [{ sym: 'H' }, { sym: 'H', parent: 0, bondType: 'single' }] } },
-    { id: 'O2', name: '산소 기체', formula: { O: 2 }, display: 'O₂', recipe: ['O', 'O'], desc: '우리가 숨 쉬는 공기 속 기체예요. 원자 두 개가 손을 두 번씩 맞잡아요(이중결합).', thermalType: 'normal', meltingPoint: -218.3, boilingPoint: -183.0, hazards: [],
+    { id: 'O2', name: '산소 기체', formula: { O: 2 }, display: 'O₂', recipe: ['O', 'O'], desc: '우리가 숨 쉬는 공기 속 기체예요. 원자 두 개가 손을 두 번씩 맞잡아요(이중결합).', uses: '병원 산소마스크, 잠수부의 공기통, 용접할 때 불꽃을 키우는 데 쓰여요.', thermalType: 'normal', meltingPoint: -218.3, boilingPoint: -183.0, hazards: [],
       structure: { atoms: [{ sym: 'O' }, { sym: 'O', parent: 0, bondType: 'double' }] } },
-    { id: 'H2O', name: '물', formula: { H: 2, O: 1 }, display: 'H₂O', recipe: ['H2', 'O'], desc: '생명에 꼭 필요한 액체예요. 산소의 손 2개가 수소 두 개와 각각 손을 잡아요.', thermalType: 'normal', meltingPoint: 0, boilingPoint: 100, hazards: [],
+    { id: 'H2O', name: '물', formula: { H: 2, O: 1 }, display: 'H₂O', recipe: ['H2', 'O'], desc: '생명에 꼭 필요한 액체예요. 산소의 손 2개가 수소 두 개와 각각 손을 잡아요.', uses: '마시고, 씻고, 요리하고... 지구의 모든 생명이 살아가는 데 없어서는 안 돼요.', thermalType: 'normal', meltingPoint: 0, boilingPoint: 100, hazards: [],
       structure: { atoms: [{ sym: 'O' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }] } },
-    { id: 'NaCl', name: '소금', formula: { Na: 1, Cl: 1 }, display: 'NaCl', recipe: ['Na', 'Cl'], desc: '나트륨의 +1과 염소의 -1이 서로 끌어당겨 딱 붙어요. 음식에 넣어 먹는 짠맛의 정체예요.', thermalType: 'normal', meltingPoint: 801, boilingPoint: 1465, hazards: [],
+    { id: 'NaCl', name: '소금', formula: { Na: 1, Cl: 1 }, display: 'NaCl', recipe: ['Na', 'Cl'], desc: '나트륨의 +1과 염소의 -1이 서로 끌어당겨 딱 붙어요. 음식에 넣어 먹는 짠맛의 정체예요.', uses: '음식의 짠맛을 내고, 식품을 오래 보관하거나 겨울철 도로의 눈을 녹이는 데도 쓰여요.', thermalType: 'normal', meltingPoint: 801, boilingPoint: 1465, hazards: [],
       structure: { atoms: [{ sym: 'Na', charge: 1 }, { sym: 'Cl', parent: 0, bondType: 'ionic', charge: -1 }] } },
-    { id: 'Cl2', name: '염소 기체', formula: { Cl: 2 }, display: 'Cl₂', recipe: ['Cl', 'Cl'], desc: '수영장 소독에 사용돼요.', thermalType: 'normal', meltingPoint: -101.5, boilingPoint: -34.0, hazards: ['toxic', 'environment'],
+    { id: 'Cl2', name: '염소 기체', formula: { Cl: 2 }, display: 'Cl₂', recipe: ['Cl', 'Cl'], desc: '수영장 소독에 사용돼요.', uses: '수돗물과 수영장을 소독하고, 종이를 하얗게 만드는 표백에 쓰여요.', thermalType: 'normal', meltingPoint: -101.5, boilingPoint: -34.0, hazards: ['toxic', 'environment'],
       structure: { atoms: [{ sym: 'Cl' }, { sym: 'Cl', parent: 0, bondType: 'single' }] } },
-    { id: 'HCl', name: '염화수소', formula: { H: 1, Cl: 1 }, display: 'HCl', recipe: ['H', 'Cl'], desc: '물에 녹으면 위산의 주성분이 돼요.', thermalType: 'normal', meltingPoint: -114.2, boilingPoint: -85.1, hazards: ['corrosive'],
+    { id: 'HCl', name: '염화수소', formula: { H: 1, Cl: 1 }, display: 'HCl', recipe: ['H', 'Cl'], desc: '물에 녹으면 위산의 주성분이 돼요.', uses: '우리 위 속에서 소화를 돕는 위산의 주성분이고, 공업에서는 금속 표면을 닦는 데 써요.', thermalType: 'normal', meltingPoint: -114.2, boilingPoint: -85.1, hazards: ['corrosive'],
       structure: { atoms: [{ sym: 'Cl' }, { sym: 'H', parent: 0, bondType: 'single' }] } },
-    { id: 'CO2', name: '이산화탄소', formula: { C: 1, O: 2 }, display: 'CO₂', recipe: ['C', 'O2'], desc: '우리가 숨을 내쉴 때 나오는 기체예요. 탄소의 손 4개가 산소 두 개와 이중결합씩 맺어요.', thermalType: 'sublimes', meltingPoint: -78.5, boilingPoint: -78.5, hazards: [],
+    { id: 'CO2', name: '이산화탄소', formula: { C: 1, O: 2 }, display: 'CO₂', recipe: ['C', 'O2'], desc: '우리가 숨을 내쉴 때 나오는 기체예요. 탄소의 손 4개가 산소 두 개와 이중결합씩 맺어요.', uses: '탄산음료의 톡 쏘는 기포, 소화기, 그리고 식물이 광합성할 때 쓰는 재료예요.', thermalType: 'sublimes', meltingPoint: -78.5, boilingPoint: -78.5, hazards: [],
       structure: { atoms: [{ sym: 'C' }, { sym: 'O', parent: 0, bondType: 'double' }, { sym: 'O', parent: 0, bondType: 'double' }] } },
-    { id: 'NH2', name: '아미노기', formula: { N: 1, H: 2 }, display: 'NH₂', recipe: ['N', 'H2'], desc: '질소의 손 3개 중 2개만 쓴 상태라 손이 하나 남아 불안정해요. 암모니아가 되기 전 중간 조각이에요.', thermalType: 'unstable', meltingPoint: null, boilingPoint: null, hazards: [],
+    { id: 'NH2', name: '아미노기', formula: { N: 1, H: 2 }, display: 'NH₂', recipe: ['N', 'H2'], desc: '질소의 손 3개 중 2개만 쓴 상태라 손이 하나 남아 불안정해요. 암모니아가 되기 전 중간 조각이에요.', uses: '혼자서는 잘 쓰이지 않고, 암모니아 같은 다른 화합물을 만드는 다리 역할을 해요.', thermalType: 'unstable', meltingPoint: null, boilingPoint: null, hazards: [],
       structure: { atoms: [{ sym: 'N' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }] } },
-    { id: 'NH3', name: '암모니아', formula: { N: 1, H: 3 }, display: 'NH₃', recipe: ['NH2', 'H'], desc: '질소의 손 3개가 수소 세 개와 모두 손을 잡아 안정돼요. 톡 쏘는 냄새가 나는 비료 재료예요.', thermalType: 'normal', meltingPoint: -77.7, boilingPoint: -33.3, hazards: ['corrosive', 'toxic'],
+    { id: 'NH3', name: '암모니아', formula: { N: 1, H: 3 }, display: 'NH₃', recipe: ['NH2', 'H'], desc: '질소의 손 3개가 수소 세 개와 모두 손을 잡아 안정돼요. 톡 쏘는 냄새가 나는 비료 재료예요.', uses: '농작물이 잘 자라게 돕는 질소 비료, 냉장고를 차갑게 하는 냉매로 쓰여요.', thermalType: 'normal', meltingPoint: -77.7, boilingPoint: -33.3, hazards: ['corrosive', 'toxic'],
       structure: { atoms: [{ sym: 'N' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }] } },
-    { id: 'CH2', name: '메틸렌', formula: { C: 1, H: 2 }, display: 'CH₂', recipe: ['C', 'H2'], desc: '탄소의 손 4개 중 2개만 써서 손이 2개 남은 불안정한 조각이에요.', thermalType: 'unstable', meltingPoint: null, boilingPoint: null, hazards: [],
+    { id: 'CH2', name: '메틸렌', formula: { C: 1, H: 2 }, display: 'CH₂', recipe: ['C', 'H2'], desc: '탄소의 손 4개 중 2개만 써서 손이 2개 남은 불안정한 조각이에요.', uses: '너무 불안정해서 혼자 오래 있지 못하고, 메탄 같은 더 큰 화합물을 만드는 중간 재료로만 잠깐 쓰여요.', thermalType: 'unstable', meltingPoint: null, boilingPoint: null, hazards: [],
       structure: { atoms: [{ sym: 'C' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }] } },
-    { id: 'CH4', name: '메탄', formula: { C: 1, H: 4 }, display: 'CH₄', recipe: ['CH2', 'H2'], desc: '탄소의 손 4개가 수소 네 개와 모두 손을 잡아요. 천연가스의 주성분이에요.', thermalType: 'normal', meltingPoint: -182.5, boilingPoint: -161.5, hazards: ['flammable'],
+    { id: 'CH4', name: '메탄', formula: { C: 1, H: 4 }, display: 'CH₄', recipe: ['CH2', 'H2'], desc: '탄소의 손 4개가 수소 네 개와 모두 손을 잡아요. 천연가스의 주성분이에요.', uses: '가스레인지에서 태우는 도시가스(천연가스)의 주성분이에요.', thermalType: 'normal', meltingPoint: -182.5, boilingPoint: -161.5, hazards: ['flammable'],
       structure: { atoms: [{ sym: 'C' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }] } },
-    { id: 'CaO', name: '산화칼슘', formula: { Ca: 1, O: 1 }, display: 'CaO', recipe: ['Ca', 'O'], desc: '칼슘의 +2와 산소의 -2가 서로 끌어당겨요. 생석회라고도 불러요.', thermalType: 'normal', meltingPoint: 2613, boilingPoint: 2850, hazards: ['corrosive'],
+    { id: 'CaO', name: '산화칼슘', formula: { Ca: 1, O: 1 }, display: 'CaO', recipe: ['Ca', 'O'], desc: '칼슘의 +2와 산소의 -2가 서로 끌어당겨요. 생석회라고도 불러요.', uses: '시멘트와 콘크리트를 만들고, 산성으로 변한 땅을 중화하는 데 쓰여요.', thermalType: 'normal', meltingPoint: 2613, boilingPoint: 2850, hazards: ['corrosive'],
       structure: { atoms: [{ sym: 'Ca', charge: 2 }, { sym: 'O', parent: 0, bondType: 'ionic', charge: -2 }] } },
-    { id: 'CaCl2', name: '염화칼슘', formula: { Ca: 1, Cl: 2 }, display: 'CaCl₂', recipe: ['Ca', 'Cl2'], desc: '칼슘의 +2를 염소 두 개의 -1씩이 나눠서 딱 맞춰요(+2 = -1 + -1). 겨울철 제설제로 사용돼요.', thermalType: 'normal', meltingPoint: 772, boilingPoint: 1935, hazards: [],
+    { id: 'CaCl2', name: '염화칼슘', formula: { Ca: 1, Cl: 2 }, display: 'CaCl₂', recipe: ['Ca', 'Cl2'], desc: '칼슘의 +2를 염소 두 개의 -1씩이 나눠서 딱 맞춰요(+2 = -1 + -1). 겨울철 제설제로 사용돼요.', uses: '겨울철 도로에 뿌려 눈을 녹이고, 습기를 빨아들이는 제습제로도 쓰여요.', thermalType: 'normal', meltingPoint: 772, boilingPoint: 1935, hazards: [],
       structure: { atoms: [{ sym: 'Ca', charge: 2 }, { sym: 'Cl', parent: 0, bondType: 'ionic', charge: -1 }, { sym: 'Cl', parent: 0, bondType: 'ionic', charge: -1 }] } },
-    { id: 'CaCO3', name: '탄산칼슘', formula: { Ca: 1, C: 1, O: 3 }, display: 'CaCO₃', recipe: ['CaO', 'CO2'], desc: '칼슘 이온과 탄산 이온(CO₃)이 짝을 이뤄요. 석회석과 조개껍데기의 주성분이에요.', thermalType: 'decomposes', meltingPoint: 1339, boilingPoint: null, hazards: [],
+    { id: 'CaCO3', name: '탄산칼슘', formula: { Ca: 1, C: 1, O: 3 }, display: 'CaCO₃', recipe: ['CaO', 'CO2'], desc: '칼슘 이온과 탄산 이온(CO₃)이 짝을 이뤄요. 석회석과 조개껍데기의 주성분이에요.', uses: '분필과 치약의 재료이고, 건축용 대리석이나 시멘트를 만드는 데도 쓰여요.', thermalType: 'decomposes', meltingPoint: 1339, boilingPoint: null, hazards: [],
       structure: { atoms: [{ sym: 'Ca', charge: 2 }, { sym: 'O', parent: 0, bondType: 'ionic', charge: -2 }, { sym: 'C', parent: 1, bondType: 'single' }, { sym: 'O', parent: 2, bondType: 'double' }, { sym: 'O', parent: 2, bondType: 'single' }] } },
-    { id: 'MgO', name: '산화마그네슘', formula: { Mg: 1, O: 1 }, display: 'MgO', recipe: ['Mg', 'O'], desc: '마그네슘의 +2와 산소의 -2가 서로 끌어당겨요. 제산제와 내화벽돌에 사용돼요.', thermalType: 'normal', meltingPoint: 2852, boilingPoint: 3600, hazards: [],
+    { id: 'MgO', name: '산화마그네슘', formula: { Mg: 1, O: 1 }, display: 'MgO', recipe: ['Mg', 'O'], desc: '마그네슘의 +2와 산소의 -2가 서로 끌어당겨요. 제산제와 내화벽돌에 사용돼요.', uses: '불에 강한 내화벽돌을 만들고, 속이 쓰릴 때 먹는 제산제로도 쓰여요.', thermalType: 'normal', meltingPoint: 2852, boilingPoint: 3600, hazards: [],
       structure: { atoms: [{ sym: 'Mg', charge: 2 }, { sym: 'O', parent: 0, bondType: 'ionic', charge: -2 }] } },
-    { id: 'MgCl2', name: '염화마그네슘', formula: { Mg: 1, Cl: 2 }, display: 'MgCl₂', recipe: ['Mg', 'Cl2'], desc: '마그네슘의 +2를 염소 두 개의 -1씩이 나눠서 딱 맞춰요. 간수의 주성분이에요.', thermalType: 'normal', meltingPoint: 714, boilingPoint: 1412, hazards: [],
+    { id: 'MgCl2', name: '염화마그네슘', formula: { Mg: 1, Cl: 2 }, display: 'MgCl₂', recipe: ['Mg', 'Cl2'], desc: '마그네슘의 +2를 염소 두 개의 -1씩이 나눠서 딱 맞춰요. 간수의 주성분이에요.', uses: '두부를 몽글몽글 굳히는 간수, 겨울철 도로 제설제로 쓰여요.', thermalType: 'normal', meltingPoint: 714, boilingPoint: 1412, hazards: [],
       structure: { atoms: [{ sym: 'Mg', charge: 2 }, { sym: 'Cl', parent: 0, bondType: 'ionic', charge: -1 }, { sym: 'Cl', parent: 0, bondType: 'ionic', charge: -1 }] } },
-    { id: 'MgOH2', name: '수산화마그네슘', formula: { Mg: 1, O: 2, H: 2 }, display: 'Mg(OH)₂', recipe: ['MgO', 'H2O'], desc: '마그네슘의 +2를 수산화기(OH) 두 개의 -1씩이 나눠서 맞춰요. 제산제(마그밀)의 주성분이에요.', thermalType: 'decomposes', meltingPoint: 350, boilingPoint: null, hazards: [],
+    { id: 'MgOH2', name: '수산화마그네슘', formula: { Mg: 1, O: 2, H: 2 }, display: 'Mg(OH)₂', recipe: ['MgO', 'H2O'], desc: '마그네슘의 +2를 수산화기(OH) 두 개의 -1씩이 나눠서 맞춰요. 제산제(마그밀)의 주성분이에요.', uses: '속이 쓰릴 때나 변비에 먹는 마그밀 같은 약의 주성분이에요.', thermalType: 'decomposes', meltingPoint: 350, boilingPoint: null, hazards: [],
       structure: { atoms: [{ sym: 'Mg', charge: 2 }, { sym: 'O', parent: 0, bondType: 'ionic', charge: -1 }, { sym: 'H', parent: 1, bondType: 'single' }, { sym: 'O', parent: 0, bondType: 'ionic', charge: -1 }, { sym: 'H', parent: 3, bondType: 'single' }] } },
-    { id: 'OH', name: '수산화기', formula: { O: 1, H: 1 }, display: 'OH', recipe: ['H', 'O'], desc: '산소가 전자 하나를 더 받아서 -1이 된 불안정한 조각이에요. 다양한 화합물을 만드는 재료가 돼요.', thermalType: 'unstable', meltingPoint: null, boilingPoint: null, hazards: [],
+    { id: 'OH', name: '수산화기', formula: { O: 1, H: 1 }, display: 'OH', recipe: ['H', 'O'], desc: '산소가 전자 하나를 더 받아서 -1이 된 불안정한 조각이에요. 다양한 화합물을 만드는 재료가 돼요.', uses: '혼자 쓰이기보단 수산화나트륨 같은 다른 화합물을 만드는 재료가 돼요.', thermalType: 'unstable', meltingPoint: null, boilingPoint: null, hazards: [],
       structure: { atoms: [{ sym: 'O', charge: -1 }, { sym: 'H', parent: 0, bondType: 'single' }] } },
-    { id: 'NaOH', name: '수산화나트륨', formula: { Na: 1, O: 1, H: 1 }, display: 'NaOH', recipe: ['Na', 'OH'], desc: '나트륨의 +1과 수산화기의 -1이 서로 끌어당겨요. 비누를 만들 때 사용되는 강한 염기예요.', thermalType: 'normal', meltingPoint: 318, boilingPoint: 1388, hazards: ['corrosive'],
+    { id: 'NaOH', name: '수산화나트륨', formula: { Na: 1, O: 1, H: 1 }, display: 'NaOH', recipe: ['Na', 'OH'], desc: '나트륨의 +1과 수산화기의 -1이 서로 끌어당겨요. 비누를 만들 때 사용되는 강한 염기예요.', uses: '비누와 세제를 만들고, 막힌 배수구를 뚫는 강력 세정제에도 쓰여요.', thermalType: 'normal', meltingPoint: 318, boilingPoint: 1388, hazards: ['corrosive'],
       structure: { atoms: [{ sym: 'Na', charge: 1 }, { sym: 'O', parent: 0, bondType: 'ionic', charge: -1 }, { sym: 'H', parent: 1, bondType: 'single' }] } },
-    { id: 'CH3COOH', name: '아세트산', formula: { C: 2, H: 4, O: 2 }, display: 'CH₃COOH', recipe: ['CH4', 'CO2'], desc: '탄소 두 개가 사슬처럼 이어진 화합물이에요. 식초의 신맛을 내는 성분이에요.', thermalType: 'normal', meltingPoint: 16.6, boilingPoint: 118.1, hazards: ['corrosive'],
+    { id: 'CH3COOH', name: '아세트산', formula: { C: 2, H: 4, O: 2 }, display: 'CH₃COOH', recipe: ['CH4', 'CO2'], desc: '탄소 두 개가 사슬처럼 이어진 화합물이에요. 식초의 신맛을 내는 성분이에요.', uses: '식초의 새콤한 맛을 내고, 피클을 절이거나 청소용 세정제로도 쓰여요.', thermalType: 'normal', meltingPoint: 16.6, boilingPoint: 118.1, hazards: ['corrosive'],
       structure: { atoms: [{ sym: 'C' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'C', parent: 0, bondType: 'single' }, { sym: 'O', parent: 4, bondType: 'double' }, { sym: 'O', parent: 4, bondType: 'single' }, { sym: 'H', parent: 6, bondType: 'single' }] } },
-    { id: 'C2H6', name: '에탄', formula: { C: 2, H: 6 }, display: 'C₂H₆', recipe: ['CH4', 'CH2'], desc: '탄소 두 개가 손을 맞잡고 나머지 손엔 수소가 붙어요. 천연가스에 섞여 있는 기체예요.', thermalType: 'normal', meltingPoint: -182.8, boilingPoint: -88.5, hazards: ['flammable'],
+    { id: 'C2H6', name: '에탄', formula: { C: 2, H: 6 }, display: 'C₂H₆', recipe: ['CH4', 'CH2'], desc: '탄소 두 개가 손을 맞잡고 나머지 손엔 수소가 붙어요. 천연가스에 섞여 있는 기체예요.', uses: '천연가스에 섞여 있고, 플라스틱의 원료가 되는 에틸렌을 만드는 데 쓰여요.', thermalType: 'normal', meltingPoint: -182.8, boilingPoint: -88.5, hazards: ['flammable'],
       structure: { atoms: [{ sym: 'C' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'H', parent: 0, bondType: 'single' }, { sym: 'C', parent: 0, bondType: 'single' }, { sym: 'H', parent: 4, bondType: 'single' }, { sym: 'H', parent: 4, bondType: 'single' }, { sym: 'H', parent: 4, bondType: 'single' }] } },
-    { id: 'N2', name: '질소 기체', formula: { N: 2 }, display: 'N₂', recipe: ['N', 'N'], desc: '공기의 대부분을 차지하는 기체예요. 손 3개를 모두 걸어 삼중결합을 만들어요.', thermalType: 'normal', meltingPoint: -210.0, boilingPoint: -195.8, hazards: [],
+    { id: 'N2', name: '질소 기체', formula: { N: 2 }, display: 'N₂', recipe: ['N', 'N'], desc: '공기의 대부분을 차지하는 기체예요. 손 3개를 모두 걸어 삼중결합을 만들어요.', uses: '과자 봉지 안을 채워 신선하게 지켜주고, 액체 질소로 만들어 급속 냉동하는 데 쓰여요.', thermalType: 'normal', meltingPoint: -210.0, boilingPoint: -195.8, hazards: [],
       structure: { atoms: [{ sym: 'N' }, { sym: 'N', parent: 0, bondType: 'triple' }] } }
   ];
 
@@ -132,6 +132,7 @@
     dexTableBody: document.getElementById('dex-table-body'),
     detailModal: document.getElementById('detail-modal'),
     btnDetailClose: document.getElementById('btn-detail-close'),
+    btnDetailConfirm: document.getElementById('btn-detail-confirm'),
     detailNewBadge: document.getElementById('detail-new-badge'),
     detailDiagram: document.getElementById('detail-diagram'),
     detailName: document.getElementById('detail-name'),
@@ -139,7 +140,9 @@
     detailThermal: document.getElementById('detail-thermal'),
     detailHazards: document.getElementById('detail-hazards'),
     detailFacts: document.getElementById('detail-facts'),
-    detailDesc: document.getElementById('detail-desc')
+    detailDesc: document.getElementById('detail-desc'),
+    detailUsesSection: document.getElementById('detail-uses-section'),
+    detailUses: document.getElementById('detail-uses')
   };
 
   var MAIN_SCREENS = ['screen-start', 'screen-game', 'screen-dex'];
@@ -153,7 +156,6 @@
   var toastTimer = null;
   var popupQueue = [];
   var popupActive = false;
-  var popupAutoCloseTimer = null;
   var pendingCompleteCelebration = false;
   var combineAnimating = false;
 
@@ -588,9 +590,13 @@
   function showDetail(kind, id, opts) {
     opts = opts || {};
     el.detailNewBadge.style.display = opts.isNew ? '' : 'none';
+    el.btnDetailConfirm.style.display = opts.isNew ? '' : 'none';
     el.detailDiagram.innerHTML = diagramFor(kind, id, 128);
+    var entity = kind === 'el' ? ELEMENTS_BY_ID[id] : COMPOUNDS_BY_ID[id];
+    el.detailUsesSection.style.display = entity.uses ? '' : 'none';
+    el.detailUses.textContent = entity.uses || '';
     if (kind === 'el') {
-      var e = ELEMENTS_BY_ID[id];
+      var e = entity;
       el.detailName.textContent = e.name;
       el.detailRecipe.style.display = 'none';
       el.detailThermal.style.display = 'none';
@@ -602,7 +608,7 @@
       el.detailFacts.innerHTML = factsHtml;
       el.detailDesc.textContent = e.desc;
     } else {
-      var c = COMPOUNDS_BY_ID[id];
+      var c = entity;
       var ingredientNames = c.recipe.map(function (rid) {
         var ie = ELEMENTS_BY_ID[rid] || COMPOUNDS_BY_ID[rid];
         return ie.name + '(' + (ELEMENTS_BY_ID[rid] ? ie.id : ie.display) + ')';
@@ -629,17 +635,20 @@
     processPopupQueue();
   }
 
+  // 발견 카드는 대항해시대 발견 보고서처럼 자동으로 넘어가지 않고,
+  // "확인했어요!" 버튼을 눌러야 다음으로 진행된다(dismissDiscoveryPopup 참고).
   function processPopupQueue() {
     if (popupActive) return;
     if (popupQueue.length === 0) { afterPopupsResolved(); return; }
     popupActive = true;
     var compoundId = popupQueue.shift();
     showDetail('cp', compoundId, { isNew: true });
-    popupAutoCloseTimer = setTimeout(function () {
-      closeDetailModal();
-      popupActive = false;
-      setTimeout(processPopupQueue, 150);
-    }, 2400);
+  }
+
+  function dismissDiscoveryPopup() {
+    closeDetailModal();
+    popupActive = false;
+    processPopupQueue();
   }
 
   function afterPopupsResolved() {
@@ -773,14 +782,14 @@
     });
 
     el.btnDetailClose.addEventListener('click', function () {
-      closeDetailModal();
-      if (popupActive) {
-        clearTimeout(popupAutoCloseTimer);
-        popupActive = false;
-        setTimeout(processPopupQueue, 100);
-      }
+      if (popupActive) dismissDiscoveryPopup(); else closeDetailModal();
     });
-    el.detailModal.addEventListener('click', function (ev) { if (ev.target === el.detailModal) el.btnDetailClose.click(); });
+    el.btnDetailConfirm.addEventListener('click', function () {
+      if (popupActive) dismissDiscoveryPopup(); else closeDetailModal();
+    });
+    el.detailModal.addEventListener('click', function (ev) {
+      if (ev.target === el.detailModal && !popupActive) closeDetailModal();
+    });
   }
 
   function init() {

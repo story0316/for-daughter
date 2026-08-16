@@ -130,15 +130,30 @@
     <!-- 상세 정보 / 발견 모달 -->
     <div id="detail-modal" class="modal-overlay">
       <div class="modal-card">
-        <div id="detail-new-badge" class="new-badge" style="display:none">✨ 새로 발견!</div>
+        <div id="detail-new-badge" class="new-badge" style="display:none">✨ 새로운 발견!</div>
         <button id="btn-detail-close" class="modal-close">✕</button>
         <div id="detail-diagram" class="detail-diagram"></div>
         <h2 id="detail-name">수소</h2>
         <div id="detail-recipe" class="detail-recipe" style="display:none"></div>
-        <div id="detail-thermal" class="detail-thermal" style="display:none"></div>
-        <div id="detail-hazards" class="detail-hazards" style="display:none"></div>
-        <div id="detail-facts" class="detail-facts"></div>
-        <p id="detail-desc" class="detail-desc"></p>
+
+        <div class="detail-section">
+          <div class="detail-section-title">💡 무엇인가요?</div>
+          <p id="detail-desc" class="detail-desc"></p>
+        </div>
+
+        <div class="detail-section" id="detail-uses-section">
+          <div class="detail-section-title">🔧 어떻게 쓰일까요?</div>
+          <p id="detail-uses" class="detail-desc"></p>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">🌡️ 어떤 성질이 있을까요?</div>
+          <div id="detail-thermal" class="detail-thermal" style="display:none"></div>
+          <div id="detail-hazards" class="detail-hazards" style="display:none"></div>
+          <div id="detail-facts" class="detail-facts"></div>
+        </div>
+
+        <button id="btn-detail-confirm" class="btn btn-primary" style="display:none">확인했어요! 👍</button>
       </div>
     </div>
 

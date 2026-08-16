@@ -654,6 +654,30 @@ html, body {
   margin-bottom: 8px;
 }
 
+.detail-section {
+  text-align: left;
+  margin: 12px 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.detail-section:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.detail-section-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #a3a3ad;
+  margin-bottom: 5px;
+  letter-spacing: 0.02em;
+}
+
+#btn-detail-confirm {
+  margin-top: 4px;
+}
+
 .detail-thermal {
   margin: 8px 0;
   text-align: left;
