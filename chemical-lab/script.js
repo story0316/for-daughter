@@ -116,6 +116,7 @@
     wbSlotA: document.getElementById('wb-slot-a'),
     wbSlotB: document.getElementById('wb-slot-b'),
     btnCombine: document.getElementById('btn-combine'),
+    combineFlash: document.getElementById('combine-flash'),
     shelfCount: document.getElementById('shelf-count'),
     shelfTotal: document.getElementById('shelf-total'),
     shelfBottles: document.getElementById('shelf-bottles'),
@@ -235,6 +236,13 @@
     return (charge > 0 ? '+' : '−') + (Math.abs(charge) > 1 ? Math.abs(charge) : '');
   }
 
+  // 유리구슬처럼 보이도록 그림자 + 하이라이트를 곁들인 3D풍 구체
+  function sphereMarkup(cx, cy, r, color) {
+    return '<ellipse cx="' + (cx + 1) + '" cy="' + (cy + r * 0.12) + '" rx="' + (r * 0.95) + '" ry="' + (r * 0.85) + '" fill="rgba(0,0,0,0.16)"/>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + color + '" stroke="#fff" stroke-width="1.4"/>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="url(#atom-shine)"/>';
+  }
+
   function renderAtomSVG(sym, size) {
     size = size || 64;
     var e = ELEMENTS_BY_ID[sym];
@@ -253,7 +261,7 @@
       chargeText = '<text x="72" y="30" text-anchor="middle" font-size="13" font-weight="900" fill="' + col + '">' + chargeLabel(e.charge) + '</text>';
     }
     return '<svg viewBox="0 0 100 100" width="' + size + '" height="' + size + '">' + nubs +
-      '<circle cx="50" cy="50" r="20" fill="' + elementColor(sym) + '" stroke="#fff" stroke-width="2"/>' +
+      sphereMarkup(50, 50, 20, elementColor(sym)) +
       '<text x="50" y="55" text-anchor="middle" font-size="17" font-weight="800" fill="#1c1f38">' + sym + '</text>' +
       chargeText + '</svg>';
   }
@@ -306,7 +314,7 @@
     structure.atoms.forEach(function (a, i) {
       var p = pos[i];
       var r = i === 0 ? 15 : 12;
-      atomsSvg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + r + '" fill="' + elementColor(a.sym) + '" stroke="#fff" stroke-width="1.6"/>';
+      atomsSvg += sphereMarkup(p.x, p.y, r, elementColor(a.sym));
       atomsSvg += '<text x="' + p.x + '" y="' + (p.y + 4) + '" text-anchor="middle" font-size="' + (i === 0 ? 12 : 10) + '" font-weight="800" fill="#1c1f38">' + a.sym + '</text>';
       if (a.charge) {
         var col = a.charge > 0 ? '#c9432f' : '#2f6fc9';
@@ -380,12 +388,21 @@
     });
   }
 
-  function swirlWorkbench() {
-    [el.wbSlotA, el.wbSlotB].forEach(function (n) {
-      n.classList.remove('swirl');
-      void n.offsetWidth;
-      n.classList.add('swirl');
-    });
+  // 두 슬롯이 가운데로 미끄러져 만나 "딱" 맞물리는 퍼즐 스냅 연출.
+  function playSnapAnimation(onDone) {
+    el.wbSlotA.classList.add('combine-a');
+    el.wbSlotB.classList.add('combine-b');
+    setTimeout(function () {
+      el.combineFlash.classList.remove('burst');
+      void el.combineFlash.offsetWidth;
+      el.combineFlash.classList.add('burst');
+    }, 300);
+    el.wbSlotA.addEventListener('animationend', function handler() {
+      el.wbSlotA.removeEventListener('animationend', handler);
+      el.wbSlotA.classList.remove('combine-a');
+      el.wbSlotB.classList.remove('combine-b');
+      onDone();
+    }, { once: true });
   }
 
   function attemptCombine() {
@@ -396,8 +413,7 @@
       showToast('음... 반응이 없어요');
       return;
     }
-    swirlWorkbench();
-    setTimeout(function () {
+    playSnapAnimation(function () {
       state.wbA = null;
       state.wbB = null;
       var isNew = state.discoveredCompounds.indexOf(match) === -1;
@@ -418,7 +434,7 @@
         renderWorkbench();
         renderInventory();
       }
-    }, 550);
+    });
   }
 
   // ---------- 연구실 진열장 ----------

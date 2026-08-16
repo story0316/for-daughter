@@ -8,6 +8,15 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <radialGradient id="atom-shine" cx="32%" cy="26%" r="72%">
+        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+        <stop offset="45%" stop-color="#ffffff" stop-opacity="0.22"/>
+        <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+  </svg>
   <div id="app">
 
     <!-- 시작 화면 -->
@@ -58,6 +67,7 @@
           <div class="wb-slot" id="wb-slot-a" data-slot="a"><span class="wb-empty">+</span></div>
           <div class="wb-plus">+</div>
           <div class="wb-slot" id="wb-slot-b" data-slot="b"><span class="wb-empty">+</span></div>
+          <div class="combine-flash" id="combine-flash"></div>
         </div>
         <button id="btn-combine" class="btn-combine" disabled>⚗️ 합성하기</button>
 
